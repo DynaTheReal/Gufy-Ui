@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.6","quick":true,"notes":["Quick-Update: Hintergrundbild reicht jetzt bis ganz unten – kein schwarzer Streifen mehr","Der ⓘ-Knopf für die Entwickler-Info ist wieder da"]};
+window.GUFY={"v":"5.7","quick":true,"notes":["Quick-Update: Der Streifen ganz unten hat jetzt genau die Farbe vom unteren Rand deines Hintergrundbilds","Der ⓘ-Knopf für die Entwickler-Info ist wieder da"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -825,6 +825,10 @@ body.phone #desktop>.wall,body.phone #lock>.wall{display:none}
 #devtoggle{position:fixed;left:8px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2502;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.82);color:#30d158;font-size:20px;font-weight:700;display:none;place-items:center;border:1px solid rgba(48,209,88,.5);padding:0}
 body.devmode #devtoggle{display:grid}
 #devtoggle.off{opacity:.6;color:#9aa0ab;border-color:rgba(255,255,255,.2)}
+
+/* weicher Übergang am unteren Fensterrand in die Streifenfarbe */
+body.phone #desktop::before,body.phone #lock::before{content:"";position:absolute;left:0;right:0;bottom:0;height:110px;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--strip,transparent))}
+body.phone.appfull #desktop::before{display:none}
 </style>
 </head>
 <body class="dark">
@@ -1661,6 +1665,24 @@ function wallTopColor(){
   try{const m=w.match(/data:image\/svg\+xml,([^')]+)/);if(m)src=decodeURIComponent(m[1])}catch(e){}
   const c=src.match(/#[0-9a-fA-F]{6}\b/);return c?c[0]:'#1c1430';
 }
+/* Farbe des Hintergrundbilds ganz unten messen – damit füllt GufyUI den Streifen unter dem Fenster,
+   in den das iPhone nur eine einfarbige Fläche zeichnet */
+const bottomCache={};
+function wallBottomColor(i){
+  if(bottomCache[i])return bottomCache[i];
+  const w=WALLS[i]||'';
+  const m=w.match(/url\('(data:image\/svg\+xml,[^']+)'\)/);
+  if(m){
+    bottomCache[i]='#000';
+    const img=new Image();
+    img.onload=()=>{try{const cv=document.createElement('canvas');cv.width=54;cv.height=96;const g=cv.getContext('2d');g.drawImage(img,0,0,54,96);
+      const d=g.getImageData(0,93,54,3).data;let r=0,gg=0,b=0,n=0;for(let k=0;k<d.length;k+=4){r+=d[k];gg+=d[k+1];b+=d[k+2];n++}
+      bottomCache[i]=`rgb(${Math.round(r/n)},${Math.round(gg/n)},${Math.round(b/n)})`;syncEdge()}catch(e){}};
+    img.src=m[1];return bottomCache[i];
+  }
+  const hex=w.match(/#[0-9a-fA-F]{6}\b/g);return bottomCache[i]=hex?hex[hex.length-1]:'#000';
+}
+const darken=(c,a)=>{const m=c.match(/\d+/g);if(!m||c[0]==='#'){const h=c.replace('#','');const v=[0,2,4].map(k=>parseInt(h.substr(k,2),16));return `rgb(${v.map(x=>Math.round(x*(1-a))).join(',')})`}return `rgb(${m.slice(0,3).map(x=>Math.round(x*(1-a))).join(',')})`};
 function syncEdge(){
   let c;const B=document.body.classList,H=document.documentElement;
   // Handy: Hintergrundbild auf die Seitenfläche legen (reicht bis ganz unten, auch unter den Streifen)
@@ -1668,7 +1690,8 @@ function syncEdge(){
   H.classList.toggle('wallbg',B.contains('phone'));
   H.style.background=wallOnPage?(WALLS[S.wall]||WALLS[0]):'';
   if(wallOnPage){const full=Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width))+40;
-    H.style.backgroundSize=`100% ${full}px`;H.style.backgroundPosition='center top';H.style.backgroundRepeat='no-repeat'}
+    H.style.backgroundSize=`100% ${full}px`;H.style.backgroundPosition='center top';H.style.backgroundRepeat='no-repeat';
+    const bc=wallBottomColor(S.wall),sc=current==='lock'?darken(bc,.45):bc;H.style.backgroundColor=sc;H.style.setProperty('--strip',sc)}
   if(current==='desktop'&&B.contains('appfull'))c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';
   else if(current==='desktop'&&B.contains('inapp'))c=wallTopColor();
   else if(current==='desktop'||current==='lock')c=wallTopColor();
