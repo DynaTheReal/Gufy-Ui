@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"6.4","notes":["Web-App: GufyUI beginnt unter der iPhone-Statusleiste und geht bis ganz nach unten (einmal neu zum Home-Bildschirm hinzufügen)","Beta: „Bildschirm bis ganz unten“","Neu: Daten sichern & wiederherstellen (Über GufyUI)"]};
+window.GUFY={"v":"6.6","notes":["Neue App im Store: VSF Manager – Leben (halbe Herzen), Floni Coins und VSF Regeln","Neue App im Store: Schulden – Coins sofort holen, Quest am selben Tag machen, sonst −1.000","Quests ohne Coins sind wieder offen"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -842,6 +842,20 @@ body.phone.gap.fulldown #homebtn{bottom:calc(14px + env(safe-area-inset-bottom) 
 body.phone.gap.fulldown #dots{bottom:calc(92px + env(safe-area-inset-bottom) + var(--gapH,0px))}
 body.phone.gap.fulldown #home{bottom:var(--gapH,0px)}
 body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
+.vcard{background:var(--panel-solid);border:1px solid var(--border);border-radius:22px;padding:18px;text-align:center;margin-bottom:14px}
+.vcard>small{display:block;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.vhearts{display:flex;justify-content:center;gap:12px;margin:16px 0 8px}
+.vh{position:relative;width:76px;height:70px}
+.vh svg{position:absolute;left:0;top:0;width:76px;height:70px}
+.vh-bg svg{fill:#5a5a60}.vh-fg{position:absolute;left:0;top:0;height:100%;overflow:hidden}.vh-fg svg{fill:#ff375f}
+.vsub{display:block;margin-bottom:14px}
+.vbig{font-size:38px;font-weight:800;margin:10px 0 14px;display:flex;align-items:center;justify-content:center;gap:10px}
+.vfi{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#bf5af2,#5e5ce6);color:#fff;font-size:22px}
+.vstep{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:14px}.vstep b{font-size:28px;min-width:40px}
+.vrule{margin-top:16px;padding:16px;border-radius:18px;background:var(--panel-solid);border:1px solid var(--border);white-space:pre-wrap;line-height:1.55;user-select:text;-webkit-user-select:text}
+.dwarn{margin:14px 0;padding:18px;border-radius:20px;background:rgba(255,69,58,.12);border:1.5px solid rgba(255,69,58,.5);text-align:center;line-height:1.5}
+.dwarn b{font-size:17px}.dwarn p{margin:8px 0 0}.dwarn p b{font-size:inherit}
+.dcard{background:rgba(255,69,58,.08)!important}
 </style>
 </head>
 <body class="dark">
@@ -1027,7 +1041,7 @@ let S=load();
 function defaults(){
   S.theme??='dark'; S.accent??='#4f8cff'; S.wall??=0;
   S.brightness??=100; S.dnd??=false;
-  S.coins??=0; S.inv??={}; S.questDone??=[];
+  S.coins??=0; S.inv??={}; S.questDone??=[]; S.debts??=[];
   S.loc??={mode:'manual',isHome:true,home:null,radius:150};
   S.sleep??={from:'22:00',to:'06:00'};
   S.battery??={level:100,last:Date.now()};
@@ -1338,6 +1352,7 @@ function remainText(){
 }
 let saveCount=0;
 function batteryTick(){
+  if(S.setupDone)checkDebts();
   advance(inUse()?USE_MULT:1);
   const lv=S.battery.level;
   if(lv<=0){S.w20=S.w10=true}
@@ -2309,6 +2324,10 @@ function genQuest(diff,avoid,kind){
   q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
+/* Schulden: offene Schulden vom Vortag → Coins auf −1000 */
+function failDebt(d){d.status='failed';S.coins=-1000;save();updateCoins();haptic('error');
+  notify('💸','Schuld nicht erledigt',`„${d.title}“ wurde nicht gemacht – Coins auf −1.000.`,'#ff453a')}
+function checkDebts(){S.debts??=[];const t=dayKey();S.debts.forEach(d=>{if(d.status==='open'&&d.day!==t)failDebt(d)})}
 // 5 Tagesquests: genau 1× Sport, immer 1× mit den Eltern, Rest witzig/peinlich
 const DAILY_SLOTS=[['mittel','fun'],['schwer','parents'],['schwer','sport'],['extrem','fun'],['extrem','fun']];
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -2337,6 +2356,12 @@ function ensureQuests(){
     L.length=DAILY_SLOTS.length;
     if(L.filter(q=>q.tag==='sport').length>1)L.forEach((q,i)=>{if(q.tag==='sport'&&!q.done)L[i]=genQuest(q.diff,L,'fun')});
     S.daily.v=2;save();
+  }
+  // Reparatur: „erledigt“ ohne Eintrag im Verlauf (= ohne Coins) → wieder offen
+  if(S.daily&&S.histClr!==dayKey()){
+    const h=(S.questDone||[]).filter(e=>dayKey(new Date(e.t))===S.daily.day);let fix=0;
+    S.daily.list.forEach(q=>{if(q.done&&!h.some(e=>(e.id&&e.id===q.id)||e.title===q.title)){q.done=false;fix++}});
+    if(fix)save();
   }
 }
 
@@ -2414,7 +2439,7 @@ render(body,ctx){
       const q=L[+b.dataset.done];
       askCode(`Abhaken: +${q.coins} Coins`,()=>{
         if(q.done||!S.daily.list.includes(q))return;
-        q.done=true;S.coins+=q.coins;S.questDone.unshift({i:q.i,title:q.title,coins:q.coins,diff:q.diff,t:Date.now()});S.questDone=S.questDone.slice(0,300);
+        q.done=true;S.coins+=q.coins;S.questDone.unshift({id:q.id,i:q.i,title:q.title,coins:q.coins,diff:q.diff,t:Date.now()});S.questDone=S.questDone.slice(0,300);
         save();updateCoins();haptic('success');coinPop('+'+q.coins+' 🪙');notify('🏆','Quest geschafft!',`+${q.coins} Coins`,'#f5a524');draw();
         const card=$(`.qcard[data-qi="${S.daily.list.indexOf(q)}"]`,body);if(card)card.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:420,easing:SPRING});
       });
@@ -2837,7 +2862,7 @@ render(body,ctx){
       $$('[data-inv]',c).forEach(b=>b.onclick=()=>{const k=b.dataset.inv;S.inv[k]=Math.max(0,(S.inv[k]||0)+ +b.dataset.d);done()});
       $$('[data-ah]',c).forEach(b=>b.onclick=()=>{setHome(b.dataset.ah==='1');go('admin')});
       $('#aQNew',c).onclick=()=>{S.daily=null;ensureQuests();done('Tagesquests neu')};
-      $('#aQHist',c).onclick=()=>{S.questDone=[];done('Verlauf gelöscht')};
+      $('#aQHist',c).onclick=()=>{S.questDone=[];S.histClr=dayKey();done('Verlauf gelöscht')};
       $('#aNSet',c).onclick=()=>{const v=$('#aName',c).value.trim();if(!v)return;S.name=v;applyLook();tick();done('Name geändert')};
       $('#aPSet',c).onclick=()=>{const v=$('#aPw',c).value;if(v.length<4){notify('🛠️','Admin','Mindestens 4 Zeichen','#ff3b30');return}S.pw=hash(v);done('Passwort geändert')};
       $('#aLock',c).onclick=()=>{adminOK=false;go('admin')};
@@ -3117,14 +3142,127 @@ render(body){
     $('#rWb',body).onclick=()=>{who=[$('#rA',body).value||'A',$('#rB',body).value||'B'];spin($('#rW',body),who,'👉 '+who[Math.random()<.5?0:1],1300)};
   }
   draw();
+}},
+/* ---------- VSF Manager ---------- */
+vsf:{name:'VSF Manager',cat:'Spaß',full:true,store:true,icon:'❤️',bg:'linear-gradient(135deg,#ff375f,#a2153a)',
+render(body){
+  const V=()=>(S.vsf??={half:6,floni:0,rules:[]});
+  const heart=`<svg viewBox="0 0 24 22"><path d="M12 21.4l-1.5-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.5 11.6L12 21.4z"/></svg>`;
+  const hearts=n=>[0,1,2].map(k=>{const f=Math.max(0,Math.min(2,n-k*2));return `<div class="vh"><div class="vh-bg">${heart}</div><div class="vh-fg" style="width:${f*50}%">${heart}</div></div>`}).join('');
+  const hTxt=n=>{const g=Math.floor(n/2),h=n%2;return (g||!h?g:'')+(h?'½':'')+' von 3 Herzen'};
+  function main(){
+    const v=V();
+    body.innerHTML=`<div class="pad">
+      <div class="vcard"><small>Leben</small><div class="vhearts">${hearts(v.half)}</div><b class="vsub">${hTxt(v.half)}</b>
+        <button class="btn" id="vHE">✏️ Bearbeiten</button></div>
+      <div class="vcard vfl"><small>Floni Coins</small><div class="vbig"><span class="vfi">F</span> ${fmtNum(v.floni)}</div>
+        <button class="btn" id="vFE">✏️ Bearbeiten</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:22px 0 12px"><h2 class="sec" style="margin:0">VSF Regeln</h2><button class="btn primary" id="vRN">＋ Neu</button></div>
+      ${v.rules.length?`<div class="notelist">${v.rules.map((r,i)=>{const l=r.text.split('\n');return `<button class="note" data-r="${i}"><b>${esc(l[0]||'Regel')}</b><small>${esc(l.slice(1).join(' ').slice(0,80))}</small></button>`}).join('')}</div>`
+        :`<div class="emptyinv"><div>📜</div><b>Noch keine Regeln</b></div>`}</div>`;
+    $('#vHE',body).onclick=editHearts;$('#vFE',body).onclick=editFloni;
+    $('#vRN',body).onclick=()=>askCode('Neue VSF-Regel',()=>editRule(-1));
+    $$('[data-r]',body).forEach(b=>b.onclick=()=>viewRule(+b.dataset.r));
+  }
+  function editHearts(){
+    let n=V().half;
+    body.innerHTML=`<div class="pad"><button class="btn" id="vBk">‹ Zurück</button>
+      <div class="vcard" style="margin-top:14px"><small>Leben bearbeiten (0–6 halbe Herzen)</small><div class="vhearts" id="vHH">${hearts(n)}</div><b class="vsub" id="vHT">${n} halbe · ${hTxt(n)}</b>
+      <div class="vstep"><button class="btn" id="vM">−</button><b id="vN">${n}</b><button class="btn" id="vP">＋</button></div>
+      <button class="btn primary" id="vOk" style="width:100%">Speichern</button></div></div>`;
+    const up=()=>{$('#vHH',body).innerHTML=hearts(n);$('#vN',body).textContent=n;$('#vHT',body).textContent=n+' halbe · '+hTxt(n);haptic('select')};
+    $('#vM',body).onclick=()=>{if(n>0){n--;up()}};$('#vP',body).onclick=()=>{if(n<6){n++;up()}};
+    $('#vBk',body).onclick=main;
+    $('#vOk',body).onclick=()=>askCode('Leben ändern',()=>{V().half=n;save();haptic('success');main()});
+  }
+  function editFloni(){
+    body.innerHTML=`<div class="pad"><button class="btn" id="vBk">‹ Zurück</button>
+      <div class="vcard" style="margin-top:14px"><small>Floni Coins bearbeiten</small>
+      <input class="input" id="vFI" type="number" inputmode="numeric" value="${V().floni}" style="text-align:center;font-size:26px;font-weight:700;margin:14px 0">
+      <div class="vstep">${[-10,-1,1,10].map(d=>`<button class="btn" data-fd="${d}">${d>0?'+':''}${d}</button>`).join('')}</div>
+      <button class="btn primary" id="vOk" style="width:100%">Speichern</button></div></div>`;
+    const inp=$('#vFI',body);
+    $$('[data-fd]',body).forEach(b=>b.onclick=()=>{inp.value=Math.round(+inp.value||0)+ +b.dataset.fd;haptic('select')});
+    $('#vBk',body).onclick=main;
+    $('#vOk',body).onclick=()=>{const v=Math.round(+inp.value||0);askCode('Floni Coins ändern',()=>{V().floni=v;save();haptic('success');main()})};
+  }
+  function viewRule(i){
+    const r=V().rules[i];if(!r)return main();
+    body.innerHTML=`<div class="pad"><div style="display:flex;justify-content:space-between;gap:8px"><button class="btn" id="vBk">‹ Alle Regeln</button><span><button class="btn" id="vEd">✏️</button> <button class="btn" id="vDl" style="color:#ff3b30">🗑️</button></span></div>
+      <div class="vrule">${esc(r.text)}</div></div>`;
+    $('#vBk',body).onclick=main;
+    $('#vEd',body).onclick=()=>askCode('Regel bearbeiten',()=>editRule(i));
+    $('#vDl',body).onclick=()=>askCode('Regel löschen',()=>{V().rules.splice(i,1);save();main()});
+  }
+  function editRule(i){
+    const r=i>=0?V().rules[i]:{text:'',t:Date.now()};
+    body.innerHTML=`<div class="ned"><div class="bar"><button class="btn" id="vBk">‹ Abbrechen</button><button class="btn primary" id="vSv">Speichern</button></div><textarea id="vTx" placeholder="Erste Zeile = Titel der Regel …"></textarea></div>`;
+    const ta=$('#vTx',body);ta.value=r.text;setTimeout(()=>ta.focus(),50);
+    $('#vBk',body).onclick=()=>i>=0?viewRule(i):main();
+    $('#vSv',body).onclick=()=>{const t=ta.value.trim();if(!t)return main();r.text=t;r.t=Date.now();if(i<0)V().rules.push(r);save();haptic('success');main()};
+  }
+  main();
+}},
+/* ---------- Schulden ---------- */
+debts:{name:'Schulden',cat:'Spaß',full:true,store:true,icon:'💸',bg:'linear-gradient(135deg,#ff9f0a,#d1281f)',
+render(body,ctx){
+  let tab='open';
+  function list(){
+    checkDebts();ensureQuests();
+    const D=S.debts,open=D.filter(d=>d.status==='open'),Q=S.daily.list.filter(q=>!q.done);
+    let html=`<div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Offene Schulden</small><b>💸 ${open.length}</b></div></div>
+      <div class="tabs"><button data-tab="open" class="${tab==='open'?'on':''}">💸 Aktuell</button><button data-tab="hist" class="${tab==='hist'?'on':''}">📜 Verlauf</button></div>`;
+    if(tab==='open'){
+      if(open.length)html+=`<div class="slabel">Musst du heute noch machen</div>`+open.map(d=>`<div class="qcard dcard" style="--dc:#ff453a"><div class="qic">${esc(d.i)}</div>
+        <div class="qt"><b>${esc(d.title)}</b><small class="muted">Bis heute 24:00 · sonst Coins auf −1.000</small><br><span class="coin">🪙 ${d.coins} bekommen</span></div>
+        <div class="qbtns"><button class="qdone" data-ok="${d.id}">✓ Gemacht</button><button class="qre" data-no="${d.id}">✗ Nicht</button></div></div>`).join('');
+      html+=`<div class="slabel">Quests von heute</div>`+(Q.length?Q.map(q=>`<div class="qcard" style="--dc:${(DIFFS.find(x=>x[0]===q.diff)||DIFFS[0])[2]}"><div class="qic">${esc(q.i)}</div>
+        <div class="qt"><b>${esc(q.title)}</b><span class="coin">🪙 ${q.coins}</span></div>
+        <div class="qbtns"><button class="qre" data-q="${q.id}" style="min-width:86px">Weiter ›</button></div></div>`).join('')
+        :`<div class="emptyinv"><div>✅</div><b>Keine offenen Quests mehr</b></div>`);
+    }else{
+      const st={done:['✅','Gemacht','#34c759'],failed:['❌','Nicht gemacht · −1.000','#ff453a'],open:['⏳','Offen','#ff9f0a']};
+      html+=D.length?`<div class="card">${D.slice().reverse().slice(0,100).map(d=>`<div class="hist"><span>${esc(d.i)} ${esc(d.title)}<br><small class="muted">${new Date(d.t).toLocaleDateString('de-DE',{day:'numeric',month:'short'})} · <span style="color:${st[d.status][2]}">${st[d.status][0]} ${st[d.status][1]}</span></small></span><b class="price" style="white-space:nowrap">+${d.coins}</b></div>`).join('')}</div>`
+        :`<div class="emptyinv"><div>📜</div><b>Noch keine Schulden</b></div>`;
+    }
+    body.innerHTML=`<div class="pad">${html}</div>`;
+    $$('[data-tab]',body).forEach(b=>b.onclick=()=>{tab=b.dataset.tab;haptic('select');list()});
+    $$('[data-q]',body).forEach(b=>b.onclick=()=>offer(b.dataset.q));
+    $$('[data-ok]',body).forEach(b=>b.onclick=()=>{const d=S.debts.find(x=>x.id===b.dataset.ok);
+      askCode('Schuld erledigt',()=>{if(d.status!=='open')return;d.status='done';save();haptic('success');notify('✅','Schuld erledigt','Die Quest ist geschafft – keine Strafe.','#34c759');list()})});
+    $$('[data-no]',body).forEach(b=>{let armed=false;b.onclick=()=>{
+      if(!armed){armed=true;b.textContent='Sicher?';haptic('warning');return}
+      const d=S.debts.find(x=>x.id===b.dataset.no);if(d&&d.status==='open')failDebt(d);list()}});
+  }
+  function offer(qid){
+    const q=S.daily.list.find(x=>x.id===qid);if(!q||q.done)return list();
+    body.innerHTML=`<div class="pad"><button class="btn" id="dBk">‹ Zurück</button>
+      <div class="qcard" style="--dc:#ff9f0a;margin-top:14px"><div class="qic">${esc(q.i)}</div><div class="qt"><b>${esc(q.title)}</b><span class="coin">🪙 ${q.coins}</span></div></div>
+      <div class="dwarn"><div style="font-size:34px">⚠️</div><b>Achtung – Schulden!</b>
+        <p>Du bekommst die <b>${q.coins} Coins sofort</b>.</p>
+        <p>Wenn du diese Quest <b>nicht bis heute 24:00</b> machst, werden deine Coins auf <b>−1.000</b> gesetzt.</p></div>
+      <button class="btn primary" id="dAcc" style="width:100%;background:#ff453a">Akzeptieren & zustimmen</button>
+      <button class="btn" id="dNo" style="width:100%;margin-top:8px">Abbrechen</button></div>`;
+    $('#dBk',body).onclick=list;$('#dNo',body).onclick=list;
+    $('#dAcc',body).onclick=()=>{
+      if(q.done||!S.daily.list.includes(q))return list();
+      q.done=true;S.coins+=q.coins;
+      S.questDone.unshift({id:q.id,i:q.i,title:q.title+' (Schulden)',coins:q.coins,diff:q.diff,t:Date.now()});S.questDone=S.questDone.slice(0,300);
+      S.debts.push({id:'d'+Date.now().toString(36),qid:q.id,i:q.i,title:q.title,coins:q.coins,day:dayKey(),t:Date.now(),status:'open'});
+      save();updateCoins();haptic('success');coinPop('+'+q.coins+' 🪙');
+      notify('💸','Schulden aufgenommen',`+${q.coins} Coins – mach die Quest heute noch!`,'#ff9f0a');list()};
+  }
+  ctx.refresh=list;
+  list();
 }}
+
 };
 
 /* =========================================================
    START
    ========================================================= */
 renderHome();applyLook();tick();advance();renderBattery();devSync();
-if(S.setupDone)ensureQuests();
+if(S.setupDone){ensureQuests();checkDebts()}
 if(S.loc.mode==='gps'&&S.setupDone)startGeo();
 addEventListener('beforeunload',()=>{advance();save()});
 addEventListener('pagehide',()=>{advance();save()});
