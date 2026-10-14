@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.9","notes":["Urlaubsmodus ohne Ladestation: Der Akku geht jetzt auch zu Hause leer (wie unterwegs)"]};
+window.GUFY={"v":"6.0","notes":["Apps: Die Liste geht unten bis ganz an den Rand (kein Ausblenden mehr)","Entwicklermodus: Test-Layout gegen den Streifen unten + iOS-Version in der Info","Urlaubsmodus ohne Ladestation: Der Akku geht auch zu Hause leer"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -830,8 +830,11 @@ body.devmode #devtoggle{display:grid}
 body.phone #desktop::before,body.phone #lock::before{content:"";position:absolute;left:0;right:0;bottom:0;height:110px;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--strip,transparent))}
 body.phone.appfull #desktop::before{display:none}
 
-/* Apps auf dem Handy: Inhalt läuft unten weich in die App-Farbe aus – der Streifen darunter hat dieselbe Farbe */
-body.phone #appview.open::after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;pointer-events:none;z-index:4;background:linear-gradient(to bottom,transparent,var(--bg))}
+
+/* 6.0: Test-Layout (Entwicklermodus) – Seite nicht fixiert, Bildschirme absolut */
+html.altlay,html.altlay body{position:relative!important;inset:auto!important;height:100%!important;min-height:100lvh}
+html.altlay.wallbg{position:relative!important;height:auto!important;min-height:100lvh}
+html.altlay .screen{position:absolute!important}
 </style>
 </head>
 <body class="dark">
@@ -1487,7 +1490,8 @@ const DEV_PARTS=[
   ['#bigBatt','Akku-Symbol'],['#emptyTitle','Akku-Text'],['.ebtns','Akku-leer-Knöpfe'],['#eOn','Einschalten-Knopf']
 ];
 let devT=null;
-function applyAdj(){const r=document.documentElement.style;r.setProperty('--adjT',(S.adjT||0)+'px');r.setProperty('--adjB',(S.adjB||0)+'px')}
+function iosVer(){const u=navigator.userAgent;if(!/iPhone|iPad|iPod/.test(u))return '';const v=u.match(/Version\/(\d+(?:\.\d+)*)/);if(v)return v[1];const m=u.match(/OS (\d+)_(\d+)(?:_(\d+))? like Mac/);return m?m[1]+'.'+m[2]+(m[3]?'.'+m[3]:''):''}
+function applyAdj(){document.documentElement.classList.toggle('altlay',!!S.altLay);const r=document.documentElement.style;r.setProperty('--adjT',(S.adjT||0)+'px');r.setProperty('--adjB',(S.adjB||0)+'px')}
 function devSync(){applyAdj();document.body.classList.toggle('devmode',!!S.dev);clearInterval(devT);if(S.dev){devDraw();devT=setInterval(devDraw,600)}else $('#devlayer').innerHTML=''}
 function devDraw(){
   const L=$('#devlayer'),out=[],W=innerWidth,H=innerHeight;
@@ -1504,7 +1508,7 @@ function devDraw(){
   const sat=getComputedStyle(document.documentElement).getPropertyValue('--sat').trim();
   const pr=document.createElement('div');pr.style.cssText='position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';document.body.append(pr);const ps=getComputedStyle(pr);const safe=[ps.paddingTop,ps.paddingBottom].map(x=>parseInt(x)).join('/');pr.remove();
   const scrR=$('.screen.active')?.getBoundingClientRect();
-  $('#devpanel').textContent=`🧑‍💻 ${SCREEN_NAMES[current]||current}${appCtx?' › App: '+APPS[appCtx.id].name:''}\nOben: ${topNames.join(' · ')||'–'}\nsafe oben/unten ${safe} · client ${document.documentElement.clientHeight} · screen-Rect ${scrR?Math.round(scrR.top)+'–'+Math.round(scrR.bottom):'-'} · Anpassung ${S.adjT||0}/${S.adjB||0}\nGufyUI ${GUFY.v} · Fenster ${innerWidth}×${innerHeight} · Bildschirm ${screen.width}×${screen.height}\nsafe-top ${sat} · Leiste ${getComputedStyle($('#statusbar')).height} · vv ${vv?Math.round(vv.height)+' @'+Math.round(vv.offsetTop):'-'} · scroll ${Math.round(scrollY)}\n${navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Browser'} · ${document.body.className}`;
+  $('#devpanel').textContent=`🧑‍💻 ${SCREEN_NAMES[current]||current}${appCtx?' › App: '+APPS[appCtx.id].name:''}\nOben: ${topNames.join(' · ')||'–'}\nsafe oben/unten ${safe} · client ${document.documentElement.clientHeight} · screen-Rect ${scrR?Math.round(scrR.top)+'–'+Math.round(scrR.bottom):'-'} · Anpassung ${S.adjT||0}/${S.adjB||0}\nGufyUI ${GUFY.v}${iosVer()?' · iOS '+iosVer():''}${S.altLay?' · Test-Layout':''} · Fenster ${innerWidth}×${innerHeight} · Bildschirm ${screen.width}×${screen.height}\nsafe-top ${sat} · Leiste ${getComputedStyle($('#statusbar')).height} · vv ${vv?Math.round(vv.height)+' @'+Math.round(vv.offsetTop):'-'} · scroll ${Math.round(scrollY)}\n${navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Browser'} · ${document.body.className}`;
 }
 function devPanelSync(){const h=!!S.devPanelHidden;$('#devpanel').classList.toggle('hid',h);$('#devtoggle').classList.toggle('off',h)}
 $('#devtoggle').onclick=()=>{S.devPanelHidden=!S.devPanelHidden;save();devPanelSync();haptic('select')};
@@ -2688,7 +2692,10 @@ render(body,ctx){
     if(tab==='adj'){
       const sl=(id,label,v,min,max)=>`<div class="srow" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>${label}</span><b id="${id}V">${v} px</b></div><input type="range" id="${id}" min="${min}" max="${max}" step="1" value="${v}" class="slider"><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" data-step="${id}" data-d="-1">−1</button><button class="btn" data-step="${id}" data-d="1">+1</button></div></div>`;
       c.innerHTML=`<div class="sgroup">${sl('aT','Alles nach unten schieben',S.adjT||0,-80,140)}${sl('aB','Unten Platz lassen',S.adjB||0,-80,140)}</div>
-        <div class="sgroup"><button class="srow sdanger" id="aRst" style="color:var(--accent)">Zurücksetzen (0 / 0)</button></div>`;
+        <div class="sgroup"><button class="srow sdanger" id="aRst" style="color:var(--accent)">Zurücksetzen (0 / 0)</button></div>
+        <div class="sgroup"><div class="srow"><span class="sic" style="background:#5e5ce6">🧪</span><span class="sl">Test-Layout (gegen Streifen unten)</span><label class="switch"><input type="checkbox" id="aAlt" ${S.altLay?'checked':''}><span></span></label></div></div>
+        <div class="slabel" style="text-transform:none">${iosVer()?'iOS '+iosVer():''}</div>`;
+      $('#aAlt',c).onchange=e=>{S.altLay=e.target.checked;save();applyAdj();detectPhone();haptic()};
       const set=(id,v)=>{v=Math.max(-80,Math.min(140,Math.round(v)));if(id==='aT')S.adjT=v;else S.adjB=v;$('#'+id,c).value=v;$('#'+id+'V',c).textContent=v+' px';applyAdj();save()};
       ['aT','aB'].forEach(id=>{$('#'+id,c).oninput=e=>set(id,+e.target.value)});
       $$('[data-step]',c).forEach(b=>b.onclick=()=>{const id=b.dataset.step;set(id,+$('#'+id,c).value+ +b.dataset.d);haptic('select')});
