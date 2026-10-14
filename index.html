@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.5","notes":["Neben der Dynamic Island ist es nicht mehr schwarz – die Farbe passt sich an","Neue Handy-Statusleiste für iPhone & Samsung: Uhrzeit links, Infos rechts","Softwareupdate zeigt jetzt, was in deiner Version neu ist"]};
+window.GUFY={"v":"4.6","notes":["In Apps reicht die App bis ganz nach oben neben die Dynamic Island – dort steht nur die Uhrzeit","Akku leer: Standort wird alle 10 Sekunden geprüft – zu Hause lädt er automatisch wieder","Akku leer: Admin-Panel mit Secret Code erreichbar"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -770,6 +770,19 @@ body.island .lk-top{top:calc(var(--sb) / 2 - 7px);right:30px}
 /* Als App auf dem Home-Bildschirm zeichnet das System Uhrzeit & Akku selbst an genau diese Stellen */
 body.sysbar .ios-time span,body.sysbar #sbCC>*{opacity:0}
 body.sysbar .lk-top{display:none}
+
+/* ===== 4.6: In Apps reicht die App bis ganz nach oben – dort steht nur die Uhrzeit ===== */
+body.phone #statusbar{position:fixed}
+body.phone.inapp #statusbar{background:var(--bg)!important;color:var(--text);text-shadow:none}
+body.phone.inapp #statusbar .right{visibility:hidden}
+body.phone.inapp #statusbar .left{flex:1}
+/* Hintergrundbild verstecken, solange eine App ganz offen ist – sonst färbt der Browser
+   den Bereich neben der Dynamic Island mit dem Hintergrund ein */
+body.appfull #desktop>.wall{visibility:hidden}
+body.appfull #home{visibility:hidden}
+/* Kappe ganz oben in App-Farbe (wird vom Browser/System für den Bereich neben der Island genutzt) */
+#topcap{position:fixed;left:0;right:0;top:0;height:max(var(--sat),1px);z-index:450;pointer-events:none;background:transparent}
+body.phone.inapp #topcap{background:var(--bg)}
 </style>
 </head>
 <body class="dark">
@@ -806,6 +819,7 @@ body.sysbar .lk-top{display:none}
 <!-- DESKTOP -->
 <div id="desktop" class="screen">
   <div class="wall"></div>
+  <div id="topcap"></div>
   <div id="statusbar" class="glass">
     <div class="left">
       <button class="sb-btn" id="sbLogo"><b>G</b></button>
@@ -855,7 +869,9 @@ body.sysbar .lk-top{display:none}
     <div class="ebtns">
       <button class="btn" id="eInv">🎒 Inventar</button>
       <button class="btn" id="eHome">🏠 Ich bin zu Hause</button>
+      <button class="btn" id="eAdmin">🛠️ Admin-Panel</button>
     </div>
+    <p id="eGeo" style="color:#777;font-size:13px;min-height:18px"></p>
     <button class="btn primary big" id="eOn" style="display:none">⏻ Einschalten</button>
   </div>
   <div class="sheet" id="eSheet">
@@ -1268,7 +1284,7 @@ function batteryTick(){
   if(lv>25){S.w20=false;S.w10=false}
   if(lv>=99.95&&S.wasCharging){S.wasCharging=false;notify('🔋','Voll geladen','Dein Akku ist bei 100 %.','#34c759')}
   if(charging())S.wasCharging=true;
-  if(lv<=0&&!['empty','setup','boot','off'].includes(current))batteryDead();
+  if(lv<=0&&!emptyAdmin&&!['empty','setup','boot','off'].includes(current))batteryDead();
   if(current==='empty')updateEmpty();
   if(!homeBusy())renderBattery();
   if(++saveCount%5===0)save();
@@ -1286,9 +1302,17 @@ function renderBattery(){
   const col=chg?'#34c759':lv<=20?'#ff3b30':'var(--accent)';
   $$('.js-ring').forEach(r=>r.style.background=`radial-gradient(rgba(12,12,16,.82) 58%,transparent 59%),conic-gradient(${col} ${lv*3.6}deg,rgba(255,255,255,.14) 0)`);
 }
+let emptyAdmin=false,emptyGeoT=null,emptyGeoAt=0;
 function batteryDead(){
   closeAppNow();closeMenus();
-  show('empty');updateEmpty();
+  show('empty');updateEmpty();emptyGeoLoop();
+}
+/* Akku leer + GPS: alle 10 Sekunden prüfen, ob man zu Hause ist – dann lädt der Akku wieder */
+function emptyGeoLoop(){
+  clearInterval(emptyGeoT);emptyGeoT=null;
+  if(S.loc.mode!=='gps'||!S.loc.home)return;
+  const run=()=>{if(current!=='empty'){clearInterval(emptyGeoT);emptyGeoT=null;return}emptyGeoAt=Date.now();checkGeoOnce();updateEmpty()};
+  run();emptyGeoT=setInterval(run,10000);
 }
 function updateEmpty(){
   const lv=S.battery.level,dead=lv<=0;
@@ -1299,11 +1323,17 @@ function updateEmpty(){
   $('#bigBatt i').style.width=Math.min(100,lv)+'%';
   const st=statusInfo();
   $('#emptyTxt').textContent=dead
-    ?(S.loc.isHome?`${st.ic} Lädt …`:'')
+    ?(rate(new Date())>0?`${st.ic} Lädt …`:(S.loc.isHome&&S.vacation?'🏖️ Urlaub: Ladestation fehlt':''))
     :'';
+  const g=$('#eGeo');
+  if(g)g.textContent=dead&&emptyGeoT?(S.loc.isHome?'📍 Zu Hause erkannt':'📍 Standort wird alle 10 Sek. geprüft …'+(emptyGeoAt?' (zuletzt vor '+Math.round((Date.now()-emptyGeoAt)/1000)+' s)':'')):'';
   $('#eHome').textContent=S.loc.mode==='gps'?'📍 Standort prüfen':(S.loc.isHome?'🚶 Ich bin unterwegs':'🏠 Ich bin zu Hause');
   $('#eOn').style.display=dead?'none':'';
 }
+$('#eAdmin').onclick=()=>askCode('Admin-Panel',()=>{
+  adminOK=true;show('desktop');renderHome();openApp('settings');emptyAdmin=true;
+  setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('admin'),30);
+});
 $('#eInv').onclick=()=>{renderInventory($('#eInvBody'),updateEmpty);$('#eSheet').classList.add('open')};
 $('#eSheetClose').onclick=()=>$('#eSheet').classList.remove('open');
 $('#eHome').onclick=()=>{if(S.loc.mode==='gps'){checkGeoOnce()}else askHome(!S.loc.isHome,updateEmpty)};
@@ -1632,7 +1662,7 @@ function openApp(id){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(appCtx!==ctx0)return;
     v.style.opacity='';v.style.transform='';
-    v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius=''};
+    v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius='';if(appCtx===ctx0)document.body.classList.add('appfull')};
     if(homeAnim)homeAnim.cancel();
     homeAnim=$('#home').animate([{transform:'scale(1)',opacity:1},{transform:'scale(.92)',opacity:.3}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'});
   }));
@@ -1647,9 +1677,10 @@ function closeAppNow(){
   if(!appCtx)return;
   appCtx.cleanup.forEach(f=>{try{f()}catch(e){}});
   appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';v.style.opacity='';v.style.transform='';delete v.dataset.closing;v.className='';v.innerHTML='';
-  document.body.classList.remove('inapp');syncEdge();
+  document.body.classList.remove('inapp','appfull');syncEdge();
   if(!closingHome&&homeAnim){homeAnim.cancel();homeAnim=null}
   $('#sbApp').textContent='Home';
+  if(emptyAdmin){emptyAdmin=false;advance();if(S.battery.level<=0)batteryDead();}
 }
 let closingHome=false;
 function goHome(){
@@ -1659,7 +1690,7 @@ function goHome(){
   const ctx=appCtx,v=$('#appview'),o=appOrigin(ctx.id);
   if(v.dataset.closing&&Date.now()-v.dataset.closing<500)return;
   v.dataset.closing=Date.now();
-  document.body.classList.remove('inapp');syncEdge();
+  document.body.classList.remove('inapp','appfull');syncEdge();
   v.style.transformOrigin=`${o.x}px ${o.y}px`;v.style.borderRadius='40px';
   const ease='cubic-bezier(.32,.72,0,1)';
   const a=v.animate([{transform:'scale(1)',opacity:1},{opacity:1,offset:.55},{transform:`scale(${o.s})`,opacity:0}],{duration:380,easing:ease,fill:'forwards'});
