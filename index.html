@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.4","quick":true,"notes":["Quick-Update: Entwickler-Info lässt sich mit dem ⓘ-Knopf links ein- und ausblenden","Die Entwickler-Info blockiert keine App-Symbole mehr – man kann durchtippen"]};
+window.GUFY={"v":"5.5","quick":true,"notes":["Quick-Update: Der Streifen ganz unten zeigt jetzt dein Hintergrundbild statt einer Fläche","In Apps hat der Streifen die App-Farbe","Entwickler-Info mit ⓘ ein- und ausblendbar"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -747,7 +747,8 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
 
 /* ===== 4.5: Handy-Statusleiste (iPhone & Samsung) ===== */
 :root{--sb:30px;--sat:0px;--edge:#1c1430}
-html,body{background:var(--edge)!important}
+html{background:var(--edge)}
+body{background:transparent!important}
 body.phone{--sb:max(var(--sat),36px)}
 #statusbar{height:var(--sb)}
 #home,#appview{top:var(--sb)!important}
@@ -812,28 +813,11 @@ body.devmode #devpanel{display:block}
 /* ===== 5.2: Bildschirm-Anpassung (Entwicklermodus) – verschiebt ALLES gemeinsam ===== */
 .screen{top:var(--adjT,0px)!important;bottom:var(--adjB,0px)!important}
 
-/* ===== 5.3: Bildschirme gehen auf Handys bis ganz nach unten (über die Lücke hinaus).
-   Alles, was unten sitzt, bleibt genau an seinem Platz. ===== */
-body.phone{--ext:120px}
-body.phone .screen{bottom:calc(var(--adjB,0px) - var(--ext))!important}
-body.phone #homebtn{bottom:calc(14px + env(safe-area-inset-bottom) + var(--ext))}
-body.phone #dots{bottom:calc(92px + env(safe-area-inset-bottom) + var(--ext))}
-body.phone .editbar{bottom:calc(22px + env(safe-area-inset-bottom) + var(--ext))}
-body.phone .storebar{bottom:calc(88px + env(safe-area-inset-bottom) + var(--ext))}
-body.phone .page{padding-bottom:calc(130px + var(--ext))}
-body.phone .appbody{padding-bottom:calc(110px + var(--ext))}
-body.phone .appbody.full{padding-bottom:calc(84px + var(--ext))}
-body.phone .center{bottom:var(--ext)}
-body.phone .lk-login{bottom:calc(12vh + var(--ext))}
-body.phone .sheet{bottom:var(--ext)}
-body.phone #setupCard{top:calc(50% - var(--ext) / 2)}
 
-/* Entwickler-Info: Taps gehen durch, links daneben ein Knopf zum Aus-/Einblenden */
-#devpanel{pointer-events:none!important;left:52px!important;max-width:calc(100vw - 60px)!important}
-#devpanel.hid{display:none!important}
-#devtoggle{position:fixed;left:8px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2502;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.82);color:#30d158;font-size:20px;font-weight:700;display:none;place-items:center;border:1px solid rgba(48,209,88,.5)}
-body.devmode #devtoggle{display:grid}
-#devtoggle.off{opacity:.6;color:#9aa0ab;border-color:rgba(255,255,255,.2)}
+/* ===== 5.5: Der Streifen unten („Void“) ist die Seiten-Hintergrundfläche.
+   Auf Handys liegt das Hintergrundbild deshalb direkt dort – so füllt es auch den Streifen. ===== */
+html.wallbg{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;height:calc(100% + 160px)!important;background-color:var(--edge)}
+body.phone #desktop>.wall,body.phone #lock>.wall{display:none}
 </style>
 </head>
 <body class="dark">
@@ -1671,8 +1655,13 @@ function wallTopColor(){
   const c=src.match(/#[0-9a-fA-F]{6}\b/);return c?c[0]:'#1c1430';
 }
 function syncEdge(){
-  let c;
-  if(current==='desktop'&&document.body.classList.contains('inapp'))c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';
+  let c;const B=document.body.classList,H=document.documentElement;
+  // Handy: Hintergrundbild auf die Seitenfläche legen (reicht bis ganz unten, auch unter den Streifen)
+  const wallOnPage=B.contains('phone')&&(current==='lock'||(current==='desktop'&&!B.contains('appfull')));
+  H.classList.toggle('wallbg',B.contains('phone'));
+  H.style.background=wallOnPage?(WALLS[S.wall]||WALLS[0]):'';
+  if(current==='desktop'&&B.contains('appfull'))c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';
+  else if(current==='desktop'&&B.contains('inapp'))c=wallTopColor();
   else if(current==='desktop'||current==='lock')c=wallTopColor();
   else if(current==='setup')c='#0b0b12';
   else c='#000000';
@@ -1777,7 +1766,7 @@ function openApp(id){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(appCtx!==ctx0)return;
     v.style.opacity='';v.style.transform='';
-    v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius='';if(appCtx===ctx0)document.body.classList.add('appfull')};
+    v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius='';if(appCtx===ctx0){document.body.classList.add('appfull');syncEdge()}};
     if(homeAnim)homeAnim.cancel();
     homeAnim=$('#home').animate([{transform:'scale(1)',opacity:1},{transform:'scale(.92)',opacity:.3}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'});
   }));
@@ -1869,7 +1858,7 @@ setInterval(()=>{if(current==='desktop'&&!appCtx&&!G&&!springRaf)updateWidgets($
 
 /* ---------- Raster ---------- */
 function measureGrid(){
-  const home=$('#home');let W=home.clientWidth||innerWidth,H=(home.clientHeight||innerHeight-30)-(parseInt(getComputedStyle(document.body).getPropertyValue('--ext'))||0);
+  const home=$('#home');let W=home.clientWidth||innerWidth,H=home.clientHeight||innerHeight-30;
   const mobile=W<=700,cols=mobile?4:Math.max(4,Math.min(8,Math.floor((W-40)/104)));
   const rowh=mobile?Math.max(88,Math.min(100,Math.floor((W-40)/4)+8)):104;
   const rows=Math.max(3,Math.floor((H-20-130)/rowh));
