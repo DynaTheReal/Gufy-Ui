@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.4","notes":["10 neue Hintergründe: Galaxie, Unterwasser, Gewitter, Mars, Eisberg und mehr","Weicher Übergang in den Bearbeiten-Modus","Flüssigeres Wischen zwischen den Seiten","Karte lädt jetzt immer – notfalls die normale OpenStreetMap"]};
+window.GUFY={"v":"3.5","notes":["Home-Taste reagiert jetzt immer","Neu: Beta-Einstellungen mit echtem Geräte-Akku"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1159,8 +1159,12 @@ function isSleepTime(d){
   return f<t?(m>=f&&m<t):(m>=f||m<t);
 }
 function rate(d){if(!S.loc.isHome)return R_AWAY;return isSleepTime(d)?R_SLEEP:R_HOME}
+let realBatt=null;
+if(navigator.getBattery)navigator.getBattery().then(b=>{realBatt=b;['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,()=>{if(S.betaBatt)batteryTick()}));if(S.betaBatt)batteryTick()}).catch(()=>{});
+const realOn=()=>!!(S.betaBatt&&realBatt);
 function advance(){
   const now=Date.now();
+  if(realOn()){S.battery.level=Math.max(0,Math.min(100,realBatt.level*100));S.battery.last=now;return}
   let t=S.battery.last||now;
   if(now-t>60*864e5)t=now-60*864e5;          // max. 60 Tage nachrechnen
   let lv=S.battery.level;
@@ -1173,15 +1177,19 @@ function advance(){
   S.battery.level=lv;S.battery.last=now;
 }
 const dispPct=()=>{const l=S.battery.level;return l<=0?0:Math.min(100,Math.ceil(l-1e-9))};
-const charging=()=>rate(new Date())>0&&S.battery.level<99.95;
+const charging=()=>realOn()?(realBatt.charging&&S.battery.level<99.95):(rate(new Date())>0&&S.battery.level<99.95);
 function fmtDur(hrs){const m=Math.round(hrs*60),H=Math.floor(m/60),M=m%60;return H?`${H} Std. ${M} Min.`:`${M} Min.`}
 function statusInfo(){
+  if(realOn())return realBatt.charging?{ic:'🔌',t:'Echter Akku · lädt',r:'Beta',col:'linear-gradient(135deg,#34c759,#0a8f3c)'}:{ic:'📱',t:'Echter Akku',r:'Beta',col:'linear-gradient(135deg,#636366,#2c2c2e)'};
   if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:'−4,2 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
   if(isSleepTime(new Date()))return{ic:'😴',t:'Schlafenszeit',r:'+12,5 % pro Std.',col:'linear-gradient(135deg,#5e5ce6,#2b1f7a)'};
   return{ic:'🏠',t:'Zu Hause',r:'+2 % pro Std.',col:'linear-gradient(135deg,#34c759,#0a8f3c)'};
 }
 function remainText(){
   const lv=S.battery.level;
+  if(realOn()){const c=realBatt.charging,t=c?realBatt.chargingTime:realBatt.dischargingTime;
+    if(c&&lv>=99.95)return 'Voll geladen';
+    return isFinite(t)&&t>0?(c?'Voll in ':'Reicht noch ')+fmtDur(t/3600):(c?'Lädt …':'Vom Gerät');}
   if(rate(new Date())<0)return 'Reicht noch '+fmtDur(lv/(-R_AWAY));
   if(lv>=99.95)return 'Voll geladen';
   let t=Date.now(),l=lv;
@@ -1535,7 +1543,7 @@ function appOrigin(id){
 function closeAppNow(){
   if(!appCtx)return;
   appCtx.cleanup.forEach(f=>{try{f()}catch(e){}});
-  appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';v.className='';v.innerHTML='';
+  appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';delete v.dataset.closing;v.className='';v.innerHTML='';
   document.body.classList.remove('inapp');
   if(!closingHome&&homeAnim){homeAnim.cancel();homeAnim=null}
   $('#sbApp').textContent='Home';
@@ -1546,16 +1554,23 @@ function goHome(){
   haptic();
   if(!appCtx){if(editMode)exitEdit();else goPage(0);return}
   const ctx=appCtx,v=$('#appview'),o=appOrigin(ctx.id);
-  if(v.dataset.closing)return;v.dataset.closing='1';
+  if(v.dataset.closing&&Date.now()-v.dataset.closing<500)return;
+  v.dataset.closing=Date.now();
   document.body.classList.remove('inapp');
   v.style.transformOrigin=`${o.x}px ${o.y}px`;v.style.borderRadius='40px';
   const ease='cubic-bezier(.32,.72,0,1)';
   const a=v.animate([{transform:'scale(1)',opacity:1},{opacity:1,offset:.55},{transform:`scale(${o.s})`,opacity:0}],{duration:380,easing:ease,fill:'forwards'});
   if(homeAnim)homeAnim.cancel();
   homeAnim=$('#home').animate([{transform:'scale(.92)',opacity:.3},{transform:'scale(1)',opacity:1}],{duration:380,easing:ease});
-  a.onfinish=()=>{delete v.dataset.closing;if(appCtx===ctx){closingHome=true;closeAppNow();closingHome=false}};
+  const fin=()=>{delete v.dataset.closing;if(appCtx===ctx){closingHome=true;closeAppNow();closingHome=false}};
+  a.onfinish=fin;a.oncancel=()=>{delete v.dataset.closing};
+  setTimeout(()=>{if(appCtx===ctx&&v.dataset.closing)fin()},520); // Sicherheitsnetz
 }
 $('#homebtn').onclick=goHome;
+// Home-Taste reagiert sofort beim Loslassen – auch wenn ein Klick verschluckt wird
+(()=>{const hb=$('#homebtn');let t0=0;hb.addEventListener('pointerdown',e=>{t0=Date.now();try{hb.setPointerCapture(e.pointerId)}catch(_){}});
+  hb.addEventListener('pointerup',e=>{if(Date.now()-t0<800){e.preventDefault();hb.dataset.skip=Date.now();goHome()}});
+  hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
 addEventListener('keydown',e=>{if(e.key==='Escape'&&current==='desktop')goHome()});
 $$('[data-open]').forEach(b=>b.onclick=()=>openApp(b.dataset.open));
 $('#sbCoins').onclick=()=>{openApp('shop');setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('items'),20)};
@@ -1969,6 +1984,7 @@ const pctOf=it=>it.min/(24*60)*100;   // 24 Std. = 100 %
 function useItem(k){
   if(!(S.inv[k]>0))return;
   advance();
+  if(realOn()){notify('🧪','Beta: Echter Akku','Powerbanks gehen nur ohne den echten Geräte-Akku.','#636366');return}
   if(S.battery.level>=99.95){notify('🔋','Akku ist schon voll','Heb dir die Powerbank für später auf.');return}
   const it=ITEMS[k];
   S.battery.level=Math.min(100,S.battery.level+pctOf(it));
@@ -2251,7 +2267,7 @@ render(body,ctx){
 /* ---------- Einstellungen ---------- */
 settings:{name:'Einstellungen',icon:'⚙️',bg:'linear-gradient(135deg,#8e9eab,#4b5563)',
 render(body,ctx){
-  const TITLES={update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
+  const TITLES={beta:'Beta',update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
   const sw=(id,on)=>`<label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label>`;
   const row=(ic,col,label,right,attr='')=>`<${attr?'button':'div'} class="srow" ${attr}><span class="sic" style="background:${col}">${ic}</span><span class="sl">${label}</span>${right}</${attr?'button':'div'}>`;
   const nav=(ic,col,label,go,val='')=>row(ic,col,label,`${val?`<span class="sv">${val}</span>`:''}<span class="chev">›</span>`,`data-go="${go}"`);
@@ -2275,6 +2291,7 @@ render(body,ctx){
       </div>
       <div class="sgroup">
         ${nav('⚙️','#8e8e93','Softwareupdate','update','GufyUI '+GUFY.v)}
+        ${nav('🧪','#af52de','Beta','beta',S.betaBatt?'An':'')}
         ${nav('ℹ️','#4f8cff','Über GufyUI','info')}
         ${nav('🛠️','#636366','Admin','admin',adminOK?'Entsperrt':'')}
       </div>
@@ -2293,6 +2310,20 @@ render(body,ctx){
     $('.sback',body).onclick=()=>{home();slideIn(body,-1);haptic('select')};
     slideIn(body,1);
     const c=$('#setc',body);
+    if(tab==='beta'){
+      const sup=!!navigator.getBattery;
+      c.innerHTML=`<div class="sgroup">
+          <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
+        </div>
+        <p class="slabel" style="text-transform:none;letter-spacing:0;font-weight:500;line-height:1.5">${sup?(realBatt?`Gerät: ${Math.round(realBatt.level*100)} %${realBatt.charging?' · lädt':''}`:'Akku wird gelesen …'):'Dieser Browser gibt den Akku nicht frei (z. B. iPhone/Safari).'}</p>`;
+      const t=$('#bReal',c);
+      if(t)t.onchange=e=>{const v=e.target.checked;e.target.checked=!v;
+        askCode(v?'Beta: Echten Akku nutzen':'Beta ausschalten',()=>{
+          advance();S.betaBatt=v;S.battery.last=Date.now();advance();save();
+          renderBattery();updateCC();go('beta');
+          notify(v?'🧪':'🔋',v?'Echter Akku aktiv':'Echter Akku aus',v?'GufyUI zeigt jetzt den Akku deines Geräts.':'GufyUI nutzt wieder das Spiel-Akku-System.','#af52de');
+        })};
+    }
     if(tab==='update'){
       const p=pendingUpdate();
       if(!p){
