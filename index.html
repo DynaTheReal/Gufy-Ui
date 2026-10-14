@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.1","notes":["Haptisches Feedback","Kein Zoomen mehr beim Doppeltippen","Neues Update-System","Neustart lädt GufyUI komplett neu"]};
+window.GUFY={"v":"3.2","notes":["Design-Update: neue Icons, Widgets und Statusleiste","Apps öffnen und schließen jetzt direkt aus dem Icon heraus","Neuer, flüssiger Ladebalken beim Start"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -515,6 +515,66 @@ button.srow:active{background:var(--hover)}
   #sbApp{display:none}
   .appbody{padding:14px 12px 110px}
 }
+
+/* =====================================================================
+   DESIGN-UPDATE 3.2
+   ===================================================================== */
+:root{--bg:#f2f2f7;--panel-2:#e9e9ef;--ease:cubic-bezier(.2,.9,.22,1)}
+body.dark{--bg:#0a0a0d;--panel-solid:#141418;--panel-2:#1c1c22;--border:rgba(255,255,255,.08);--panel:rgba(22,22,28,.66)}
+body{letter-spacing:-.011em}
+#appview{animation:none!important;will-change:transform,opacity;overflow:hidden}
+#home{will-change:transform,opacity;transform-origin:50% 45%}
+
+/* Statusleiste: frei über dem Hintergrund, in Apps solide */
+#statusbar{background:transparent;border:none;backdrop-filter:none;-webkit-backdrop-filter:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);height:30px}
+#statusbar .sb-btn:hover{background:rgba(255,255,255,.12)}
+body.inapp #statusbar{color:var(--text);text-shadow:none;background:var(--bg)}
+body.inapp #statusbar .sb-btn:hover{background:var(--hover)}
+#statusbar .sb-coins{color:#ffd60a}
+body.inapp #statusbar .sb-coins{color:var(--gold)}
+
+/* App-Kopf */
+.apphead{height:50px;background:var(--bg);border-bottom:1px solid var(--border);font-size:16px;font-weight:650;letter-spacing:-.02em}
+.appbody{background:var(--bg)}
+
+/* App-Icons: Squircle mit Glanz */
+.appicon .ic,.strow .ic{border-radius:24%;position:relative;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.14)}
+.appicon .ic::after,.strow .ic::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 48%);pointer-events:none}
+.appicon{font-size:12px;font-weight:500;gap:6px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.appicon:hover .ic{transform:none}
+.appicon:active .ic{transform:scale(.92);transition:transform .12s}
+
+/* Widgets */
+.page .widget{color:#fff;background:rgba(18,18,24,.34);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);border-radius:26px;box-shadow:0 12px 34px rgba(0,0,0,.18)}
+.page .widget .wt,.page .widget .muted{color:rgba(255,255,255,.72)}
+.page .widget .wt{font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.page .ring{color:#fff}
+
+/* Home-Taste */
+#homebtn{width:56px;height:56px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);box-shadow:0 8px 26px rgba(0,0,0,.28);transition:transform .15s var(--ease),background .25s}
+#homebtn::after{border-color:#fff;width:19px;height:19px;border-radius:6px;border-width:2px;opacity:.95}
+body.inapp #homebtn{background:var(--panel);border-color:var(--border)}
+body.inapp #homebtn::after{border-color:var(--text)}
+#dots i{width:6px;height:6px}
+
+/* Karten & Listen */
+.card,.sgroup,.item,.qcard,.hero>div,.rbox{border-radius:22px}
+.sgroup,.sprof{border-color:var(--border);box-shadow:0 1px 0 rgba(255,255,255,.02)}
+.btn{border-radius:14px;font-weight:650}
+.btn.primary{box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
+.qcard{border-left-width:4px}
+.tabs button{border-radius:14px}
+
+/* Kontrollzentrum & Menüs */
+#cc{border-radius:28px;padding:16px}
+.cc-tile{border-radius:20px}
+.cc-slider,.cc-batt{border-radius:20px}
+#menu,#ctxmenu{border-radius:18px}
+.toast{border-radius:22px}
+
+/* Ladebalken (GPU) */
+.bootline{width:96px;height:3px;border-radius:3px;background:rgba(255,255,255,.14)}
+.bootline i{width:100%;transform:scaleX(0);transform-origin:left center;border-radius:3px;will-change:transform}
 </style>
 </head>
 <body class="dark">
@@ -917,7 +977,7 @@ function renderBattery(){
   $$('.js-bremain').forEach(e=>e.textContent=rem);
   $$('.js-locicon').forEach(e=>e.textContent=st.ic);
   const col=chg?'#34c759':lv<=20?'#ff3b30':'var(--accent)';
-  const r=$('#ring');if(r)r.style.background=`radial-gradient(var(--panel-solid) 58%,transparent 59%),conic-gradient(${col} ${lv*3.6}deg,var(--hover) 0)`;
+  const r=$('#ring');if(r)r.style.background=`radial-gradient(rgba(12,12,16,.82) 58%,transparent 59%),conic-gradient(${col} ${lv*3.6}deg,var(--hover) 0)`;
 }
 function batteryDead(){
   closeAppNow();closeMenus();
@@ -982,9 +1042,9 @@ function boot(){
   advance();
   show('boot');
   const bt=$('#boot');bt.classList.remove('play','out');void bt.offsetWidth;bt.classList.add('play');
-  const f=$('#bootFill');f.style.transition='none';f.style.width='0';
+  const f=$('#bootFill');f.getAnimations().forEach(a=>a.cancel());
   $('#bootTxt').textContent=S.setupDone?(S.name?'Willkommen zurück, '+S.name:'Wird gestartet …'):'Willkommen';
-  setTimeout(()=>{f.style.transition='width 1.1s cubic-bezier(.6,.1,.3,1)';f.style.width='100%'},1750);
+  f.animate([{transform:'scaleX(0)'},{transform:'scaleX(.35)',offset:.35},{transform:'scaleX(.6)',offset:.6},{transform:'scaleX(1)'}],{duration:1250,delay:1650,easing:'cubic-bezier(.65,0,.35,1)',fill:'both'});
   setTimeout(()=>bt.classList.add('out'),2950);
   setTimeout(()=>{
     advance();
@@ -1189,23 +1249,45 @@ function openApp(id){
   closeAppNow();
   const app=APPS[id],v=$('#appview');
   v.innerHTML=`<div class="apphead">${app.icon} ${app.name}</div><div class="appbody${app.full?' full':''}"><div class="appinner"></div></div>`;
-  v.className='open';
+  v.className='open';document.body.classList.add('inapp');
   appCtx={id,cleanup:[],body:$('.appinner',v)};
   app.render(appCtx.body,appCtx);
   $('#sbApp').textContent=app.name;
+  const o=appOrigin(id);v.style.transformOrigin=`${o.x}px ${o.y}px`;
+  v.getAnimations().forEach(a=>a.cancel());
+  v.style.borderRadius='40px';
+  v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:440,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius=''};
+  if(homeAnim)homeAnim.cancel();
+  homeAnim=$('#home').animate([{transform:'scale(1)',opacity:1},{transform:'scale(.92)',opacity:.3}],{duration:440,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'});
+}
+let homeAnim=null;
+function appOrigin(id){
+  const v=$('#appview'),vr=v.getBoundingClientRect(),el=$(`#track .appicon[data-id="${id}"] .ic`);
+  if(el&&current==='desktop'){const r=el.getBoundingClientRect();if(r.width&&r.right>0&&r.left<innerWidth)return{x:r.left+r.width/2-vr.left,y:r.top+r.height/2-vr.top,s:Math.max(.08,r.width/vr.width)}}
+  return{x:vr.width/2,y:vr.height*.45,s:.86};
 }
 function closeAppNow(){
   if(!appCtx)return;
   appCtx.cleanup.forEach(f=>{try{f()}catch(e){}});
-  appCtx=null;const v=$('#appview');v.className='';v.innerHTML='';
+  appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';v.className='';v.innerHTML='';
+  document.body.classList.remove('inapp');
+  if(!closingHome&&homeAnim){homeAnim.cancel();homeAnim=null}
   $('#sbApp').textContent='Home';
 }
+let closingHome=false;
 function goHome(){
   closeMenus();closeCtx();
   haptic();
   if(!appCtx){if(editMode)exitEdit();else goPage(0);return}
-  const ctx=appCtx;$('#appview').classList.add('closing');
-  setTimeout(()=>{if(appCtx===ctx)closeAppNow()},190);
+  const ctx=appCtx,v=$('#appview'),o=appOrigin(ctx.id);
+  if(v.dataset.closing)return;v.dataset.closing='1';
+  document.body.classList.remove('inapp');
+  v.style.transformOrigin=`${o.x}px ${o.y}px`;v.style.borderRadius='40px';
+  const ease='cubic-bezier(.32,.72,0,1)';
+  const a=v.animate([{transform:'scale(1)',opacity:1},{opacity:1,offset:.55},{transform:`scale(${o.s})`,opacity:0}],{duration:380,easing:ease,fill:'forwards'});
+  if(homeAnim)homeAnim.cancel();
+  homeAnim=$('#home').animate([{transform:'scale(.92)',opacity:.3},{transform:'scale(1)',opacity:1}],{duration:380,easing:ease});
+  a.onfinish=()=>{delete v.dataset.closing;if(appCtx===ctx){closingHome=true;closeAppNow();closingHome=false}};
 }
 $('#homebtn').onclick=goHome;
 addEventListener('keydown',e=>{if(e.key==='Escape'&&current==='desktop')goHome()});
