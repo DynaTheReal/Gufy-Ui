@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.5","quick":true,"notes":["Quick-Update: Der Streifen ganz unten zeigt jetzt dein Hintergrundbild statt einer Fläche","In Apps hat der Streifen die App-Farbe","Entwickler-Info mit ⓘ ein- und ausblendbar"]};
+window.GUFY={"v":"5.6","quick":true,"notes":["Quick-Update: Hintergrundbild reicht jetzt bis ganz unten – kein schwarzer Streifen mehr","Der ⓘ-Knopf für die Entwickler-Info ist wieder da"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -818,6 +818,13 @@ body.devmode #devpanel{display:block}
    Auf Handys liegt das Hintergrundbild deshalb direkt dort – so füllt es auch den Streifen. ===== */
 html.wallbg{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;height:calc(100% + 160px)!important;background-color:var(--edge)}
 body.phone #desktop>.wall,body.phone #lock>.wall{display:none}
+
+/* Entwickler-Info: Taps gehen durch, links daneben ein Knopf zum Aus-/Einblenden */
+#devpanel{pointer-events:none!important;left:52px!important;max-width:calc(100vw - 60px)!important}
+#devpanel.hid{display:none!important}
+#devtoggle{position:fixed;left:8px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2502;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.82);color:#30d158;font-size:20px;font-weight:700;display:none;place-items:center;border:1px solid rgba(48,209,88,.5);padding:0}
+body.devmode #devtoggle{display:grid}
+#devtoggle.off{opacity:.6;color:#9aa0ab;border-color:rgba(255,255,255,.2)}
 </style>
 </head>
 <body class="dark">
@@ -1660,6 +1667,8 @@ function syncEdge(){
   const wallOnPage=B.contains('phone')&&(current==='lock'||(current==='desktop'&&!B.contains('appfull')));
   H.classList.toggle('wallbg',B.contains('phone'));
   H.style.background=wallOnPage?(WALLS[S.wall]||WALLS[0]):'';
+  if(wallOnPage){const full=Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width))+40;
+    H.style.backgroundSize=`100% ${full}px`;H.style.backgroundPosition='center top';H.style.backgroundRepeat='no-repeat'}
   if(current==='desktop'&&B.contains('appfull'))c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';
   else if(current==='desktop'&&B.contains('inapp'))c=wallTopColor();
   else if(current==='desktop'||current==='lock')c=wallTopColor();
