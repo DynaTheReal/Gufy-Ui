@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.0","notes":["Quests geben weniger Coins: Belohnung × 2 ÷ 10 (z. B. 50 → 10, 400 → 80)"]};
+window.GUFY={"v":"4.1","notes":["Quests sind nach Coins sortiert – wenigste oben","Nur noch glatte Belohnungen: 10, 20, 50, 100, 200 oder 500 Coins"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1623,7 +1623,7 @@ const WTYPES={
     html:()=>`<div class="wt">Coins</div><div class="wcenter col"><div style="font-size:34px">🪙</div><div class="wbig js-coins" style="color:#ffd60a;font-size:34px"></div></div>`},
   quests:{name:'Tagesquests',sizes:['l'],open:()=>'quests',html:()=>`<div class="wt">Tagesquests <span class="js-qn" style="float:right"></span></div><div class="js-ql"></div>`,
     upd:el=>{ensureQuests();const L=S.daily.list;$('.js-qn',el).textContent=L.filter(q=>q.done).length+'/'+L.length;
-      $('.js-ql',el).innerHTML=L.map(q=>`<div class="wq ${q.done?'done':''}"><i style="background:${(DIFFS.find(d=>d[0]===q.diff)||DIFFS[0])[2]}"></i><span>${esc(q.title)}</span><b>${q.done?'✓':q.coins}</b></div>`).join('')}},
+      $('.js-ql',el).innerHTML=sortQ(L).map(i=>L[i]).map(q=>`<div class="wq ${q.done?'done':''}"><i style="background:${(DIFFS.find(d=>d[0]===q.diff)||DIFFS[0])[2]}"></i><span>${esc(q.title)}</span><b>${q.done?'✓':q.coins}</b></div>`).join('')}},
   calendar:{name:'Kalender',sizes:['s'],open:()=>appAvail('calendar')?'calendar':null,html:()=>`<div class="wt js-wday" style="color:#ff453a"></div><div class="wcal js-day"></div><div class="wsub js-month"></div>`},
   analog:{name:'Analoguhr',sizes:['s'],open:()=>appAvail('clock')?'clock':null,
     html:()=>`<div class="wcenter"><div class="aw">${Array.from({length:12},(_,i)=>`<i style="transform:rotate(${i*30}deg)"></i>`).join('')}<b class="h"></b><b class="m"></b><b class="sec"></b><span></span></div></div>`,
@@ -1956,8 +1956,12 @@ const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit El
 // Erlaubte Belohnungen je Schwierigkeit (kein 25er mehr)
 const COINSTEPS={mittel:[50,100],schwer:[100,200,300],extrem:[300,400,500,1000]};
 // Belohnung = Grundwert × 2 ÷ 10 (z. B. 50 → 10, 400 → 80, 1000 → 200)
-const QUEST_PAY=v=>Math.round(v*2/10);
-const COINALL=[10,20,40,60,80,100,200];
+const NICE_PAY=[10,20,50,100,200,500];               // nur glatte Belohnungen
+const roundPay=v=>NICE_PAY.reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)||(Math.abs(x-v)===Math.abs(b-v)&&x>b)?x:b);
+const QUEST_PAY=v=>roundPay(v*2/10);
+const QUEST_SORT=1;   // 1 = wenigste Coins oben, -1 = meiste Coins oben
+const sortQ=L=>L.map((q,i)=>i).sort((a,b)=>QUEST_SORT*(L[a].coins-L[b].coins));
+const COINALL=NICE_PAY;
 // Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
   {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:100,schwer:200,extrem:400}},
@@ -2040,6 +2044,7 @@ function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
   (S.customQ||[]).forEach(o=>{if(!COINSTEPS[o.diff])o.diff='mittel';if(!S.payV2&&o.coins>=50)o.coins=QUEST_PAY(o.coins)});
   // einmalig: offene Quests von heute auf die neuen Belohnungen umrechnen
+  if(!S.payV3){(S.daily?S.daily.list:[]).concat(S.customQ||[]).forEach(q=>{if(!q.done)q.coins=roundPay(q.coins)});S.payV3=S.payV2=true;save()}
   if(!S.payV2){if(S.daily)S.daily.list.forEach(q=>{if(!q.done&&q.coins>=50)q.coins=QUEST_PAY(q.coins)});S.payV2=true;save()}
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
@@ -2104,7 +2109,7 @@ render(body,ctx){
     let html=`<div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Heute geschafft</small><b>🏆 ${doneN}/${L.length}</b></div></div>
       <div class="tabs"><button data-tab="today" class="${tab==='today'?'on':''}">📅 Heute</button><button data-tab="own" class="${tab==='own'?'on':''}">⭐ Eigene</button><button data-tab="hist" class="${tab==='hist'?'on':''}">📜 Verlauf</button></div>`;
     if(tab==='today'){
-      html+=L.map((q,i)=>{const d=dcol(q.diff);return `<div class="qcard ${q.done?'qdoneC':''}" style="--dc:${d[2]}"><div class="qic">${esc(q.i)}</div>
+      html+=sortQ(L).map(i=>{const q=L[i],d=dcol(q.diff);return `<div class="qcard ${q.done?'qdoneC':''}" data-qi="${i}" style="--dc:${d[2]}"><div class="qic">${esc(q.i)}</div>
         <div class="qt"><small class="qchip" style="background:${d[2]}">${d[1]}</small><b>${esc(q.title)}</b><small class="muted">${TAGS[q.tag]||''}${q.hint?' · '+esc(q.hint):''}</small><br><span class="coin">🪙 ${q.coins}</span></div>
         <div class="qbtns">${q.done?`<span class="qok">✅</span>`:`<button class="qdone" data-done="${i}">✓ Geschafft</button><button class="qre" data-re="${i}">🎲</button>`}</div></div>`}).join('');
       html+=`<div class="qfoot"><button class="btn" id="qAll">🔄 Neu würfeln</button><small class="muted">Neue Quests in ${untilMidnight()}</small></div>`;
@@ -2127,7 +2132,7 @@ render(body,ctx){
         if(q.done||!S.daily.list.includes(q))return;
         q.done=true;S.coins+=q.coins;S.questDone.unshift({i:q.i,title:q.title,coins:q.coins,diff:q.diff,t:Date.now()});S.questDone=S.questDone.slice(0,300);
         save();updateCoins();haptic('success');coinPop('+'+q.coins+' 🪙');notify('🏆','Quest geschafft!',`+${q.coins} Coins`,'#f5a524');draw();
-        const card=$$('.qcard',body)[S.daily.list.indexOf(q)];if(card)card.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:420,easing:SPRING});
+        const card=$(`.qcard[data-qi="${S.daily.list.indexOf(q)}"]`,body);if(card)card.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:420,easing:SPRING});
       });
     });
     const all=$('#qAll',body);if(all)all.onclick=()=>askCode('Tagesquests neu würfeln',()=>{S.daily.list=S.daily.list.map(q=>q.done?q:genQuest(q.diff,S.daily.list,q.kind));save();draw()});
