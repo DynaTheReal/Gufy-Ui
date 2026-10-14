@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.2","quick":true,"notes":["Quick-Update: Home-Taste ist nicht mehr abgeschnitten","Entwicklermodus: „Bildschirm anpassen“ – alles live nach unten schieben, bis es passt","Entwicklermodus: Namen von oben stehen jetzt zusätzlich unten im Info-Kasten"]};
+window.GUFY={"v":"5.3","quick":true,"notes":["Quick-Update: Der Bildschirm geht jetzt bis ganz nach unten – keine Lücke mehr","Home-Taste & Co. bleiben genau an ihrem Platz","Entwicklermodus: „Bildschirm anpassen“ zum Feinjustieren"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -811,6 +811,22 @@ body.devmode #devpanel{display:block}
 
 /* ===== 5.2: Bildschirm-Anpassung (Entwicklermodus) – verschiebt ALLES gemeinsam ===== */
 .screen{top:var(--adjT,0px)!important;bottom:var(--adjB,0px)!important}
+
+/* ===== 5.3: Bildschirme gehen auf Handys bis ganz nach unten (über die Lücke hinaus).
+   Alles, was unten sitzt, bleibt genau an seinem Platz. ===== */
+body.phone{--ext:120px}
+body.phone .screen{bottom:calc(var(--adjB,0px) - var(--ext))!important}
+body.phone #homebtn{bottom:calc(14px + env(safe-area-inset-bottom) + var(--ext))}
+body.phone #dots{bottom:calc(92px + env(safe-area-inset-bottom) + var(--ext))}
+body.phone .editbar{bottom:calc(22px + env(safe-area-inset-bottom) + var(--ext))}
+body.phone .storebar{bottom:calc(88px + env(safe-area-inset-bottom) + var(--ext))}
+body.phone .page{padding-bottom:calc(130px + var(--ext))}
+body.phone .appbody{padding-bottom:calc(110px + var(--ext))}
+body.phone .appbody.full{padding-bottom:calc(84px + var(--ext))}
+body.phone .center{bottom:var(--ext)}
+body.phone .lk-login{bottom:calc(12vh + var(--ext))}
+body.phone .sheet{bottom:var(--ext)}
+body.phone #setupCard{top:calc(50% - var(--ext) / 2)}
 </style>
 </head>
 <body class="dark">
@@ -1844,7 +1860,7 @@ setInterval(()=>{if(current==='desktop'&&!appCtx&&!G&&!springRaf)updateWidgets($
 
 /* ---------- Raster ---------- */
 function measureGrid(){
-  const home=$('#home');let W=home.clientWidth||innerWidth,H=home.clientHeight||innerHeight-30;
+  const home=$('#home');let W=home.clientWidth||innerWidth,H=(home.clientHeight||innerHeight-30)-(parseInt(getComputedStyle(document.body).getPropertyValue('--ext'))||0);
   const mobile=W<=700,cols=mobile?4:Math.max(4,Math.min(8,Math.floor((W-40)/104)));
   const rowh=mobile?Math.max(88,Math.min(100,Math.floor((W-40)/4)+8)):104;
   const rows=Math.max(3,Math.floor((H-20-130)/rowh));
