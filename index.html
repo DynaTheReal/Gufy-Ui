@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.5","notes":["Home-Taste reagiert jetzt immer","Neu: Beta-Einstellungen mit echtem Geräte-Akku"]};
+window.GUFY={"v":"3.6","notes":["Akku hält unterwegs jetzt 5 Stunden (−20 % pro Std.)","Powerbanks laden dafür viel mehr: 60 Min. = +20 %, 30 Min. = +10 %"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1146,12 +1146,13 @@ setInterval(tick,1000);
 
 /* =========================================================
    AKKU – läuft in Echtzeit, auch wenn GufyUI geschlossen ist
-   Unterwegs:            100 % in 24 Std.  → −4,17 %/h
+   Unterwegs:            100 % in 5 Std.   → −20 %/h
    Zu Hause (wach):      lädt langsam      → +2 %/h
    Zu Hause (Schlafen):  8 Std. = 100 %    → +12,5 %/h
    ========================================================= */
 let adminOK=false;const ADMIN='hyjfacf';
-const R_AWAY=-100/24, R_HOME=2, R_SLEEP=100/8;
+const AWAY_HOURS=5;  // so viele Stunden hält ein voller Akku unterwegs
+const R_AWAY=-100/AWAY_HOURS, R_HOME=2, R_SLEEP=100/8;
 const toMin=s=>{const[a,b]=s.split(':').map(Number);return a*60+b};
 function isSleepTime(d){
   const m=d.getHours()*60+d.getMinutes(),f=toMin(S.sleep.from),t=toMin(S.sleep.to);
@@ -1181,7 +1182,7 @@ const charging=()=>realOn()?(realBatt.charging&&S.battery.level<99.95):(rate(new
 function fmtDur(hrs){const m=Math.round(hrs*60),H=Math.floor(m/60),M=m%60;return H?`${H} Std. ${M} Min.`:`${M} Min.`}
 function statusInfo(){
   if(realOn())return realBatt.charging?{ic:'🔌',t:'Echter Akku · lädt',r:'Beta',col:'linear-gradient(135deg,#34c759,#0a8f3c)'}:{ic:'📱',t:'Echter Akku',r:'Beta',col:'linear-gradient(135deg,#636366,#2c2c2e)'};
-  if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:'−4,2 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
+  if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:'−20 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
   if(isSleepTime(new Date()))return{ic:'😴',t:'Schlafenszeit',r:'+12,5 % pro Std.',col:'linear-gradient(135deg,#5e5ce6,#2b1f7a)'};
   return{ic:'🏠',t:'Zu Hause',r:'+2 % pro Std.',col:'linear-gradient(135deg,#34c759,#0a8f3c)'};
 }
@@ -1255,7 +1256,7 @@ addEventListener('visibilitychange',()=>{batteryTick();save()});
 function setHome(v,quiet){
   if(S.loc.isHome===v)return;
   advance();S.loc.isHome=v;save();haptic();
-  if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 24 Std.).',v?'#34c759':'#ff9500');
+  if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 5 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
 }
@@ -1364,7 +1365,7 @@ function renderSetup(){
       <div class="walls">${WALLS.map((w,i)=>[w,i]).sort((a,b)=>(b[1]>=SCENE0)-(a[1]>=SCENE0)).map(([w,i])=>`<button data-wall="${i}" class="${i===tmp.wall?'sel':''}" style="background:${w}"></button>`).join('')}</div>`;
   }else if(step===5){
     html=`<div class="s-ico">📍</div><h1>Wo bist du gerade?</h1>
-      <p class="s-sub">Unterwegs verbraucht GufyUI Akku – 100 % halten 24 Stunden. Zu Hause lädt er langsam, beim Schlafen schnell.</p>
+      <p class="s-sub">Unterwegs verbraucht GufyUI Akku – 100 % halten 5 Stunden. Zu Hause lädt er langsam, beim Schlafen schnell.</p>
       <div class="themes">
         <button class="themecard ${tmp.isHome?'sel':''}" data-home="1"><div style="font-size:46px;padding:8px">🏠</div><b>Zu Hause</b></button>
         <button class="themecard ${!tmp.isHome?'sel':''}" data-home="0"><div style="font-size:46px;padding:8px">🚶</div><b>Unterwegs</b></button>
@@ -1980,7 +1981,7 @@ const ITEMS={
   pb60:{name:'Powerbank · 60 Min.',icon:'🔋',min:60,price:100,bg:'linear-gradient(135deg,#34c759,#0a7d33)'},
   pb30:{name:'Powerbank · 30 Min.',icon:'⚡',min:30,price:50,bg:'linear-gradient(135deg,#ffd60a,#ff9500)'}
 };
-const pctOf=it=>it.min/(24*60)*100;   // 24 Std. = 100 %
+const pctOf=it=>it.min/(AWAY_HOURS*60)*100;   // 5 Std. = 100 % → 60 Min. = 20 %
 function useItem(k){
   if(!(S.inv[k]>0))return;
   advance();
