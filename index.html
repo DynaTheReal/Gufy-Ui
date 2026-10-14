@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.6","notes":["In Apps reicht die App bis ganz nach oben neben die Dynamic Island – dort steht nur die Uhrzeit","Akku leer: Standort wird alle 10 Sekunden geprüft – zu Hause lädt er automatisch wieder","Akku leer: Admin-Panel mit Secret Code erreichbar"]};
+window.GUFY={"v":"4.7","notes":["Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus lässt sich dort direkt ausschalten (mit Secret Code)","Ist der Akku leer, wird ein Update sofort installiert"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -16,7 +16,9 @@ window.GUFY={"v":"4.6","notes":["In Apps reicht die App bis ganz nach oben neben
   window.gufyCmp=cmp;
   try{
     var inst=JSON.parse(localStorage.getItem('gufyui_inst')||'null');
-    if(inst&&inst.html&&cmp(inst.v,GUFY.v)<0){
+    var st=JSON.parse(localStorage.getItem('gufyui_v1')||'{}');
+    var dead=st.battery&&st.battery.level<=0&&!st.betaBatt;   // Akku leer → Update sofort installieren (man kommt sonst nicht zum Installieren)
+    if(inst&&inst.html&&cmp(inst.v,GUFY.v)<0&&!dead){
       localStorage.setItem('gufyui_pending',JSON.stringify({v:GUFY.v,notes:GUFY.notes}));
       document.write(inst.html.replace(/<head>/i,'<head><script>window.__GUFY_OLD=1<\/script>')+'<plaintext style="display:none">');
     }
@@ -870,6 +872,7 @@ body.phone.inapp #topcap{background:var(--bg)}
       <button class="btn" id="eInv">🎒 Inventar</button>
       <button class="btn" id="eHome">🏠 Ich bin zu Hause</button>
       <button class="btn" id="eAdmin">🛠️ Admin-Panel</button>
+      <button class="btn" id="eVac" style="display:none">🏖️ Urlaubsmodus aus</button>
     </div>
     <p id="eGeo" style="color:#777;font-size:13px;min-height:18px"></p>
     <button class="btn primary big" id="eOn" style="display:none">⏻ Einschalten</button>
@@ -1323,13 +1326,15 @@ function updateEmpty(){
   $('#bigBatt i').style.width=Math.min(100,lv)+'%';
   const st=statusInfo();
   $('#emptyTxt').textContent=dead
-    ?(rate(new Date())>0?`${st.ic} Lädt …`:(S.loc.isHome&&S.vacation?'🏖️ Urlaub: Ladestation fehlt':''))
+    ?(rate(new Date())>0?`${st.ic} Lädt …`:(S.loc.isHome&&S.vacation?'🏖️ Urlaubsmodus ist an – ohne Ladestation lädt der Akku zu Hause nicht':''))
     :'';
   const g=$('#eGeo');
   if(g)g.textContent=dead&&emptyGeoT?(S.loc.isHome?'📍 Zu Hause erkannt':'📍 Standort wird alle 10 Sek. geprüft …'+(emptyGeoAt?' (zuletzt vor '+Math.round((Date.now()-emptyGeoAt)/1000)+' s)':'')):'';
   $('#eHome').textContent=S.loc.mode==='gps'?'📍 Standort prüfen':(S.loc.isHome?'🚶 Ich bin unterwegs':'🏠 Ich bin zu Hause');
   $('#eOn').style.display=dead?'none':'';
+  $('#eVac').style.display=dead&&S.vacation&&!hasStation()?'':'none';
 }
+$('#eVac').onclick=()=>askCode('Urlaubsmodus ausschalten',()=>{advance();S.vacation=false;save();updateEmpty();notify('🏖️','Urlaubsmodus aus','Zu Hause lädt der Akku wieder.','#ff9f0a')});
 $('#eAdmin').onclick=()=>askCode('Admin-Panel',()=>{
   adminOK=true;show('desktop');renderHome();openApp('settings');emptyAdmin=true;
   setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('admin'),30);
