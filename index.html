@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.3","notes":["Neue Belohnungs-Stufen: 25, 50, 100, 200, 500 Coins","Leichte Quests sind jetzt schwerer, witziger und peinlicher"]};
+window.GUFY={"v":"4.4","notes":["Quests sind schwerer: mehr schwere & extreme, Sport mit höheren Zahlen","iPhone: Statusleiste wie beim echten iPhone – Uhrzeit links, Platz für die Dynamic Island","In Apps scheint oben kein Hintergrund mehr durch"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -739,6 +739,30 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
 
 .vacbar{background:linear-gradient(135deg,#ff9f0a,#ff375f);color:#fff;font-weight:700;font-size:14px;padding:11px 14px;border-radius:16px;margin-bottom:12px}
 .owned{font-weight:700;color:#30d158;font-size:14px;white-space:nowrap;padding:0 6px}
+
+/* ===== 4.4: iPhone-Statusleiste (Dynamic Island) ===== */
+:root{--sb:30px}
+body.ios{--sb:var(--sat,59px)}
+#statusbar{height:var(--sb)}
+#home,#appview{top:var(--sb)!important}
+#menu{top:calc(var(--sb) + 4px)}
+#cc{top:calc(var(--sb) + 6px)}
+#toasts{top:calc(var(--sb) + 8px)}
+.ios-time{display:none}
+body.ios #statusbar{padding:0 26px 0 30px;align-items:center}
+body.ios #statusbar .left,body.ios #statusbar .right{height:100%;align-items:center;padding-top:2px}
+body.ios #sbLogo,body.ios #sbApp,body.ios #sbCC .js-time,body.ios #sbCC .js-locicon{display:none}
+body.ios .ios-time{display:flex;font-size:17px;font-weight:600;letter-spacing:-.01em;padding:4px 6px}
+body.ios #statusbar .right{gap:4px}
+body.ios #statusbar .sb-coins{display:none}
+body.ios #sbCC{font-size:15px;font-weight:600;gap:5px}
+body.ios #sbCC .batt{width:27px;height:13px;border-radius:4.5px}
+/* in Apps: kein Hintergrund mehr neben der Dynamic Island */
+body.ios.inapp #statusbar{background:var(--bg)}
+body.ios .lk-top{top:calc(var(--sb) / 2 - 9px);right:26px}
+/* Home-Bildschirm-App: iOS zeigt Uhrzeit & Akku schon selbst → eigene ausblenden, Tippflächen bleiben */
+body.ios-sys .ios-time span,body.ios-sys #sbCC>*,body.ios-sys .sb-coins{opacity:0}
+body.ios-sys .lk-top{display:none}
 </style>
 </head>
 <body class="dark">
@@ -779,6 +803,7 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
     <div class="left">
       <button class="sb-btn" id="sbLogo"><b>G</b></button>
       <span id="sbApp">Home</span>
+      <button class="sb-btn ios-time" id="sbTime"><span class="js-time"></span></button>
     </div>
     <div class="right">
       <button class="sb-btn sb-coins" id="sbCoins">🪙 <span class="js-coins">0</span></button>
@@ -1470,6 +1495,18 @@ function tryUnlock(){
     $('#lkPw').value='';
   }
 }
+/* iPhone mit Dynamic Island / Notch erkennen (sicherer Bereich oben) */
+function detectIOS(){
+  const pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;left:0;width:1px;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none';
+  document.body.append(pr);let h=pr.getBoundingClientRect().height;pr.remove();
+  if(window.__satTest)h=window.__satTest;
+  const on=h>=40,was=document.body.classList.contains('ios');
+  document.documentElement.style.setProperty('--sat',Math.round(h)+'px');
+  document.body.classList.toggle('ios',on);
+  document.body.classList.toggle('ios-sys',on&&navigator.standalone===true); // Home-Bildschirm-App: iOS zeichnet Uhrzeit & Akku selbst
+  if(was!==on&&current==='desktop')renderHome();
+}
+detectIOS();addEventListener('resize',detectIOS);addEventListener('orientationchange',()=>setTimeout(detectIOS,300));
 function enterDesktop(){const was=current;show('desktop');renderHome();tick();announceUpdate();renderBattery();updateCoins();
   if(was!=='desktop'){$('#desktop').animate([{opacity:0,transform:'scale(1.08)'},{opacity:1,transform:'none'}],{duration:520,easing:EASE});
     const pg=$$('#track .page')[homePage];if(pg)stagger($$('.hitem',pg),{opacity:0,transform:'scale(.6)'},24)}
@@ -1924,6 +1961,7 @@ function closeMenus(){['#menu','#cc'].forEach(sel=>{const el=$(sel);if(!el.class
   el.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.92)'}],{duration:170,easing:'ease-in'}).onfinish=()=>{el.classList.remove('open');delete el.dataset.closing}})}
 function openMenu(sel){const el=$(sel);delete el.dataset.closing;el.getAnimations().forEach(a=>a.cancel());el.classList.add('open');
   el.animate([{opacity:0,transform:'scale(.86) translateY(-8px)'},{opacity:1,transform:'none'}],{duration:380,easing:SPRING});haptic('select')}
+$('#sbTime').onclick=e=>$('#sbLogo').onclick(e);
 $('#sbLogo').onclick=e=>{e.stopPropagation();if($('#menu').classList.contains('open'))return closeMenus();closeMenus();openMenu('#menu')};
 $('#sbCC').onclick=e=>{e.stopPropagation();if($('#cc').classList.contains('open'))return closeMenus();closeMenus();updateCC();openMenu('#cc')};
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#menu,#cc,#sbLogo,#sbCC'))closeMenus()});
@@ -1971,12 +2009,13 @@ const sortQ=L=>L.map((q,i)=>i).sort((a,b)=>QUEST_SORT*(L[a].coins-L[b].coins));
 const COINALL=NICE_PAY;
 // Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
-  {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:50,schwer:100,extrem:200}},
-  {i:'💪',g:'sport',t:n=>`Ihr müsst beide ${n} Liegestütze am Stück machen`,r:{mittel:[20,20],schwer:[35,40],extrem:[60,60]},cv:{mittel:25,schwer:50,extrem:200}},
-  {i:'🔥',g:'sport',t:n=>`Ihr müsst beide ${n} Burpees machen`,r:{mittel:[15,15],schwer:[25,30],extrem:[50,50]},cv:{mittel:25,schwer:50,extrem:200}},
-  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[10,10],schwer:[20,20],extrem:[40,40]},cv:{mittel:25,schwer:50,extrem:200},h:'Mit Helm'},
-  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km ohne Pause`,r:{mittel:[3,3],schwer:[5,5],extrem:[10,10]},cv:{mittel:50,schwer:100,extrem:200}},
-  {i:'🤸',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden Handstand an der Wand halten`,r:{mittel:[20,20],schwer:[40,45],extrem:[60,60]},cv:{mittel:25,schwer:50,extrem:200}}
+  {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[8,8],schwer:[12,12],extrem:[20,20]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'💪',g:'sport',t:n=>`Ihr müsst beide ${n} Liegestütze am Stück machen`,r:{mittel:[30,30],schwer:[50,50],extrem:[80,80]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'🔥',g:'sport',t:n=>`Ihr müsst beide ${n} Burpees machen`,r:{mittel:[25,25],schwer:[40,40],extrem:[70,70]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[15,15],schwer:[25,25],extrem:[50,50]},cv:{mittel:50,schwer:100,extrem:200},h:'Mit Helm'},
+  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km ohne Pause`,r:{mittel:[4,4],schwer:[7,7],extrem:[12,12]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'🤸',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden Handstand an der Wand halten`,r:{mittel:[30,30],schwer:[60,60],extrem:[90,90]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'🪑',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden an der Wand sitzen (Wandsitzen)`,r:{mittel:[90,90],schwer:[150,150],extrem:[240,240]},cv:{mittel:50,schwer:100,extrem:200}}
 ];
 // Fun: [Symbol, Text, Coins, p] – p=1 heißt „mit den Eltern“
 const QF={
@@ -2050,7 +2089,7 @@ function genQuest(diff,avoid,kind){
   return q;
 }
 // 5 Tagesquests: genau 1× Sport, immer 1× mit den Eltern, Rest witzig/peinlich
-const DAILY_SLOTS=[['mittel','fun'],['mittel','parents'],['schwer','sport'],['schwer','fun'],['extrem','fun']];
+const DAILY_SLOTS=[['mittel','fun'],['schwer','parents'],['schwer','sport'],['extrem','fun'],['extrem','fun']];
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
@@ -2058,13 +2097,17 @@ function ensureQuests(){
   // einmalig: offene Quests von heute auf die neuen Belohnungen umrechnen
   if(!S.payV3){(S.daily?S.daily.list:[]).concat(S.customQ||[]).forEach(q=>{if(!q.done)q.coins=roundPay(q.coins)});S.payV3=S.payV2=true;save()}
   if(!S.payV2){if(S.daily)S.daily.list.forEach(q=>{if(!q.done&&q.coins>=50)q.coins=QUEST_PAY(q.coins)});S.payV2=true;save()}
+  if(S.daily&&S.daily.day===dayKey()&&!S.questsV7){ // schwerere Tagesquests: offene heute neu würfeln
+    const L=S.daily.list;DAILY_SLOTS.forEach(([d,k],i)=>{if(L[i]&&!L[i].done)L[i]=genQuest(d,L.filter((_,j)=>j!==i),k)});
+    S.questsV7=S.questsV6=true;S.daily.v=2;save();
+  }
   if(S.daily&&S.daily.day===dayKey()&&S.daily.v===2&&!S.questsV6){ // neue Quests & Stufen: offene heute neu würfeln
     const L=S.daily.list;DAILY_SLOTS.forEach(([d,k],i)=>{if(L[i]&&!L[i].done)L[i]=genQuest(d,L.filter((_,j)=>j!==i),k)});
     (S.customQ||[]).forEach(o=>o.coins=roundPay(o.coins));S.questsV6=true;save();
   }
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
-    S.daily={day:dayKey(),list,v:2};S.questsV6=true;save();
+    S.daily={day:dayKey(),list,v:2};S.questsV6=S.questsV7=true;save();
   }else if(S.daily.v!==2){ // heutige Liste an die neuen Regeln anpassen, Erledigtes bleibt
     const L=S.daily.list;
     DAILY_SLOTS.forEach(([d,k],i)=>{const q=L[i];
