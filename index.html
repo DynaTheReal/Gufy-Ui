@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.7","notes":["Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus lässt sich dort direkt ausschalten (mit Secret Code)","Ist der Akku leer, wird ein Update sofort installiert"]};
+window.GUFY={"v":"4.8","notes":["Tipp in der Startanimation aufs G, um die Version zu sehen","Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus lässt sich dort direkt ausschalten · Updates werden bei leerem Akku sofort installiert"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -785,6 +785,10 @@ body.appfull #home{visibility:hidden}
 /* Kappe ganz oben in App-Farbe (wird vom Browser/System für den Bereich neben der Island genutzt) */
 #topcap{position:fixed;left:0;right:0;top:0;height:max(var(--sat),1px);z-index:450;pointer-events:none;background:transparent}
 body.phone.inapp #topcap{background:var(--bg)}
+
+/* Version beim Tippen aufs G in der Startanimation */
+#bootG{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bootver{position:absolute;left:50%;top:calc(50% + 150px);transform:translateX(-50%);padding:7px 14px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:600;letter-spacing:.02em;opacity:0;pointer-events:none;white-space:nowrap}
 </style>
 </head>
 <body class="dark">
@@ -792,7 +796,8 @@ body.phone.inapp #topcap{background:var(--bg)}
 <!-- BOOT -->
 <div id="boot" class="screen">
   <div class="center" style="gap:14px">
-    <div class="bmark">G</div>
+    <div class="bmark" id="bootG">G</div>
+    <div class="bootver" id="bootVer"></div>
     <div id="bootBrand">Gufy<b>UI</b></div>
     <div class="bootline"><i id="bootFill"></i></div>
     <div class="boottxt" id="bootTxt"></div>
@@ -1401,6 +1406,13 @@ function checkGeoOnce(){if(navigator.geolocation)navigator.geolocation.getCurren
 /* =========================================================
    BOOT
    ========================================================= */
+$('#bootG').addEventListener('pointerdown',e=>{
+  e.preventDefault();haptic('select');
+  const v=$('#bootVer');v.textContent='GufyUI '+GUFY.v;
+  v.getAnimations().forEach(a=>a.cancel());
+  v.animate([{opacity:0,transform:'translateX(-50%) translateY(6px) scale(.9)'},{opacity:1,transform:'translateX(-50%)',offset:.15},{opacity:1,transform:'translateX(-50%)',offset:.8},{opacity:0,transform:'translateX(-50%) translateY(-4px)'}],{duration:1800,easing:'ease-out'});
+  $('#bootG').animate([{transform:'scale(1)'},{transform:'scale(.9)'},{transform:'scale(1)'}],{duration:260,easing:'cubic-bezier(.2,1.3,.3,1)',composite:'add'});
+});
 function boot(){
   advance();
   show('boot');
