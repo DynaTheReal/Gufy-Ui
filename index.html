@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"4.9","quick":true,"notes":["Quick-Update: wird sofort installiert, auch bei leerem Akku","Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus aus & Admin-Panel direkt dort (mit Secret Code)","Tipp in der Startanimation aufs G, um die Version zu sehen"]};
+window.GUFY={"v":"5.0","notes":["Fehler behoben: Nach der Tastatur (z. B. beim Passwort) ist auf dem iPhone alles nach oben gerutscht","Uhrzeit oben ist wieder an ihrem Platz, unten keine Lücke mehr"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -791,6 +791,10 @@ body.phone.inapp #topcap{background:var(--bg)}
 /* Version beim Tippen aufs G in der Startanimation */
 #bootG{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .bootver{position:absolute;left:50%;top:calc(50% + 150px);transform:translateX(-50%);padding:7px 14px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:600;letter-spacing:.02em;opacity:0;pointer-events:none;white-space:nowrap}
+
+/* ===== 5.0: Seite fest am Bildschirm – iPhone darf sie nach der Tastatur nicht verschieben ===== */
+html,body{position:fixed!important;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+.screen{overflow:hidden}
 </style>
 </head>
 <body class="dark">
@@ -1415,6 +1419,16 @@ $('#bootG').addEventListener('pointerdown',e=>{
   v.animate([{opacity:0,transform:'translateX(-50%) translateY(6px) scale(.9)'},{opacity:1,transform:'translateX(-50%)',offset:.15},{opacity:1,transform:'translateX(-50%)',offset:.8},{opacity:0,transform:'translateX(-50%) translateY(-4px)'}],{duration:1800,easing:'ease-out'});
   $('#bootG').animate([{transform:'scale(1)'},{transform:'scale(.9)'},{transform:'scale(1)'}],{duration:260,easing:'cubic-bezier(.2,1.3,.3,1)',composite:'add'});
 });
+/* Falls iOS die Seite trotzdem verschiebt (Tastatur auf/zu): sofort zurück an ihren Platz */
+function resetShift(){
+  const se=document.scrollingElement||document.documentElement;
+  if(window.scrollY||se.scrollTop||document.body.scrollTop){window.scrollTo(0,0);se.scrollTop=0;document.body.scrollTop=0}
+  $$('.screen').forEach(x=>{if(x.scrollTop)x.scrollTop=0});
+}
+addEventListener('scroll',resetShift,{passive:true});
+document.addEventListener('focusout',()=>{setTimeout(resetShift,50);setTimeout(resetShift,350)});
+if(window.visualViewport){visualViewport.addEventListener('resize',()=>setTimeout(resetShift,60));visualViewport.addEventListener('scroll',()=>{if(!document.activeElement||!document.activeElement.matches('input,textarea'))resetShift()})}
+addEventListener('pageshow',resetShift);addEventListener('orientationchange',()=>setTimeout(resetShift,300));
 function boot(){
   advance();
   show('boot');
