@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"4.1","notes":["Quests sind nach Coins sortiert – wenigste oben","Nur noch glatte Belohnungen: 10, 20, 50, 100, 200 oder 500 Coins"]};
+window.GUFY={"v":"4.3","notes":["Neue Belohnungs-Stufen: 25, 50, 100, 200, 500 Coins","Leichte Quests sind jetzt schwerer, witziger und peinlicher"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -736,6 +736,9 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
 #appview{contain:strict}
 .qcard{animation:none}
 #track.drag{transition:none!important}
+
+.vacbar{background:linear-gradient(135deg,#ff9f0a,#ff375f);color:#fff;font-weight:700;font-size:14px;padding:11px 14px;border-radius:16px;margin-bottom:12px}
+.owned{font-weight:700;color:#30d158;font-size:14px;white-space:nowrap;padding:0 6px}
 </style>
 </head>
 <body class="dark">
@@ -1168,7 +1171,8 @@ function isSleepTime(d){
   if(f===t)return false;
   return f<t?(m>=f&&m<t):(m>=f||m<t);
 }
-function rate(d,lv){if(!S.loc.isHome)return R_AWAY;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
+const hasStation=()=>(S.inv&&S.inv.station>0);
+function rate(d,lv){if(!S.loc.isHome)return R_AWAY;if(S.vacation&&!hasStation())return 0;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
 let realBatt=null;
 if(navigator.getBattery)navigator.getBattery().then(b=>{realBatt=b;['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,()=>{if(S.betaBatt)batteryTick()}));if(S.betaBatt)batteryTick()}).catch(()=>{});
 const realOn=()=>!!(S.betaBatt&&realBatt);
@@ -1202,6 +1206,8 @@ function statusInfo(){
   if(realOn())return realBatt.charging?{ic:'🔌',t:'Echter Akku · lädt',r:'Beta',col:'linear-gradient(135deg,#34c759,#0a8f3c)'}:{ic:'📱',t:'Echter Akku',r:'Beta',col:'linear-gradient(135deg,#636366,#2c2c2e)'};
   if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:inUse()?'−40 % pro Std. (in Benutzung)':'−20 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
   const full=S.battery.level>=99.95;
+  if(S.vacation&&!hasStation())return{ic:'🏖️',t:'Urlaub · Zu Hause',r:'Lädt nicht – Ladestation fehlt',col:'linear-gradient(135deg,#ff9f0a,#ff375f)'};
+  if(S.vacation)return{ic:'🔌',t:'Urlaub · Ladestation',r:full?'Voll geladen':'Lädt über Ladestation',col:'linear-gradient(135deg,#30b0c7,#0a84ff)'};
   if(isSleepTime(new Date()))return{ic:'😴',t:'Schlafenszeit',r:full?'Voll geladen':'Lädt',col:'linear-gradient(135deg,#5e5ce6,#2b1f7a)'};
   return{ic:'🏠',t:'Zu Hause',r:full?'Voll geladen':(S.battery.level<80?'Lädt schnell':'Lädt langsam'),col:'linear-gradient(135deg,#34c759,#0a8f3c)'};
 }
@@ -1210,6 +1216,7 @@ function remainText(){
   if(realOn()){const c=realBatt.charging,t=c?realBatt.chargingTime:realBatt.dischargingTime;
     if(c&&lv>=99.95)return 'Voll geladen';
     return isFinite(t)&&t>0?(c?'Voll in ':'Reicht noch ')+approxDur(t/3600):(c?'Lädt …':'Vom Gerät');}
+  if(rate(new Date())===0)return lv>=99.95?'Voll geladen':'Lädt nicht';
   if(rate(new Date())<0)return 'Reicht noch '+approxDur(lv/(-R_AWAY*(inUse()?USE_MULT:1)));
   if(lv>=99.95)return 'Voll geladen';
   let t=Date.now(),l=lv;
@@ -1954,63 +1961,68 @@ $('#bright').oninput=e=>{S.brightness=+e.target.value;applyLook();save()};
 const DIFFS=[['mittel','Mittel','#e0a800','🟡'],['schwer','Schwer','#ff9500','🟠'],['extrem','Extrem','#ff3b30','🔴']];
 const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit Eltern',own:'⭐ Eigene'};
 // Erlaubte Belohnungen je Schwierigkeit (kein 25er mehr)
-const COINSTEPS={mittel:[50,100],schwer:[100,200,300],extrem:[300,400,500,1000]};
+const COINSTEPS={mittel:[25,50],schwer:[50,100],extrem:[100,200,500]};
 // Belohnung = Grundwert × 2 ÷ 10 (z. B. 50 → 10, 400 → 80, 1000 → 200)
-const NICE_PAY=[10,20,50,100,200,500];               // nur glatte Belohnungen
+const NICE_PAY=[25,50,100,200,500];               // Belohnungs-Stufen
 const roundPay=v=>NICE_PAY.reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)||(Math.abs(x-v)===Math.abs(b-v)&&x>b)?x:b);
-const QUEST_PAY=v=>roundPay(v*2/10);
+const QUEST_PAY=v=>roundPay(v);   // Werte stehen direkt bei den Quests
 const QUEST_SORT=1;   // 1 = wenigste Coins oben, -1 = meiste Coins oben
 const sortQ=L=>L.map((q,i)=>i).sort((a,b)=>QUEST_SORT*(L[a].coins-L[b].coins));
 const COINALL=NICE_PAY;
 // Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
-  {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:100,schwer:200,extrem:400}},
-  {i:'💪',g:'sport',t:n=>`Ihr müsst beide ${n} Liegestütze am Stück machen`,r:{mittel:[20,20],schwer:[35,40],extrem:[60,60]},cv:{mittel:50,schwer:100,extrem:300}},
-  {i:'🔥',g:'sport',t:n=>`Ihr müsst beide ${n} Burpees machen`,r:{mittel:[15,15],schwer:[25,30],extrem:[50,50]},cv:{mittel:50,schwer:100,extrem:300}},
-  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[10,10],schwer:[20,20],extrem:[40,40]},cv:{mittel:50,schwer:100,extrem:300},h:'Mit Helm'},
-  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km ohne Pause`,r:{mittel:[3,3],schwer:[5,5],extrem:[10,10]},cv:{mittel:100,schwer:200,extrem:400}},
-  {i:'🤸',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden Handstand an der Wand halten`,r:{mittel:[20,20],schwer:[40,45],extrem:[60,60]},cv:{mittel:50,schwer:100,extrem:300}}
+  {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'💪',g:'sport',t:n=>`Ihr müsst beide ${n} Liegestütze am Stück machen`,r:{mittel:[20,20],schwer:[35,40],extrem:[60,60]},cv:{mittel:25,schwer:50,extrem:200}},
+  {i:'🔥',g:'sport',t:n=>`Ihr müsst beide ${n} Burpees machen`,r:{mittel:[15,15],schwer:[25,30],extrem:[50,50]},cv:{mittel:25,schwer:50,extrem:200}},
+  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[10,10],schwer:[20,20],extrem:[40,40]},cv:{mittel:25,schwer:50,extrem:200},h:'Mit Helm'},
+  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km ohne Pause`,r:{mittel:[3,3],schwer:[5,5],extrem:[10,10]},cv:{mittel:50,schwer:100,extrem:200}},
+  {i:'🤸',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden Handstand an der Wand halten`,r:{mittel:[20,20],schwer:[40,45],extrem:[60,60]},cv:{mittel:25,schwer:50,extrem:200}}
 ];
 // Fun: [Symbol, Text, Coins, p] – p=1 heißt „mit den Eltern“
 const QF={
   mittel:[
-    ['🤖','Bestell beim Bäcker in Roboterstimme',100],
-    ['👠','Lauf einen Catwalk durch einen Supermarktgang',100],
-    ['🥒','Telefonier draußen 2 Minuten mit einer Gurke als Handy',100],
-    ['🦆','Watschel 1 Minute wie eine Ente durch einen Supermarktgang',100],
-    ['🗿','Steh 2 Minuten draußen wie eine Statue – ohne dich zu bewegen',100],
-    ['🎙️','Kommentiere wie ein Fußballreporter live, wie deine Eltern kochen',100,1],
-    ['🧀','Geh ernst zu deinen Eltern: „Wir müssen reden …“ – und halt einen Vortrag über Käse',50,1],
-    ['🏴‍☠️','Sprich eine Stunde nur mit Piratenstimme – auch mit deinen Eltern',50,1],
-    ['🎭','Sing beim Abendessen jede Bitte („Gib mir mal das Salz“) wie ein Opernsänger',50,1],
-    ['🙇','Begrüß heute jedes Familienmitglied mit Verbeugung und „Seid gegrüßt“',50,1],
-    ['🐒','Mach Affengeräusche, wenn ein Elternteil das Zimmer betritt – eine Stunde lang',50,1],
-    ['🛎️','Klopf bei deinen Eltern, ruf „Zimmerservice!“ und serviere ein Glas Wasser im Kellner-Akzent',50,1],
-    ['🤖','Frag deine Eltern mit Roboterstimme, ob ihre Software ein Update braucht',50,1],
-    ['🪞','Stell dich hinter Mama oder Papa und mach 2 Minuten jede Bewegung nach',100,1]
+    // draußen & peinlich
+    ['🤖','Bestell beim Bäcker komplett in Roboterstimme – auch beim Bezahlen und „Tschüss“',50],
+    ['👠','Lauf einen Catwalk durch den Supermarkt – mit Drehung und Pose am Ende jedes Gangs',50],
+    ['🥒','Telefonier 3 Minuten draußen laut mit einer Gurke als Handy – mit echtem „Streitgespräch“',25],
+    ['🦆','Watschel einmal quer durch den Supermarkt wie eine Ente – mit Quaken',50],
+    ['🗿','Steh 5 Minuten an einer belebten Stelle wie eine Statue – Zucken zählt nicht',25],
+    ['🧦','Geh mit Socken als Handschuhen einkaufen – und benimm dich, als wäre das normal',50],
+    ['🩲','Trag einen Nachmittag lang eine Unterhose über der Hose – auch draußen',50],
+    ['🐌','Geh 100 m auf dem Gehweg in kompletter Zeitlupe – mit Zeitlupen-Gesicht',25],
+    // mit den Eltern
+    ['🧀','Halte vor der ganzen Familie einen 3-Minuten-Vortrag über Käse – todernst. Lachst du, ist die Quest verloren',25,1],
+    ['🎙️','Kommentiere 5 Minuten live wie ein Fußballreporter, was deine Eltern machen – mit lautem Torjubel',25,1],
+    ['🍽️','Bediene deine Eltern das ganze Abendessen als übertriebener Kellner – Handtuch über dem Arm, Akzent, Verbeugung',50,1],
+    ['🏴‍☠️','Sprich einen ganzen Nachmittag nur mit Piratenstimme – vergisst du es, fängst du von vorn an',50,1],
+    ['🎭','Sing das ganze Abendessen JEDEN Satz wie ein Opernsänger',25,1],
+    ['📣','Kündige 2 Stunden lang jedes Mal wie ein Stadionsprecher an, wenn ein Elternteil den Raum betritt',25,1],
+    ['🤖','Spiel deinen Eltern ein „Software-Update“ vor: Roboterstimme, Ladebalken-Geräusche und Update-Tanz',25,1],
+    ['🪞','Mach 5 Minuten jede Bewegung von Mama oder Papa nach – bis sie lachen oder aufgeben',25,1]
   ],
   schwer:[
-    ['🗺️','Frag eine fremde Person nach dem Weg – komplett in Reimform',200],
-    ['🌟','Wink 10 Leuten zu wie ein Weltstar auf dem roten Teppich',200],
-    ['👔','Dein Freund sucht dein Outfit aus – und du gehst so raus',300],
-    ['🛒','Frag im Laden ganz ernst, ob es „unsichtbare Schuhe“ gibt',200],
-    ['🎶','Sing draußen 30 Sekunden laut den Refrain deines Lieblingssongs',200],
-    ['👟','Geh mit zwei verschiedenen Schuhen eine Runde durch die Stadt',100],
-    ['🤖','Beweg dich draußen 15 Minuten nur wie ein Roboter',200],
-    ['🎤','Antworte deinen Eltern 30 Minuten lang nur als Musical-Lied',200,1],
-    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken',100,1],
-    ['🕵️','Begrüß Mama oder Papa als Geheimagent – mit Sonnenbrille und Codewort',100,1]
+    ['🗺️','Frag eine fremde Person nach dem Weg – komplett in Reimform',100],
+    ['🌟','Wink 20 Leuten zu wie ein Weltstar – und gib einem davon ein „Autogramm“',100],
+    ['👔','Dein Freund sucht dein Outfit aus – und du gehst so raus',100],
+    ['🛒','Frag im Laden ganz ernst, ob es „unsichtbare Schuhe“ gibt',100],
+    ['🎶','Sing draußen 30 Sekunden laut den Refrain deines Lieblingssongs',50],
+    ['👟','Geh mit zwei verschiedenen Schuhen eine Runde durch die Stadt',50],
+    ['🤖','Beweg dich draußen 15 Minuten nur wie ein Roboter',100],
+    ['🎤','Antworte deinen Eltern 30 Minuten lang nur als Musical-Lied',100,1],
+    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken – mit Wetterbericht',50,1],
+    ['🕵️','Begrüß Mama oder Papa als Geheimagent – mit Sonnenbrille und Codewort',50,1]
   ],
   extrem:[
-    ['🦸','Ein ganzer Tag als Superheld: Kostüm, Heldenname, Heldenstimme',500],
-    ['🎥','Musikvideo in voller Verkleidung drehen und der Familie vorspielen',400],
-    ['🎶','Sing draußen laut einen Song, bis jemand klatscht oder lacht',500],
-    ['🖼️','Dein Freund sucht dein Profilbild aus – 24 Stunden lang',300],
-    ['🕺','Tanz 1 Minute in der Fußgängerzone, bis jemand lacht oder mitmacht',500],
-    ['🧙','Geh komplett verkleidet einkaufen – und bleib die ganze Zeit in der Rolle',400],
-    ['📢','Halte draußen eine 1-Minuten-Rede darüber, warum Käse die Welt rettet',400],
-    ['🎭','Spielt euren Eltern beim Abendessen ein selbst erfundenes Theaterstück vor',400,1],
-    ['🎩','Beantworte einen ganzen Abend alle Sätze deiner Eltern mit „Sehr wohl, Herrschaften“',300,1]
+    ['🦸','Ein ganzer Tag als Superheld: Kostüm, Heldenname, Heldenstimme',200],
+    ['🎥','Musikvideo in voller Verkleidung drehen und der Familie vorspielen',200],
+    ['🎶','Sing draußen laut einen Song, bis jemand klatscht oder lacht',200],
+    ['🖼️','Dein Freund sucht dein Profilbild aus – 24 Stunden lang',100],
+    ['🕺','Tanz 1 Minute in der Fußgängerzone, bis jemand lacht oder mitmacht',200],
+    ['🧙','Geh komplett verkleidet einkaufen – und bleib die ganze Zeit in der Rolle',200],
+    ['📢','Halte draußen eine 1-Minuten-Rede darüber, warum Käse die Welt rettet',100],
+    ['🎭','Spielt euren Eltern beim Abendessen ein selbst erfundenes Theaterstück vor',200,1],
+    ['🎩','Beantworte einen ganzen Abend alle Sätze deiner Eltern mit „Sehr wohl, Herrschaften“',100,1],
+    ['🏆','Mini-Olympiade mit 5 Disziplinen – mit Siegerehrung, Hymne und Medaillen',500]
   ]
 };
 const snapCoins=(raw,diff)=>COINSTEPS[diff].reduce((b,v)=>Math.abs(v-raw)<Math.abs(b-raw)?v:b);
@@ -2046,9 +2058,13 @@ function ensureQuests(){
   // einmalig: offene Quests von heute auf die neuen Belohnungen umrechnen
   if(!S.payV3){(S.daily?S.daily.list:[]).concat(S.customQ||[]).forEach(q=>{if(!q.done)q.coins=roundPay(q.coins)});S.payV3=S.payV2=true;save()}
   if(!S.payV2){if(S.daily)S.daily.list.forEach(q=>{if(!q.done&&q.coins>=50)q.coins=QUEST_PAY(q.coins)});S.payV2=true;save()}
+  if(S.daily&&S.daily.day===dayKey()&&S.daily.v===2&&!S.questsV6){ // neue Quests & Stufen: offene heute neu würfeln
+    const L=S.daily.list;DAILY_SLOTS.forEach(([d,k],i)=>{if(L[i]&&!L[i].done)L[i]=genQuest(d,L.filter((_,j)=>j!==i),k)});
+    (S.customQ||[]).forEach(o=>o.coins=roundPay(o.coins));S.questsV6=true;save();
+  }
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
-    S.daily={day:dayKey(),list,v:2};save();
+    S.daily={day:dayKey(),list,v:2};S.questsV6=true;save();
   }else if(S.daily.v!==2){ // heutige Liste an die neuen Regeln anpassen, Erledigtes bleibt
     const L=S.daily.list;
     DAILY_SLOTS.forEach(([d,k],i)=>{const q=L[i];
@@ -2065,11 +2081,15 @@ function ensureQuests(){
    ========================================================= */
 const ITEMS={
   pb60:{name:'Powerbank · 60 Min.',icon:'🔋',min:60,price:100,bg:'linear-gradient(135deg,#34c759,#0a7d33)'},
-  pb30:{name:'Powerbank · 30 Min.',icon:'⚡',min:30,price:50,bg:'linear-gradient(135deg,#ffd60a,#ff9500)'}
+  pb30:{name:'Powerbank · 30 Min.',icon:'⚡',min:30,price:50,bg:'linear-gradient(135deg,#ffd60a,#ff9500)'},
+  // nur im Urlaubsmodus erhältlich
+  travel:{name:'Reise-Powerbank · 120 Min.',icon:'🧳',min:120,price:200,vac:true,bg:'linear-gradient(135deg,#ff9f0a,#ff375f)'},
+  station:{name:'Ladestation',icon:'🔌',price:500,vac:true,perm:true,bg:'linear-gradient(135deg,#30b0c7,#0a84ff)'}
 };
+const shopItems=()=>Object.entries(ITEMS).filter(([k,it])=>!it.vac||S.vacation);
 const pctOf=it=>it.min/(AWAY_HOURS*60)*100;   // 5 Std. = 100 % → 60 Min. = 20 %
 function useItem(k){
-  if(!(S.inv[k]>0))return;
+  if(!(S.inv[k]>0)||ITEMS[k].perm)return;
   advance();
   if(realOn()){notify('🧪','Beta: Echter Akku','Powerbanks gehen nur ohne den echten Geräte-Akku.','#636366');return}
   if(S.battery.level>=99.95){notify('🔋','Akku ist schon voll','Heb dir die Powerbank für später auf.');return}
@@ -2086,8 +2106,8 @@ function renderInventory(c,after){
   c.innerHTML=`<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between"><b>🔋 Akku</b><b>${fmtPct(lv)}</b></div>
       <div class="barwrap"><i style="width:${lv}%;background:${col}"></i></div></div>`+
     (owned.length?owned.map(k=>{const it=ITEMS[k];return `<div class="item"><div class="itemic" style="background:${it.bg}">${it.icon}</div>
-      <div class="qt"><b>${it.name}</b><small class="muted">+${fmtPct(pctOf(it))} · <b>${S.inv[k]}×</b></small></div>
-      <button class="btn primary" data-use="${k}" ${lv>=99.95?'disabled':''}>Einlösen</button></div>`}).join('')
+      <div class="qt"><b>${it.name}</b><small class="muted">${it.perm?(S.vacation?'Aktiv – lädt zu Hause':'Wird nur im Urlaubsmodus gebraucht'):'+'+fmtPct(pctOf(it))+' · <b>'+S.inv[k]+'×</b>'}</small></div>
+      ${it.perm?`<span class="owned">${S.vacation?'⚡ Aktiv':'✓'}</span>`:`<button class="btn primary" data-use="${k}" ${lv>=99.95?'disabled':''}>Einlösen</button>`}</div>`}).join('')
      :`<div class="emptyinv"><div>🎒</div><b>Inventar leer</b></div>`);
   $$('[data-use]',c).forEach(b=>b.onclick=()=>{useItem(b.dataset.use);renderInventory(c,after);if(after)after()});
 }
@@ -2140,7 +2160,7 @@ render(body,ctx){
     const nq=$('#qNew',body);if(nq)nq.onclick=()=>askCode('Quest erstellen',form);
   }
   function form(){
-    let fd='mittel',fc=20;
+    let fd='mittel',fc=25;
     function fdraw(){
       body.innerHTML=`<h2 style="font-size:22px;margin-bottom:14px">＋ Neue Quest</h2>
         <div style="display:flex;gap:8px;margin-bottom:10px"><input class="input" id="fI" value="⭐" maxlength="4" style="width:70px;text-align:center;font-size:24px"><input class="input" id="fT" placeholder="Was muss man machen?" maxlength="120"></div>
@@ -2172,7 +2192,7 @@ render(body,ctx){
   let tab='apps';const busy={};
   const bar=h(`<div class="storebar glass"><button data-st="apps"><span>📱</span>Apps</button><button data-st="items"><span>🎒</span>Gegenstände</button></div>`);
   $('#appview').append(bar);
-  body.style.paddingBottom='70px';
+  body.style.paddingBottom='150px';
   $$('[data-st]',bar).forEach(b=>b.onclick=()=>{if(tab===b.dataset.st)return;tab=b.dataset.st;haptic('select');draw();fadeIn(body)});
   const storeIds=()=>Object.keys(APPS).filter(id=>APPS[id].store);
   function btn(id){
@@ -2190,9 +2210,9 @@ render(body,ctx){
     }else{
       body.innerHTML=`<div class="sthead">Gegenstände</div>
         <div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Akku</small><b>🔋 ${dispPct()} %</b></div></div>
-        ${Object.entries(ITEMS).map(([k,it])=>`<div class="item"><div class="itemic" style="background:${it.bg}">${it.icon}</div>
-          <div class="qt"><b>${it.name}</b><small class="muted">+${fmtPct(pctOf(it))} · ${S.inv[k]||0}× im Inventar</small><br><span class="price">🪙 ${it.price}</span></div>
-          <button class="btn gold" data-buy="${k}" ${S.coins<it.price?'disabled':''}>Kaufen</button></div>`).join('')}`;
+        ${S.vacation?'<div class="vacbar">🏖️ Urlaubsmodus – neue Items verfügbar</div>':''}${shopItems().map(([k,it])=>`<div class="item"><div class="itemic" style="background:${it.bg}">${it.icon}</div>
+          <div class="qt"><b>${it.name}</b><small class="muted">${it.perm?'Lädt im Urlaub zu Hause':'+'+fmtPct(pctOf(it))+' · '+(S.inv[k]||0)+'× im Inventar'}</small><br><span class="price">🪙 ${it.price}</span></div>
+          ${it.perm&&S.inv[k]>0?'<span class="owned">✓ Gekauft</span>':`<button class="btn gold" data-buy="${k}" ${S.coins<it.price?'disabled':''}>Kaufen</button>`}</div>`).join('')}`;
     }
     $$('[data-get]',body).forEach(b=>b.onclick=()=>{
       const id=b.dataset.get;busy[id]=0;draw();
@@ -2204,7 +2224,7 @@ render(body,ctx){
     $$('[data-open2]',body).forEach(b=>b.onclick=()=>openApp(b.dataset.open2));
     $$('[data-rm]',body).forEach(b=>b.onclick=()=>{const id=b.dataset.rm;S.installed=S.installed.filter(x=>x!==id);save();renderHome();draw()});
     $$('[data-buy]',body).forEach(b=>b.onclick=()=>{
-      const k=b.dataset.buy,it=ITEMS[k];if(S.coins<it.price)return;
+      const k=b.dataset.buy,it=ITEMS[k];if(S.coins<it.price||(it.perm&&S.inv[k]>0))return;
       S.coins-=it.price;S.inv[k]=(S.inv[k]||0)+1;save();updateCoins();
       haptic('success');coinPop('−'+it.price+' 🪙');notify('🛍️','Gekauft!',it.name+' liegt jetzt in deinem Inventar.','#f5a524');draw();
     });
@@ -2374,6 +2394,7 @@ render(body,ctx){
         ${row('🌙','#5e5ce6','Dunkelmodus',sw('hDark',S.theme==='dark'))}
         ${row('🔕','#8e8e93','Nicht stören',sw('hDnd',S.dnd))}
         ${row('📳','#ff375f','Haptisches Feedback',sw('hHap',S.haptics!==false))}
+        ${row('🏖️','#ff9f0a','Urlaubsmodus',sw('hVac',!!S.vacation))}
         ${row('☀️','#ff9f0a','Helligkeit',`<input type="range" id="hBr" min="25" max="100" value="${S.brightness}" style="width:42%;accent-color:var(--accent)">`)}
       </div>
       <div class="sgroup">
@@ -2394,6 +2415,12 @@ render(body,ctx){
     $('#hDark',body).onchange=e=>{S.theme=e.target.checked?'dark':'light';save();applyLook();renderBattery()};
     $('#hDnd',body).onchange=e=>{S.dnd=e.target.checked;save();updateCC()};
     $('#hHap',body).onchange=e=>{S.haptics=e.target.checked;save();haptic()};
+    $('#hVac',body).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
+      askCode(v?'Urlaubsmodus einschalten':'Urlaubsmodus ausschalten',()=>{
+        advance(inUse()?USE_MULT:1);S.vacation=v;save();renderBattery();updateCC();
+        const t=$('#hVac',body);if(t)t.checked=v;
+        notify('🏖️',v?'Urlaubsmodus an':'Urlaubsmodus aus',v?(hasStation()?'Zu Hause lädt jetzt deine Ladestation.':'Zu Hause wird nicht geladen – im Gufy Store gibt es die Ladestation.'):'Laden zu Hause funktioniert wieder normal.','#ff9f0a');
+      })};
     $('#hBr',body).oninput=e=>{S.brightness=+e.target.value;save();applyLook()};
     $('#hOut',body).onclick=()=>logout();
     bindNav();
