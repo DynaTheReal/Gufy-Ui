@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.0","notes":["Fehler behoben: Nach der Tastatur (z. B. beim Passwort) ist auf dem iPhone alles nach oben gerutscht","Uhrzeit oben ist wieder an ihrem Platz, unten keine Lücke mehr"]};
+window.GUFY={"v":"5.1","quick":true,"notes":["Quick-Update: Fehler behoben – auf dem iPhone ist alles hochgerutscht und unten war eine Lücke","Uhrzeit oben ist wieder sichtbar","Neu: Entwicklermodus in den Einstellungen (mit Secret Code) – zeigt den Namen jedes Bildschirm-Teils"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -772,8 +772,7 @@ body.island #statusbar .sb-coins,body.island #sbCC .js-locicon{display:none}
 body.phone.inapp #statusbar{background:var(--bg)}
 body.island .lk-top{top:calc(var(--sb) / 2 - 7px);right:30px}
 /* Als App auf dem Home-Bildschirm zeichnet das System Uhrzeit & Akku selbst an genau diese Stellen */
-body.sysbar .ios-time span,body.sysbar #sbCC>*{opacity:0}
-body.sysbar .lk-top{display:none}
+
 
 /* ===== 4.6: In Apps reicht die App bis ganz nach oben – dort steht nur die Uhrzeit ===== */
 body.phone #statusbar{position:fixed}
@@ -795,6 +794,24 @@ body.phone.inapp #topcap{background:var(--bg)}
 /* ===== 5.0: Seite fest am Bildschirm – iPhone darf sie nach der Tastatur nicht verschieben ===== */
 html,body{position:fixed!important;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 .screen{overflow:hidden}
+
+/* ===== 5.1: iPhone Home-Bildschirm-App – echte Bildschirmhöhe, kein „Void“ unten ===== */
+body.fullfix,html:has(body.fullfix){height:var(--fullh)!important;bottom:auto!important}
+body.fullfix .screen{bottom:auto;height:var(--fullh)}
+
+/* Entwicklermodus: Namen aller sichtbaren Oberflächen */
+#devlayer{position:fixed;inset:0;z-index:2500;pointer-events:none;display:none}
+body.devmode #devlayer{display:block}
+.devbox{position:fixed;border:1.5px dashed rgba(48,209,88,.9);border-radius:6px;pointer-events:none}
+.devbox.scr{border:2px solid #ff375f;border-radius:0}
+.devbox.app{border-color:#0a84ff}
+.devbox b{position:absolute;left:-1px;top:-1px;background:rgba(48,209,88,.95);color:#000;font:700 10px/1.3 ui-monospace,Menlo,monospace;padding:1px 4px;border-radius:4px 0 4px 0;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.devbox.scr b{background:#ff375f;color:#fff;font-size:11px;left:auto;right:-1px;top:auto;bottom:-1px;border-radius:4px 0 0 0}
+.devbox.app b{left:auto;right:-1px;border-radius:0 4px 0 4px}
+.devbox.app b{background:#0a84ff;color:#fff}
+#devpanel{position:fixed;left:8px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2501;display:none;background:rgba(0,0,0,.82);color:#30d158;font:600 11px/1.45 ui-monospace,Menlo,monospace;padding:7px 9px;border-radius:10px;max-width:calc(100vw - 16px);white-space:pre-wrap;pointer-events:auto}
+body.devmode #devpanel{display:block}
+#devpanel.min{opacity:.55}
 </style>
 </head>
 <body class="dark">
@@ -904,6 +921,7 @@ html,body{position:fixed!important;inset:0;width:100%;height:100%;overflow:hidde
   </div>
 </div>
 
+<div id="devlayer"></div><div id="devpanel"></div>
 <div id="toasts"></div>
 <div id="ctxmenu" class="glass"></div>
 <div id="cfm"></div>
@@ -1429,6 +1447,38 @@ addEventListener('scroll',resetShift,{passive:true});
 document.addEventListener('focusout',()=>{setTimeout(resetShift,50);setTimeout(resetShift,350)});
 if(window.visualViewport){visualViewport.addEventListener('resize',()=>setTimeout(resetShift,60));visualViewport.addEventListener('scroll',()=>{if(!document.activeElement||!document.activeElement.matches('input,textarea'))resetShift()})}
 addEventListener('pageshow',resetShift);addEventListener('orientationchange',()=>setTimeout(resetShift,300));
+/* =========================================================
+   ENTWICKLERMODUS – zeigt den Namen jedes sichtbaren UI-Teils
+   ========================================================= */
+const SCREEN_NAMES={boot:'Startanimation',setup:'Einrichtung',lock:'Sperrbildschirm',desktop:'Homescreen',empty:'Akku-leer-Bildschirm',off:'Aus-Bildschirm'};
+const DEV_PARTS=[
+  ['#statusbar','Statusleiste'],['#sbTime','Uhrzeit'],['#sbCC','Akku-Anzeige'],['#sbCoins','Coins-Anzeige'],['#sbLogo','G-Knopf'],
+  ['#topcap','Obere Kappe (neben Island)'],['#homebtn','Home-Taste'],['#dots','Seitenpunkte'],['.editbar','Bearbeiten-Leiste'],
+  ['#menu.open','G-Menü'],['#cc.open','Kontrollzentrum'],['#ctxmenu.open','Kontextmenü'],['#pin.open .pinbox','Code-Eingabe'],['#cfm.open .pinbox','Bestätigung'],
+  ['.toast','Mitteilung'],['#wsheet.open','Widget-Galerie'],['.sheet.open','Inventar-Fenster'],
+  ['.apphead','App-Titelleiste'],['.storebar','Store-Leiste'],['.tabs','Tabs'],['.hero','Info-Kacheln'],['.qcard','Quest-Karte'],['.item','Gegenstand'],
+  ['.sgroup','Einstellungs-Gruppe'],['.sprof','Profil-Karte'],['.mapcard','Karte'],['.locstat','Standort-Status'],['.strow','Store-App-Zeile'],['.feat','Spiel des Tages'],
+  ['.lk-time','Uhr (Sperrbildschirm)'],['.lk-login','Anmeldung'],['.lk-top','Akku (Sperrbildschirm)'],
+  ['#setupCard','Einrichtungs-Karte'],['.bmark','G-Logo'],['#bootBrand','Schriftzug'],['.bootline','Ladebalken'],
+  ['#bigBatt','Akku-Symbol'],['#emptyTitle','Akku-Text'],['.ebtns','Akku-leer-Knöpfe'],['#eOn','Einschalten-Knopf']
+];
+let devT=null;
+function devSync(){document.body.classList.toggle('devmode',!!S.dev);clearInterval(devT);if(S.dev){devDraw();devT=setInterval(devDraw,600)}else $('#devlayer').innerHTML=''}
+function devDraw(){
+  const L=$('#devlayer'),out=[],W=innerWidth,H=innerHeight;
+  const vis=el=>{if(!el||!el.isConnected)return null;const r=el.getBoundingClientRect();if(r.width<4||r.height<4||r.bottom<0||r.right<0||r.top>H||r.left>W)return null;const cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||+cs.opacity===0)return null;return r};
+  const box=(r,name,cls='')=>out.push(`<div class="devbox ${cls}" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px"><b>${esc(name)}</b></div>`);
+  const scr=$('.screen.active');if(scr){const r=vis(scr);if(r)box(r,'Bildschirm: '+(SCREEN_NAMES[scr.id]||scr.id)+' (#'+scr.id+')','scr')}
+  if(current==='desktop'&&appCtx){const r=vis($('#appview'));if(r)box(r,'App: '+APPS[appCtx.id].name+' ('+appCtx.id+')','app')}
+  else if(current==='desktop'){const pg=$$('#track .page')[homePage];if(pg){const r=vis(pg);if(r)box(r,'Homescreen-Seite '+(homePage+1))}
+    $$('#track .hitem',pg||document).forEach(el=>{const r=vis(el);if(!r)return;const id=el.dataset.id;box(r,isW(id)?'Widget: '+(WTYPES[S.widgets[id]?.type]?.name||id):'App-Icon: '+(APPS[id]?.name||id))})}
+  DEV_PARTS.forEach(([sel,name])=>$$(sel).forEach(el=>{if(scr&&!scr.contains(el)&&el.closest('.screen'))return;const r=vis(el);if(r)box(r,name)}));
+  L.innerHTML=out.slice(0,80).join('');
+  const vv=window.visualViewport;
+  const sat=getComputedStyle(document.documentElement).getPropertyValue('--sat').trim();
+  $('#devpanel').textContent=`🧑‍💻 ${SCREEN_NAMES[current]||current}${appCtx?' › App: '+APPS[appCtx.id].name:''}\nGufyUI ${GUFY.v} · Fenster ${innerWidth}×${innerHeight} · Bildschirm ${screen.width}×${screen.height}\nsafe-top ${sat} · Leiste ${getComputedStyle($('#statusbar')).height} · vv ${vv?Math.round(vv.height)+' @'+Math.round(vv.offsetTop):'-'} · scroll ${Math.round(scrollY)}\n${navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Browser'} · ${document.body.className}`;
+}
+$('#devpanel').onclick=()=>$('#devpanel').classList.toggle('min');
 function boot(){
   advance();
   show('boot');
@@ -1578,6 +1628,10 @@ function detectPhone(){
   document.body.classList.toggle('island',!!phone&&h>=34);
   const sys=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
   document.body.classList.toggle('sysbar',!!phone&&h>=34&&sys);
+  // iPhone als Home-Bildschirm-App: innerHeight ist um die Statusleiste zu kurz → echte Bildschirmhöhe nehmen
+  const full=sys&&/iPhone|iPad|iPod/.test(navigator.userAgent)?Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width)):0;
+  document.body.classList.toggle('fullfix',full>innerHeight+4);
+  document.documentElement.style.setProperty('--fullh',(full||innerHeight)+'px');
   if(was!==document.body.className&&current==='desktop')renderHome();
   syncEdge();
 }
@@ -2534,6 +2588,7 @@ render(body,ctx){
         ${row('🔕','#8e8e93','Nicht stören',sw('hDnd',S.dnd))}
         ${row('📳','#ff375f','Haptisches Feedback',sw('hHap',S.haptics!==false))}
         ${row('🏖️','#ff9f0a','Urlaubsmodus',sw('hVac',!!S.vacation))}
+        ${row('🧑‍💻','#30d158','Entwicklermodus',sw('hDev',!!S.dev))}
         ${row('☀️','#ff9f0a','Helligkeit',`<input type="range" id="hBr" min="25" max="100" value="${S.brightness}" style="width:42%;accent-color:var(--accent)">`)}
       </div>
       <div class="sgroup">
@@ -2554,6 +2609,8 @@ render(body,ctx){
     $('#hDark',body).onchange=e=>{S.theme=e.target.checked?'dark':'light';save();applyLook();renderBattery()};
     $('#hDnd',body).onchange=e=>{S.dnd=e.target.checked;save();updateCC()};
     $('#hHap',body).onchange=e=>{S.haptics=e.target.checked;save();haptic()};
+    $('#hDev',body).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
+      askCode(v?'Entwicklermodus an':'Entwicklermodus aus',()=>{S.dev=v;save();devSync();const t=$('#hDev',body);if(t)t.checked=v})};
     $('#hVac',body).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
       askCode(v?'Urlaubsmodus einschalten':'Urlaubsmodus ausschalten',()=>{
         advance(inUse()?USE_MULT:1);S.vacation=v;save();renderBattery();updateCC();
@@ -2965,7 +3022,7 @@ render(body){
 /* =========================================================
    START
    ========================================================= */
-renderHome();applyLook();tick();advance();renderBattery();
+renderHome();applyLook();tick();advance();renderBattery();devSync();
 if(S.setupDone)ensureQuests();
 if(S.loc.mode==='gps'&&S.setupDone)startGeo();
 addEventListener('beforeunload',()=>{advance();save()});
