@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.8","notes":["5 Tagesquests – mit mehr peinlichen Aufgaben","Wenn GufyUI benutzt wird, verbraucht der Akku unterwegs doppelt so viel","Karte startet als Satellit mit Straßennamen","Wischen zwischen Seiten gleitet jetzt mit Schwung weiter","Apps öffnen ohne Ruckler"]};
+window.GUFY={"v":"3.9","notes":["Nur noch 1 Sport-Quest pro Tag – mit machbaren Zahlen pro Person","Jeden Tag eine Quest mit den Eltern","Neue witzige Eltern-Quests"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1952,53 +1952,59 @@ $('#bright').oninput=e=>{S.brightness=+e.target.value;applyLook();save()};
    QUESTS – riesiger Generator, zu zweit, leicht bis extrem
    ========================================================= */
 const DIFFS=[['mittel','Mittel','#e0a800','🟡'],['schwer','Schwer','#ff9500','🟠'],['extrem','Extrem','#ff3b30','🔴']];
-const TAGS={sport:'💪 Sport',fun:'😂 Fun',own:'⭐ Eigene'};
+const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit Eltern',own:'⭐ Eigene'};
 // Erlaubte Belohnungen je Schwierigkeit (kein 25er mehr)
 const COINSTEPS={mittel:[50,100],schwer:[100,200,300],extrem:[300,400,500,1000]};
 const COINALL=[50,100,200,300,400,500,1000];
-// Sport: r = Bereich je Schwierigkeit, c = Roh-Wert (wird auf erlaubte Coins gerundet)
+// Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
-  {i:'🧗',g:'sport',t:n=>`Klimmzüge: zusammen ${n} Stück`,r:{mittel:[15,20],schwer:[30,40],extrem:[60,80]},c:n=>n*5},
-  {i:'💪',g:'sport',t:n=>`Liegestütze: zusammen ${n} Stück`,r:{mittel:[100,100],schwer:[200,250],extrem:[400,500]},c:n=>n*.8},
-  {i:'🔥',g:'sport',t:n=>`Burpees: zusammen ${n} Stück`,r:{mittel:[50,60],schwer:[100,120],extrem:[200,250]},c:n=>n*1.6},
-  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[10,15],schwer:[20,30],extrem:[50,70]},c:n=>n*5,h:'Mit Helm'},
-  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km`,r:{mittel:[5,5],schwer:[10,10],extrem:[21,21]},c:n=>n*20}
+  {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:100,schwer:200,extrem:400}},
+  {i:'💪',g:'sport',t:n=>`Ihr müsst beide ${n} Liegestütze am Stück machen`,r:{mittel:[20,20],schwer:[35,40],extrem:[60,60]},cv:{mittel:50,schwer:100,extrem:300}},
+  {i:'🔥',g:'sport',t:n=>`Ihr müsst beide ${n} Burpees machen`,r:{mittel:[15,15],schwer:[25,30],extrem:[50,50]},cv:{mittel:50,schwer:100,extrem:300}},
+  {i:'🚴',g:'sport',t:n=>`Fahrt zusammen ${n} km Fahrrad`,r:{mittel:[10,10],schwer:[20,20],extrem:[40,40]},cv:{mittel:50,schwer:100,extrem:300},h:'Mit Helm'},
+  {i:'🏃',g:'sport',t:n=>`Joggt zusammen ${n} km ohne Pause`,r:{mittel:[3,3],schwer:[5,5],extrem:[10,10]},cv:{mittel:100,schwer:200,extrem:400}},
+  {i:'🤸',g:'sport',t:n=>`Ihr müsst beide ${n} Sekunden Handstand an der Wand halten`,r:{mittel:[20,20],schwer:[40,45],extrem:[60,60]},cv:{mittel:50,schwer:100,extrem:300}}
 ];
-// Fun (witzig & peinlich): [Symbol, Text, Coins]
+// Fun: [Symbol, Text, Coins, p] – p=1 heißt „mit den Eltern“
 const QF={
   mittel:[
     ['🤖','Bestell beim Bäcker in Roboterstimme',100],
     ['👠','Lauf einen Catwalk durch einen Supermarktgang',100],
     ['🥒','Telefonier draußen 2 Minuten mit einer Gurke als Handy',100],
-    ['🎙️','Kommentiere wie ein Fußballreporter live, wie deine Eltern kochen',100],
-    ['🧀','Geh ernst zu deinen Eltern: „Wir müssen reden …“ – und halt einen Vortrag über Käse',50],
-    ['🏴‍☠️','Sprich eine Stunde nur mit Piratenstimme – auch mit deinen Eltern',50],
     ['🦆','Watschel 1 Minute wie eine Ente durch einen Supermarktgang',100],
-    ['🎭','Sing beim Abendessen jede Bitte („Gib mir mal das Salz“) wie ein Opernsänger',50],
     ['🗿','Steh 2 Minuten draußen wie eine Statue – ohne dich zu bewegen',100],
-    ['🙇','Begrüß heute jedes Familienmitglied mit Verbeugung und „Seid gegrüßt“',50],
-    ['🐒','Mach jedes Mal Affengeräusche, wenn ein Elternteil das Zimmer betritt – eine Stunde lang',50]
+    ['🎙️','Kommentiere wie ein Fußballreporter live, wie deine Eltern kochen',100,1],
+    ['🧀','Geh ernst zu deinen Eltern: „Wir müssen reden …“ – und halt einen Vortrag über Käse',50,1],
+    ['🏴‍☠️','Sprich eine Stunde nur mit Piratenstimme – auch mit deinen Eltern',50,1],
+    ['🎭','Sing beim Abendessen jede Bitte („Gib mir mal das Salz“) wie ein Opernsänger',50,1],
+    ['🙇','Begrüß heute jedes Familienmitglied mit Verbeugung und „Seid gegrüßt“',50,1],
+    ['🐒','Mach Affengeräusche, wenn ein Elternteil das Zimmer betritt – eine Stunde lang',50,1],
+    ['🛎️','Klopf bei deinen Eltern, ruf „Zimmerservice!“ und serviere ein Glas Wasser im Kellner-Akzent',50,1],
+    ['🤖','Frag deine Eltern mit Roboterstimme, ob ihre Software ein Update braucht',50,1],
+    ['🪞','Stell dich hinter Mama oder Papa und mach 2 Minuten jede Bewegung nach',100,1]
   ],
   schwer:[
     ['🗺️','Frag eine fremde Person nach dem Weg – komplett in Reimform',200],
-    ['🎤','Antworte deinen Eltern 30 Minuten lang nur als Musical-Lied',200],
     ['🌟','Wink 10 Leuten zu wie ein Weltstar auf dem roten Teppich',200],
     ['👔','Dein Freund sucht dein Outfit aus – und du gehst so raus',300],
-    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken',100],
     ['🛒','Frag im Laden ganz ernst, ob es „unsichtbare Schuhe“ gibt',200],
     ['🎶','Sing draußen 30 Sekunden laut den Refrain deines Lieblingssongs',200],
     ['👟','Geh mit zwei verschiedenen Schuhen eine Runde durch die Stadt',100],
-    ['🤖','Beweg dich draußen 15 Minuten nur wie ein Roboter',200]
+    ['🤖','Beweg dich draußen 15 Minuten nur wie ein Roboter',200],
+    ['🎤','Antworte deinen Eltern 30 Minuten lang nur als Musical-Lied',200,1],
+    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken',100,1],
+    ['🕵️','Begrüß Mama oder Papa als Geheimagent – mit Sonnenbrille und Codewort',100,1]
   ],
   extrem:[
     ['🦸','Ein ganzer Tag als Superheld: Kostüm, Heldenname, Heldenstimme',500],
     ['🎥','Musikvideo in voller Verkleidung drehen und der Familie vorspielen',400],
     ['🎶','Sing draußen laut einen Song, bis jemand klatscht oder lacht',500],
     ['🖼️','Dein Freund sucht dein Profilbild aus – 24 Stunden lang',300],
-    ['🏆','Mini-Olympiade mit 5 Disziplinen – mit Siegerehrung und Medaillen',1000],
     ['🕺','Tanz 1 Minute in der Fußgängerzone, bis jemand lacht oder mitmacht',500],
     ['🧙','Geh komplett verkleidet einkaufen – und bleib die ganze Zeit in der Rolle',400],
-    ['📢','Halte draußen eine 1-Minuten-Rede darüber, warum Käse die Welt rettet',400]
+    ['📢','Halte draußen eine 1-Minuten-Rede darüber, warum Käse die Welt rettet',400],
+    ['🎭','Spielt euren Eltern beim Abendessen ein selbst erfundenes Theaterstück vor',400,1],
+    ['🎩','Beantworte einen ganzen Abend alle Sätze deiner Eltern mit „Sehr wohl, Herrschaften“',300,1]
   ]
 };
 const snapCoins=(raw,diff)=>COINSTEPS[diff].reduce((b,v)=>Math.abs(v-raw)<Math.abs(b-raw)?v:b);
@@ -2010,29 +2016,37 @@ function genQuest(diff,avoid,kind){
   for(let k=0;k<40;k++){
     if(!kind&&own.length&&Math.random()<.3){
       const o=own[rnd(0,own.length-1)];q={i:o.i,title:o.title,coins:o.coins,tag:'own'};
-    }else if(kind==='sport'||(!kind&&Math.random()<.5)){
+    }else if(kind==='sport'||(!kind&&Math.random()<.2)){
       const tpl=QT[rnd(0,QT.length-1)],[a,b]=tpl.r[diff],n=nice(rnd(a,b));
-      q={i:tpl.i,title:tpl.t(n),coins:snapCoins(tpl.c(n),diff),tag:tpl.g,hint:tpl.h||''};
+      q={i:tpl.i,title:tpl.t(n),coins:snapCoins(tpl.cv[diff],diff),tag:tpl.g,hint:tpl.h||''};
     }else{
-      const L=QF[diff],f=L[rnd(0,L.length-1)];
-      q={i:f[0],title:f[1],coins:f[2],tag:'fun'};
+      let L=QF[diff];
+      if(kind==='parents')L=L.filter(f=>f[3]);else if(kind==='fun')L=L.filter(f=>!f[3]);
+      const f=L[rnd(0,L.length-1)];
+      q={i:f[0],title:f[1],coins:f[2],tag:f[3]?'parents':'fun'};
     }
     if(!avoid.some(x=>x.title===q.title||x.i===q.i))break;
   }
   q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
-// 5 Tagesquests: zwei Mittel, zwei Schwer, eine Extrem – davon mindestens drei peinlich/witzig
-const DAILY_SLOTS=[['mittel','fun'],['mittel','sport'],['schwer','fun'],['schwer',''],['extrem','fun']];
+// 5 Tagesquests: genau 1× Sport, immer 1× mit den Eltern, Rest witzig/peinlich
+const DAILY_SLOTS=[['mittel','fun'],['mittel','parents'],['schwer','sport'],['schwer','fun'],['extrem','fun']];
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
   (S.customQ||[]).forEach(o=>{if(!COINSTEPS[o.diff])o.diff='mittel';if(o.coins<50)o.coins=50});
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
-    S.daily={day:dayKey(),list};save();
-  }else if(S.daily.list.length<DAILY_SLOTS.length){ // Update von 3 auf 5 Quests: heute direkt auffüllen
-    DAILY_SLOTS.slice(S.daily.list.length).forEach(([d,k])=>S.daily.list.push(genQuest(d,S.daily.list,k)));save();
+    S.daily={day:dayKey(),list,v:2};save();
+  }else if(S.daily.v!==2){ // heutige Liste an die neuen Regeln anpassen, Erledigtes bleibt
+    const L=S.daily.list;
+    DAILY_SLOTS.forEach(([d,k],i)=>{const q=L[i];
+      const ok=q&&(q.done||(q.diff===d&&(q.kind===k||(k==='fun'&&q.tag==='fun')||(k==='sport'&&q.tag==='sport'))&&!(q.tag==='sport'&&k!=='sport')));
+      if(!ok)L[i]=q&&q.done?q:genQuest(d,L.filter((_,j)=>j!==i),k)});
+    L.length=DAILY_SLOTS.length;
+    if(L.filter(q=>q.tag==='sport').length>1)L.forEach((q,i)=>{if(q.tag==='sport'&&!q.done)L[i]=genQuest(q.diff,L,'fun')});
+    S.daily.v=2;save();
   }
 }
 
