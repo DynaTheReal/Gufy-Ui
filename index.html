@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"6.6","notes":["Neue App im Store: VSF Manager – Leben (halbe Herzen), Floni Coins und VSF Regeln","Neue App im Store: Schulden – Coins sofort holen, Quest am selben Tag machen, sonst −1.000","Quests ohne Coins sind wieder offen"]};
+window.GUFY={"v":"6.7","notes":["Ordner: App beim Bearbeiten auf eine andere App ziehen, 2 Sekunden halten – fertig. Ordner kann man umbenennen","8 neue, schlichte Widgets (Akku-Balken, Quest-Fortschritt, Neue Quests, Schlafenszeit, Inventar, VSF, Schulden, Heute)","Apps springen beim Ziehen nicht mehr sofort weg"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -856,6 +856,51 @@ body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
 .dwarn{margin:14px 0;padding:18px;border-radius:20px;background:rgba(255,69,58,.12);border:1.5px solid rgba(255,69,58,.5);text-align:center;line-height:1.5}
 .dwarn b{font-size:17px}.dwarn p{margin:8px 0 0}.dwarn p b{font-size:inherit}
 .dcard{background:rgba(255,69,58,.08)!important}
+/* 6.7: Ordner */
+.fic{background:rgba(255,255,255,.24)!important;display:grid!important;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:8px;place-items:stretch!important;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.fic i{border-radius:4px;display:grid;place-items:center;font-size:9px;font-style:normal;line-height:1;overflow:hidden}
+.fic::after{display:none}
+.hitem.fhover .ic{box-shadow:0 0 0 3px #fff,0 10px 26px rgba(0,0,0,.35)!important}
+@property --fa{syntax:'<angle>';inherits:false;initial-value:0deg}
+.fprog{position:absolute;z-index:5;pointer-events:none;border-radius:50%;--fa:0deg;background:conic-gradient(#fff var(--fa),rgba(255,255,255,.2) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));animation:fring 2s linear forwards,fpop .25s cubic-bezier(.2,1.4,.3,1)}
+@keyframes fring{to{--fa:360deg}}
+@keyframes fpop{from{transform:scale(.6);opacity:0}}
+.dragclone.folding{opacity:.55;transition:opacity .2s}
+#fold{position:fixed;inset:0;z-index:1300;display:none;place-items:center;background:rgba(0,0,0,.32);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%)}
+#fold.open{display:grid}
+.fbox{width:min(86vw,330px)}
+.fname{display:block;width:100%;background:transparent;border:0;outline:0;color:#fff;font-size:28px;font-weight:700;line-height:1.2;font-family:inherit;text-align:center;margin-bottom:18px;text-shadow:0 2px 10px rgba(0,0,0,.4);-webkit-user-select:text;user-select:text}
+.fgrid{background:rgba(40,40,50,.5);border:1px solid rgba(255,255,255,.16);border-radius:36px;padding:24px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px 6px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.fapp{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;color:#fff;font-size:12px;font-weight:500;background:none;border:0;padding:0;text-shadow:0 1px 3px rgba(0,0,0,.5);min-width:0}
+.fapp span:last-child{max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fapp .ic{width:62px;height:62px;border-radius:24%;font-size:31px;position:relative;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.14)}
+.fout{position:absolute;top:-7px;left:calc(50% - 38px);z-index:2;width:24px;height:24px;border-radius:50%;background:rgba(58,58,60,.95);color:#fff;font-size:14px;font-weight:700;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.fhint{text-align:center;color:rgba(255,255,255,.75);font-size:13px;margin-top:14px}
+/* 6.7: schlichte Widgets */
+.wbox{--cwbg:rgba(22,22,30,.9);display:flex;flex-direction:column}
+.cw-num{font-size:44px;font-weight:700;letter-spacing:-1.5px;line-height:1;margin-top:auto}
+.cw-num small{font-size:.45em;font-weight:600;letter-spacing:0;opacity:.7;margin-left:2px}
+.cw-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.16);margin:10px 0 7px;overflow:hidden}
+.cw-bar i{display:block;height:100%;border-radius:3px;transition:width .4s}
+.cw-sub{color:rgba(255,255,255,.66);font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cw-mid{flex:1;display:grid;place-items:center}
+.cw-ring{width:76px;height:76px;border-radius:50%;display:grid;place-items:center}
+.cw-ring b{font-size:19px}
+.cw-ic{font-size:26px;margin-top:6px}
+.cw-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.cw-list div{display:flex;justify-content:space-between;align-items:center;font-size:15px;background:rgba(255,255,255,.08);border-radius:10px;padding:5px 9px}
+.cw-hearts{display:flex;gap:4px;margin:auto 0 8px;justify-content:center}
+.vh.sm{width:38px;height:35px}.vh.sm svg{width:38px;height:35px}
+.cw-floni{display:flex;align-items:center;justify-content:center;gap:7px;font-size:20px}
+.cw-floni span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#bf5af2,#5e5ce6);font-size:13px;font-weight:800}
+.cw-alert .wbox{box-shadow:inset 0 0 0 1.5px rgba(255,69,58,.7)!important}
+.cw-today{display:flex;justify-content:space-between;align-items:stretch;height:100%;gap:14px}
+.cw-day{font-size:56px;font-weight:700;letter-spacing:-2px;line-height:1}
+.cw-stats{display:flex;flex-direction:column;justify-content:space-between;min-width:44%}
+.cw-stats div{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,.1);padding:4px 0}
+.cw-stats div:last-child{border:0}
+.cw-stats small{color:rgba(255,255,255,.62);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.cw-stats b{font-size:17px}
 </style>
 </head>
 <body class="dark">
@@ -1041,7 +1086,7 @@ let S=load();
 function defaults(){
   S.theme??='dark'; S.accent??='#4f8cff'; S.wall??=0;
   S.brightness??=100; S.dnd??=false;
-  S.coins??=0; S.inv??={}; S.questDone??=[]; S.debts??=[];
+  S.coins??=0; S.inv??={}; S.questDone??=[]; S.debts??=[]; S.folders??={};
   S.loc??={mode:'manual',isHome:true,home:null,radius:150};
   S.sleep??={from:'22:00',to:'06:00'};
   S.battery??={level:100,last:Date.now()};
@@ -1889,6 +1934,20 @@ $('#sbCoins').onclick=()=>{openApp('shop');setTimeout(()=>appCtx&&appCtx.go&&app
 let homePage=0,editMode=false,dragId=null,G=null,dragEl=null,dragOff=null,dragPos=null,dragRaf=0,edgeT=null,lastTarget=null;
 let GRID={cols:4,rows:6,rowh:98};
 const isW=id=>id.startsWith('w-');
+const isF=id=>id.startsWith('f-');
+const inFolders=()=>Object.values(S.folders||{}).flatMap(f=>f.apps);
+/* Ordner aufräumen: fehlende Apps raus, Ordner mit nur 1 App lösen sich auf (App bleibt an derselben Stelle) */
+function cleanFolders(){
+  S.folders??={};const seen=new Set();
+  for(const [fid,f] of Object.entries(S.folders)){
+    f.apps=f.apps.filter(a=>appAvail(a)&&!seen.has(a)&&seen.add(a));
+    if(f.apps.length<=1){
+      const rest=f.apps[0];
+      (S.layout||[]).forEach(p=>{const i=p.indexOf(fid);if(i>=0){if(rest)p.splice(i,1,rest);else p.splice(i,1)}});
+      delete S.folders[fid];
+    }
+  }
+}
 const appAvail=id=>id&&APPS[id]&&(CORE.includes(id)||S.installed.includes(id));
 
 /* ---------- Widget-Typen ---------- */
@@ -1913,6 +1972,42 @@ const WTYPES={
     upd:el=>{const st=statusInfo();$('.js-st',el).innerHTML=`<div style="font-size:40px">${st.ic}</div><b>${st.t}</b><small class="wsub">${st.r}</small>`}},
   notes:{name:'Notizen',sizes:['s','l'],open:()=>appAvail('notes')?'notes':null,html:()=>`<div class="wt" style="color:#ffd60a">Notizen</div><div class="wnote js-note"></div>`,
     upd:el=>{const n=[...(S.notes||[])].sort((a,b)=>b.t-a.t)[0];$('.js-note',el).textContent=n&&n.text.trim()?n.text:'Keine Notizen'}}
+  ,
+  /* ---- 6.7: neue, schlichte Widgets ---- */
+  battbar:{name:'Akku-Balken',sizes:['s'],open:()=>'standort',
+    html:()=>`<div class="wt">Akku</div><div class="cw-num"><span class="js-bb"></span><small>%</small></div><div class="cw-bar"><i class="js-bbf"></i></div><div class="cw-sub js-bbs"></div>`,
+    upd:el=>{const lv=S.battery.level,st=statusInfo(),r=rate(new Date());$('.js-bb',el).textContent=Math.round(lv);
+      const f=$('.js-bbf',el);f.style.width=Math.max(2,lv)+'%';f.style.background=r>0?'#30d158':lv<=20?'#ff453a':'#fff';
+      $('.js-bbs',el).textContent=r>0?'Lädt':st.t}},
+  qprog:{name:'Quest-Fortschritt',sizes:['s'],open:()=>'quests',
+    html:()=>`<div class="wt">Quests</div><div class="cw-mid"><div class="cw-ring js-qr"><b class="js-qrn"></b></div></div><div class="cw-sub js-qrs" style="text-align:center"></div>`,
+    upd:el=>{ensureQuests();const L=S.daily.list,d=L.filter(q=>q.done).length,open=L.filter(q=>!q.done).reduce((a,q)=>a+q.coins,0);
+      $('.js-qr',el).style.background=`radial-gradient(var(--cwbg) 62%,transparent 63%),conic-gradient(#ffd60a ${d/L.length*360}deg,rgba(255,255,255,.14) 0)`;
+      $('.js-qrn',el).textContent=d+'/'+L.length;$('.js-qrs',el).textContent=open?'noch 🪙 '+fmtNum(open):'Alles geschafft 🎉'}},
+  midnight:{name:'Neue Quests',sizes:['s'],open:()=>'quests',
+    html:()=>`<div class="wt">Neue Quests in</div><div class="cw-num js-mn" style="margin-top:auto"></div><div class="cw-sub">bis Mitternacht</div>`,
+    upd:el=>{const n=new Date(),m=new Date(n);m.setHours(24,0,0,0);const t=Math.floor((m-n)/60000);$('.js-mn',el).innerHTML=`${Math.floor(t/60)}<small>h</small> ${pad(t%60)}<small>m</small>`}},
+  sleep:{name:'Schlafenszeit',sizes:['s'],open:()=>'standort',
+    html:()=>`<div class="wt js-slt"></div><div class="cw-ic js-sli"></div><div class="cw-num js-sln" style="font-size:30px"></div><div class="cw-sub js-sls"></div>`,
+    upd:el=>{const n=new Date(),sl=isSleepTime(n),tgt=sl?S.sleep.to:S.sleep.from,[h,m]=tgt.split(':').map(Number),d=new Date(n);d.setHours(h,m,0,0);if(d<=n)d.setDate(d.getDate()+1);
+      $('.js-slt',el).textContent=sl?'Aufstehen':'Schlafenszeit';$('.js-sli',el).textContent=sl?'⏰':'😴';$('.js-sln',el).textContent=tgt;$('.js-sls',el).textContent='in '+approxDur((d-n)/3600000).replace(/^ca\. /,'')}},
+  inv:{name:'Inventar',sizes:['s'],open:()=>'inventar',
+    html:()=>`<div class="wt">Inventar</div><div class="cw-list js-iv"></div>`,
+    upd:el=>{const rows=Object.entries(ITEMS).filter(([k])=>(S.inv[k]||0)>0);
+      $('.js-iv',el).innerHTML=rows.length?rows.slice(0,3).map(([k,it])=>`<div><span>${it.icon}</span><b>${it.perm?'✓':'×'+S.inv[k]}</b></div>`).join(''):'<p class="cw-sub" style="margin-top:8px">Leer – im Store gibt es Powerbanks</p>'}},
+  vsfw:{name:'VSF Leben',sizes:['s'],open:()=>appAvail('vsf')?'vsf':null,
+    html:()=>`<div class="wt">VSF</div><div class="cw-hearts js-vh"></div><div class="cw-floni"><span>F</span><b class="js-vf"></b></div>`,
+    upd:el=>{const v=S.vsf||{half:6,floni:0};const hp='<svg viewBox="0 0 24 22"><path d="M12 21.4l-1.5-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.5 11.6L12 21.4z"/></svg>';
+      $('.js-vh',el).innerHTML=[0,1,2].map(k=>{const f=Math.max(0,Math.min(2,v.half-k*2));return `<div class="vh sm"><div class="vh-bg">${hp}</div><div class="vh-fg" style="width:${f*50}%">${hp}</div></div>`}).join('');
+      $('.js-vf',el).textContent=fmtNum(v.floni)}},
+  debtw:{name:'Schulden',sizes:['s'],open:()=>appAvail('debts')?'debts':null,
+    html:()=>`<div class="wt">Schulden</div><div class="cw-ic js-di"></div><div class="cw-num js-dn" style="font-size:30px"></div><div class="cw-sub js-ds"></div>`,
+    upd:el=>{const o=(S.debts||[]).filter(d=>d.status==='open');$('.js-di',el).textContent=o.length?'⚠️':'✅';
+      $('.js-dn',el).textContent=o.length?o.length+' offen':'Keine';$('.js-ds',el).textContent=o.length?'bis 24:00 erledigen':'Alles erledigt';el.classList.toggle('cw-alert',!!o.length)}},
+  today:{name:'Heute',sizes:['l'],open:()=>'quests',
+    html:()=>`<div class="cw-today"><div><div class="wt js-wday" style="color:#ff453a"></div><div class="cw-day js-day"></div><div class="cw-sub js-month"></div></div>
+      <div class="cw-stats"><div><small>Coins</small><b class="js-coins"></b></div><div><small>Quests</small><b class="js-tq"></b></div><div><small>Akku</small><b class="js-tb"></b></div></div></div>`,
+    upd:el=>{ensureQuests();const L=S.daily.list;$('.js-tq',el).textContent=L.filter(q=>q.done).length+'/'+L.length;$('.js-tb',el).textContent=Math.round(S.battery.level)+' %'}}
 };
 function widgetBody(type,size){return WTYPES[type].html(size)}
 function updateWidgets(root){
@@ -1938,8 +2033,9 @@ const cellsOf=id=>!isW(id)?1:(S.widgets[id]?.size==='l'?2*Math.min(4,GRID.cols):
 const pageCap=()=>GRID.cols*GRID.rows;
 const usedCells=p=>p.reduce((a,id)=>a+cellsOf(id),0);
 function cascade(L){for(let i=0;i<L.length;i++){while(usedCells(L[i])>pageCap()&&L[i].length>1){const x=L[i].pop();(L[i+1]??=[]).unshift(x)}}}
-const homeIds=()=>Object.keys(S.widgets||{}).concat(CORE,S.installed.filter(id=>APPS[id]));
+const homeIds=()=>{const inF=new Set(inFolders());return Object.keys(S.widgets||{}).concat(Object.keys(S.folders||{}),CORE.filter(id=>!inF.has(id)),S.installed.filter(id=>APPS[id]&&!inF.has(id)))};
 function normLayout(){
+  cleanFolders();
   const want=homeIds(),seen=new Set();
   let L=(S.layout||[]).map(p=>p.filter(id=>want.includes(id)&&!seen.has(id)&&seen.add(id)));
   if(!L.length)L=[[]];
@@ -1952,6 +2048,8 @@ function itemHTML(id){
   const ph=id===dragId?' ph':'';
   if(isW(id)){const w=S.widgets[id],T=WTYPES[w.type];if(!T)return'';const o=T.open()||'';
     return `<div class="hitem wdg ${w.size}${ph}" data-id="${id}" data-type="${w.type}" data-open="${o}"><span class="del" data-delid="${id}">−</span><div class="wbox">${widgetBody(w.type,w.size)}</div></div>`}
+  if(isF(id)){const f=S.folders[id];if(!f)return'';
+    return `<div class="hitem appicon folder${ph}" data-id="${id}"><span class="del" data-delid="${id}">−</span><div class="ic fic">${f.apps.slice(0,9).map(a=>`<i style="background:${APPS[a].bg}">${APPS[a].icon}</i>`).join('')}</div><span class="lbl">${esc(f.name)}</span></div>`}
   const a=APPS[id];
   return `<div class="hitem appicon${ph}" data-id="${id}">${id==='settings'&&pendingUpdate()?'<span class="badge">1</span>':''}${CORE.includes(id)?'':`<span class="del" data-delid="${id}">−</span>`}<div class="ic" style="background:${a.bg}">${a.icon}</div><span class="lbl">${a.name}</span></div>`;
 }
@@ -2045,13 +2143,89 @@ function moveDrag(e){
         if(np>=0&&np<n)moveToPage(dragId,np)},550)}
     else if(edgeT){clearTimeout(edgeT);edgeT=null}
     const over=document.elementFromPoint(x,y),t=over&&over.closest('#track .hitem');
-    if(t&&t.dataset.id!==dragId){if(lastTarget!==t.dataset.id){lastTarget=t.dataset.id;moveBefore(dragId,t.dataset.id)}}
-    else if(!t){lastTarget=null;
+    const canFold=!isW(dragId)&&!isF(dragId);
+    if(t&&t.dataset.id!==dragId){
+      const tid=t.dataset.id,tApp=!isW(tid);let inIcon=false;
+      if(canFold&&tApp){const ic=$('.ic',t);if(ic){const r=ic.getBoundingClientRect(),m=r.width*.1;inIcon=x>r.left+m&&x<r.right-m&&y>r.top+m&&y<r.bottom-m}}
+      if(inIcon){clearReorder();if(foldId!==tid)setFold(t)}
+      else{clearFold();
+        if(lastTarget!==tid){
+          if(!(canFold&&tApp)){clearReorder();lastTarget=tid;moveBefore(dragId,tid)}
+          else if(reId!==tid){clearReorder();reId=tid;reT=setTimeout(()=>{reT=null;reId=null;if(!dragId)return;lastTarget=tid;moveBefore(dragId,tid)},230)}
+        }}
+    }
+    else if(!t){lastTarget=null;clearFold();clearReorder();
       const pg=over&&over.closest('#track .page');
       if(pg&&+pg.dataset.p!==findPos(dragId)[0]&&+pg.dataset.p===homePage)moveToPage(dragId,homePage);}
   });
 }
+let foldId=null,foldT=null,reT=null,reId=null;
+function clearReorder(){clearTimeout(reT);reT=null;reId=null}
+function setFold(t){
+  clearFold();foldId=t.dataset.id;t.classList.add('fhover');
+  const ic=$('.ic',t);if(ic){const a=ic.getBoundingClientRect(),b=t.getBoundingClientRect(),d=Math.max(a.width,a.height)+22;
+    t.insertAdjacentHTML('beforeend',`<b class="fprog" style="left:${a.left-b.left+a.width/2-d/2}px;top:${a.top-b.top+a.height/2-d/2}px;width:${d}px;height:${d}px"></b>`)}
+  if(dragEl)dragEl.classList.add('folding');haptic('select');
+  foldT=setTimeout(()=>{const src=dragId,tgt=foldId;clearFold();if(src&&tgt)makeFolder(src,tgt)},2000);
+}
+function clearFold(){
+  clearTimeout(foldT);foldT=null;
+  if(foldId){const el=$(`#track .hitem[data-id="${foldId}"]`);if(el){el.classList.remove('fhover');$$('.fprog',el).forEach(x=>x.remove())}}
+  if(dragEl)dragEl.classList.remove('folding');
+  foldId=null;
+}
+function makeFolder(src,tgt){
+  const[ps,is]=findPos(src),[pt,it]=findPos(tgt);if(ps<0||pt<0)return;
+  let fid=tgt;
+  if(isF(tgt)){S.folders[tgt].apps.push(src);S.layout[ps].splice(is,1)}
+  else{
+    const ca=APPS[src].cat,cb=APPS[tgt].cat;
+    fid='f-'+Date.now().toString(36);
+    S.folders[fid]={name:ca&&ca===cb?ca:'Ordner',apps:[tgt,src]};
+    S.layout[pt][it]=fid;
+    const[ps2,is2]=findPos(src);S.layout[ps2].splice(is2,1);
+  }
+  // Ziehen beenden: Kopie fliegt in den Ordner
+  const el=dragEl;dragEl=null;dragId=null;if(G)G.mode='none';
+  haptic('success');flipRender();save();
+  const f=$(`#track .hitem[data-id="${fid}"] .ic`);
+  if(el){const r=f?f.getBoundingClientRect():null;
+    el.animate([{transform:el.style.transform,opacity:1},{transform:r?`translate3d(${r.left}px,${r.top}px,0) scale(.3)`:el.style.transform,opacity:0}],{duration:260,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'}).onfinish=()=>el.remove()}
+  if(f)f.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:380,easing:SPRING});
+  if(!isF(tgt))setTimeout(()=>openFolder(fid,true),320);
+}
+/* Ordner öffnen */
+function openFolder(fid,rename){
+  const f=S.folders[fid];if(!f)return;
+  let ov=$('#fold');if(!ov){ov=document.createElement('div');ov.id='fold';document.body.append(ov)}
+  const draw=()=>{
+    const g=S.folders[fid];if(!g){closeFolder();return}
+    ov.innerHTML=`<div class="fbox"><input class="fname" id="fName" maxlength="20" value="${esc(g.name)}" spellcheck="false">
+      <div class="fgrid">${g.apps.map(a=>`<button class="fapp" data-a="${a}">${editMode?`<span class="fout" data-out="${a}">↥</span>`:''}<div class="ic" style="background:${APPS[a].bg}">${APPS[a].icon}</div><span>${esc(APPS[a].name)}</span></button>`).join('')}</div>
+      <p class="fhint">${editMode?'↥ nimmt eine App aus dem Ordner':'Tippe auf den Namen, um ihn zu ändern'}</p></div>`;
+    const inp=$('#fName',ov);
+    inp.oninput=()=>{g.name=inp.value.slice(0,20);save()};
+    inp.onblur=()=>{if(!g.name.trim()){g.name='Ordner';inp.value='Ordner';save()}renderHome()};
+    inp.onkeydown=e=>{if(e.key==='Enter')inp.blur()};
+    $$('[data-out]',ov).forEach(b=>b.onclick=e=>{e.stopPropagation();const a=b.dataset.out;
+      g.apps=g.apps.filter(x=>x!==a);const[pf,i]=findPos(fid);if(pf>=0)S.layout[pf].splice(i+1,0,a);
+      haptic();cascade(S.layout);renderHome();save();if(S.folders[fid])draw();else closeFolder()});
+    $$('.fapp',ov).forEach(b=>b.onclick=()=>{const a=b.dataset.a;closeFolder();if(!editMode)setTimeout(()=>openApp(a),120)});
+    if(rename)setTimeout(()=>{inp.focus();inp.select()},60);rename=false;
+  };
+  draw();ov.classList.add('open');haptic();
+  ov.onpointerdown=e=>{if(e.target===ov)closeFolder()};
+  const b=$('.fbox',ov);b.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:340,easing:SPRING});
+}
+function closeFolder(){const ov=$('#fold');if(!ov||!ov.classList.contains('open'))return;const a=document.activeElement;if(a&&a.blur)a.blur();
+  const b=$('.fbox',ov);if(!b){ov.classList.remove('open');return}
+  b.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.7)'}],{duration:180,easing:'ease-in'}).onfinish=()=>ov.classList.remove('open');renderHome();save()}
+function dissolveFolder(fid){
+  const f=S.folders[fid];if(!f)return;const[p,i]=findPos(fid);
+  if(p>=0)S.layout[p].splice(i,1,...f.apps);delete S.folders[fid];cascade(S.layout);
+}
 function endDrag(){
+  clearFold();clearReorder();
   clearTimeout(edgeT);edgeT=null;
   const id=dragId;dragId=null;
   const src=$(`#track .hitem[data-id="${id}"]`);
@@ -2067,6 +2241,8 @@ function openCtx(el){
   if(isW(id)){
     const w=S.widgets[id],T=WTYPES[w.type],o=T.open();
     m.innerHTML=`${o?`<button data-c="open">Öffnen <span>${APPS[o].icon}</span></button>`:''}${T.sizes.length>1?`<button data-c="size">${w.size==='s'?'Größer machen':'Kleiner machen'} <span>↔️</span></button>`:''}<button data-c="edit">Home-Bildschirm bearbeiten <span>✏️</span></button><button data-c="del" class="red">Widget entfernen <span>🗑️</span></button>`;
+  }else if(isF(id)){
+    m.innerHTML=`<button data-c="open">Öffnen <span>📂</span></button><button data-c="ren">Umbenennen <span>✏️</span></button><button data-c="edit">Home-Bildschirm bearbeiten <span>📱</span></button><button data-c="del" class="red">Ordner auflösen <span>🗂️</span></button>`;
   }else{
     const a=APPS[id];
     m.innerHTML=`<button data-c="open">Öffnen <span>${a.icon}</span></button><button data-c="edit">Home-Bildschirm bearbeiten <span>✏️</span></button>${CORE.includes(id)?'':`<button data-c="del" class="red">App entfernen <span>🗑️</span></button>`}`;
@@ -2078,7 +2254,8 @@ function openCtx(el){
   m.getAnimations().forEach(a=>a.cancel());
   m.animate([{opacity:0,transform:'scale(.85)'},{opacity:1,transform:'none'}],{duration:260,easing:'cubic-bezier(.2,1.3,.3,1)'});
   $$('button',m).forEach(b=>b.onclick=()=>{closeCtx();const c=b.dataset.c;
-    if(c==='open')openApp(isW(id)?WTYPES[S.widgets[id].type].open():id);
+    if(c==='open'){if(isF(id))return openFolder(id);openApp(isW(id)?WTYPES[S.widgets[id].type].open():id)}
+    if(c==='ren')return openFolder(id,true);
     if(c==='edit')enterEdit();
     if(c==='del')confirmDelete(id);
     if(c==='size'){S.widgets[id].size=S.widgets[id].size==='s'?'l':'s';haptic();flipRender();save()}});
@@ -2087,6 +2264,8 @@ function closeCtx(){$('#ctxmenu').classList.remove('open');$$('#track .lifted').
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#ctxmenu')&&!e.target.closest('#home'))closeCtx()});
 
 function confirmDelete(id){
+  if(isF(id)){const f=S.folders[id];if(!f)return;
+    return confirmBox('📂',`Ordner „${f.name}“ auflösen?`,'Auflösen',()=>{dissolveFolder(id);flipRender();save()})}
   const W=isW(id),a=W?{icon:'🧩',name:WTYPES[S.widgets[id].type].name+'-Widget'}:APPS[id];
   confirmBox(a.icon,`„${a.name}“ entfernen?`,'Entfernen',()=>{
     if(W)delete S.widgets[id];else S.installed=S.installed.filter(x=>x!==id);
@@ -2165,10 +2344,12 @@ function closeWSheet(){$('#wsheet').classList.remove('open');$('#wscrim').classL
     if(g.mode==='drag')return endDrag();
     if(cancel)return;
     if(g.mode==='del')return confirmDelete(g.del.dataset.delid);
+    if(g.mode==='maybe'&&g.id&&isF(g.id))return openFolder(g.id);
     if(g.mode)return;
     if(editMode){if(!g.item)exitEdit();return}
     if(!g.item)return;
     if(isW(g.id)){const o=g.item.dataset.open;if(o)openApp(o);return}
+    if(isF(g.id))return openFolder(g.id);
     openApp(g.id);
   };
   home.addEventListener('pointerup',e=>up(e,false));
@@ -2796,7 +2977,7 @@ render(body,ctx){
         <div class="sgroup" style="padding:18px"><div class="colors">${ACCENTS.map(a=>`<button data-acc="${a}" class="${a===S.accent?'sel':''}" style="background:${a}"></button>`).join('')}</div></div>
         <div class="slabel">Home-Bildschirm</div>
         <div class="sgroup"><button class="srow" id="lReset" style="justify-content:center;color:var(--accent);font-weight:600">App-Anordnung zurücksetzen</button></div>`;
-      $('#lReset',c).onclick=()=>{S.layout=null;homePage=0;renderHome();save();notify('📱','Home-Bildschirm','Apps wieder in Standard-Reihenfolge')};
+      $('#lReset',c).onclick=()=>{S.layout=null;S.folders={};homePage=0;renderHome();save();notify('📱','Home-Bildschirm','Apps wieder in Standard-Reihenfolge')};
       $$('[data-th]',c).forEach(b=>b.onclick=()=>{S.theme=b.dataset.th;save();applyLook();renderBattery();go('look')});
       $$('[data-acc]',c).forEach(b=>b.onclick=()=>{S.accent=b.dataset.acc;save();applyLook();go('look')});
     }
