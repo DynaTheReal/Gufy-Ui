@@ -2,7 +2,28 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* =====================================================================
+   GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
+   und in "notes" kurz reinschreiben, was neu ist.
+   ===================================================================== */
+window.GUFY={"v":"3.1","notes":["Haptisches Feedback","Kein Zoomen mehr beim Doppeltippen","Neues Update-System","Neustart lädt GufyUI komplett neu"]};
+/* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
+   läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
+(function(){
+  if(window.__GUFY_OLD)return;
+  function cmp(a,b){a=String(a).split('.').map(Number);b=String(b).split('.').map(Number);for(var i=0;i<Math.max(a.length,b.length);i++){var d=(a[i]||0)-(b[i]||0);if(d)return d<0?-1:1}return 0}
+  window.gufyCmp=cmp;
+  try{
+    var inst=JSON.parse(localStorage.getItem('gufyui_inst')||'null');
+    if(inst&&inst.html&&cmp(inst.v,GUFY.v)<0){
+      localStorage.setItem('gufyui_pending',JSON.stringify({v:GUFY.v,notes:GUFY.notes}));
+      document.write(inst.html.replace(/<head>/i,'<head><script>window.__GUFY_OLD=1<\/script>')+'<plaintext style="display:none">');
+    }
+  }catch(e){}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <title>GufyUI</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +45,8 @@ body.dark{
   --bg:#0f1115; --panel:rgba(30,32,40,.72); --panel-solid:#14161c; --panel-2:#1f222b;
   --text:#f3f4f6; --muted:#9aa0ab; --border:rgba(255,255,255,.09); --hover:rgba(255,255,255,.07);
 }
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:#000;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 input,textarea{user-select:text;-webkit-user-select:text;font:inherit;color:inherit}
@@ -380,6 +402,14 @@ button.srow:active{background:var(--hover)}
 #cfm{position:fixed;inset:0;z-index:1985;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px}
 #cfm.open{display:flex}
 
+.badge{position:absolute;top:-6px;right:calc(50% - 40px);min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#ff3b30;color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.badge.static{position:static;display:inline-grid}
+.upd{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin:6px 0 22px}
+.upd .bmark{width:72px;height:72px;font-size:38px;margin-bottom:8px}
+.notes{margin:8px 0 0 18px;line-height:1.7;font-size:15px}
+.ubar{height:8px;border-radius:6px;background:var(--hover);overflow:hidden}
+.ubar i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;will-change:transform}
+
 /* ---------- Home-Taste ---------- */
 #homebtn{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);width:62px;height:62px;border-radius:50%;z-index:450;display:grid;place-items:center;box-shadow:0 8px 30px rgba(0,0,0,.35);transition:transform .12s}
 #homebtn::after{content:"";width:22px;height:22px;border:2.5px solid var(--text);border-radius:7px;opacity:.85}
@@ -597,6 +627,52 @@ button.srow:active{background:var(--hover)}
 <div id="dim"></div>
 
 <script>
+/* =========================================================
+   UPDATE-SYSTEM
+   ========================================================= */
+const UPD_KEY='gufyui_pending',INST_KEY='gufyui_inst';
+(function(){ // aktuelle Version als „installiert“ merken (nur wenn sie wirklich läuft)
+  if(window.__GUFY_OLD)return;
+  try{
+    const inst=JSON.parse(localStorage.getItem(INST_KEY)||'null');
+    if(!inst||inst.v!==GUFY.v||!inst.html)localStorage.setItem(INST_KEY,JSON.stringify({v:GUFY.v,html:'<!DOCTYPE html>\n'+document.documentElement.outerHTML}));
+  }catch(e){}
+})();
+function pendingUpdate(){try{const p=JSON.parse(localStorage.getItem(UPD_KEY)||'null');return p&&gufyCmp(p.v,GUFY.v)>0?p:null}catch(e){return null}}
+if(!pendingUpdate())try{localStorage.removeItem(UPD_KEY)}catch(e){}
+// Während GufyUI offen ist, alle 10 Minuten schauen, ob eine neue Version veröffentlicht wurde
+async function checkForUpdate(){
+  try{
+    if(!/^https?:/.test(location.protocol))return false;
+    const txt=await (await fetch(location.href.split('#')[0],{cache:'no-store'})).text();
+    const m=txt.match(/window\.GUFY=(\{.*?\});/);if(!m)return false;
+    const g=JSON.parse(m[1]);
+    if(gufyCmp(g.v,GUFY.v)>0){const had=pendingUpdate();localStorage.setItem(UPD_KEY,JSON.stringify(g));if(!had||had.v!==g.v){announceUpdate(true)}return true}
+  }catch(e){}
+  return false;
+}
+setInterval(checkForUpdate,10*60*1000);
+let updAnnounced=false;
+function announceUpdate(force){
+  const p=pendingUpdate();if(!p||(updAnnounced&&!force)||current!=='desktop')return;
+  updAnnounced=true;renderHome();
+  setTimeout(()=>notify('⬇️','Update verfügbar','GufyUI '+p.v+' – tippen zum Installieren','#1c1c1e',openUpdatePage),700);
+}
+function openUpdatePage(){openApp('settings');setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('update'),20)}
+function installUpdate(p,onProgress,onDone){
+  const t0=performance.now(),DUR=5000;
+  (function fr(now){
+    const k=Math.min(1,(now-t0)/DUR);onProgress(k);
+    if(k<1)return requestAnimationFrame(fr);
+    onDone();
+    setTimeout(()=>{
+      try{localStorage.setItem(INST_KEY,JSON.stringify({v:p.v,html:null}));localStorage.removeItem(UPD_KEY)}catch(e){}
+      advance();save();show('off');$('#off .center').style.opacity=0;
+      setTimeout(()=>location.reload(),500);
+    },1300);
+  })(t0);
+}
+
 /* =========================================================
    GufyUI
    ========================================================= */
@@ -871,7 +947,7 @@ addEventListener('visibilitychange',()=>{batteryTick();save()});
 /* ---------- Zuhause / Unterwegs ---------- */
 function setHome(v,quiet){
   if(S.loc.isHome===v)return;
-  advance();S.loc.isHome=v;save();
+  advance();S.loc.isHome=v;save();haptic();
   if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 24 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
@@ -1030,38 +1106,39 @@ function showLock(){
 function tryUnlock(){
   const v=$('#lkPw').value;
   if(hash(v)===S.pw){
-    S.loggedIn=true;save();
+    S.loggedIn=true;save();haptic('success');
     enterDesktop();
     if(S.firstLogin){S.firstLogin=false;save();setTimeout(()=>notify('🎉','Willkommen, '+S.name+'!','Öffne „Quests“ und verdiene deine ersten Coins.'),500)}
   }else{
-    $('#lkErr').textContent=v?'Falsches Passwort':'Bitte Passwort eingeben';
+    haptic('error');$('#lkErr').textContent=v?'Falsches Passwort':'Bitte Passwort eingeben';
     const l=$('#lkLogin');l.classList.remove('shake');void l.offsetWidth;l.classList.add('shake');
     $('#lkPw').value='';
   }
 }
-function enterDesktop(){show('desktop');setTrack(0,false);tick();renderBattery();updateCoins();
+function enterDesktop(){show('desktop');setTrack(0,false);tick();announceUpdate();renderBattery();updateCoins();
   if(!S.wallUpd){S.wallUpd=true;save();if(!S.firstLogin)setTimeout(()=>notify('🎨','Hintergrund-Update',SCENES.length+' neue Hintergründe in den Einstellungen'),900)}}
 function logout(){adminOK=false;S.loggedIn=false;save();showLock()}
 $('#lkGo').onclick=tryUnlock;
 $('#lkPw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
 
 /* ---------- Mitteilungen ---------- */
-function notify(icon,title,text,color){
+function notify(icon,title,text,color,onTap){
   if(S.dnd)return;
   const t=h(`<div class="toast glass"><div class="ic" style="background:${color||'var(--accent)'}">${icon}</div><div><b>${esc(title)}</b><small>${esc(text)}</small></div></div>`);
   $('#toasts').prepend(t);
   let gone=false,sx=0,sy=0,dx=0,dy=0,drag=false;
   const kill=(dir)=>{if(gone)return;gone=true;
-    if(dir){t.style.transform=dir==='up'?'translateY(-140%)':`translateX(${dir*120}%)`;t.style.opacity=0;setTimeout(()=>t.remove(),260)}
+    if(dir){haptic('select');t.style.transform=dir==='up'?'translateY(-140%)':`translateX(${dir*120}%)`;t.style.opacity=0;setTimeout(()=>t.remove(),260)}
     else{t.classList.add('out');setTimeout(()=>t.remove(),300)}};
   t.addEventListener('pointerdown',e=>{drag=true;sx=e.clientX;sy=e.clientY;dx=dy=0;t.style.transition='none';t.setPointerCapture(e.pointerId)});
   t.addEventListener('pointermove',e=>{if(!drag)return;dx=e.clientX-sx;dy=Math.min(0,e.clientY-sy);
     t.style.transform=Math.abs(dx)>-dy?`translateX(${dx}px)`:`translateY(${dy}px)`;t.style.opacity=1-Math.min(.8,Math.max(Math.abs(dx),-dy)/220)});
   const end=()=>{if(!drag)return;drag=false;t.style.transition='';
+    if(onTap&&Math.abs(dx)<6&&dy>-6){kill();onTap();return}
     if(Math.abs(dx)>70)kill(Math.sign(dx));else if(dy<-35)kill('up');
     else{t.style.transform='';t.style.opacity=''}};
   t.addEventListener('pointerup',end);t.addEventListener('pointercancel',end);
-  setTimeout(()=>{if(!drag)kill()},5000);
+  setTimeout(()=>{if(!drag)kill()},onTap?9000:5000);
 }
 let pinOk=null,pinCancel=null,pinVal='';
 function askCode(title,ok,cancel){
@@ -1074,10 +1151,10 @@ function pinKey(k){
   if(k==='x')return pinClose(false);
   if(k==='del'){pinVal=pinVal.slice(0,-1);return pinDraw()}
   if(pinVal.length>=4)return;
-  pinVal+=k;pinDraw();
+  pinVal+=k;pinDraw();haptic('select');
   if(pinVal.length===4)setTimeout(()=>{
-    if(hash(pinVal)===ADMIN)pinClose(true);
-    else{const b=$('#pin .pinbox');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');pinVal='';pinDraw()}
+    if(hash(pinVal)===ADMIN){haptic('success');pinClose(true)}
+    else{haptic('error');const b=$('#pin .pinbox');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');pinVal='';pinDraw()}
   },150);
 }
 $$('#pin .pinpad button').forEach(b=>b.onclick=()=>pinKey(b.dataset.k||b.textContent));
@@ -1085,6 +1162,18 @@ $('#pin').addEventListener('pointerdown',e=>{if(e.target.id==='pin')pinClose(fal
 addEventListener('keydown',e=>{if(!$('#pin').classList.contains('open'))return;
   if(/^[0-9]$/.test(e.key))pinKey(e.key);else if(e.key==='Backspace')pinKey('del');else if(e.key==='Escape')pinKey('x');e.stopPropagation()},true);
 function askHome(v,after){askCode(v?'Status: 🏠 Zu Hause':'Status: 🚶 Unterwegs',()=>{setHome(v);if(after)after()},after)}
+/* Haptisches Feedback: Android über Vibration, iPhone (iOS 18+) über den System-Schalter-Trick */
+const hapLbl=(()=>{try{const l=document.createElement('label'),i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');l.append(i);l.setAttribute('aria-hidden','true');l.style.cssText='position:fixed;left:-200px;top:0;opacity:0;pointer-events:none';document.body.append(l);return l}catch(e){return null}})();
+function haptic(kind){
+  if(S.haptics===false)return;
+  try{
+    if(navigator.vibrate){navigator.vibrate(kind==='error'?[30,50,30,50,30]:kind==='success'?[14,40,24]:kind==='heavy'?28:kind==='select'?6:12);return}
+    if(hapLbl){hapLbl.click();if(kind==='error'||kind==='success')setTimeout(()=>hapLbl.click(),110);if(kind==='error')setTimeout(()=>hapLbl.click(),220)}
+  }catch(e){}
+}
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('change',e=>{if(e.target.matches('.switch input'))haptic('select')});
+document.addEventListener('dblclick',e=>e.preventDefault());
 function coinPop(text){const e=h(`<div class="coinpop">${text}</div>`);document.body.append(e);setTimeout(()=>e.remove(),1350)}
 
 /* =========================================================
@@ -1096,6 +1185,7 @@ const CORE=['quests','shop','inventar','standort','settings'];
 function openApp(id){
   closeMenus();
   if(appCtx&&appCtx.id===id)return;
+  haptic();
   closeAppNow();
   const app=APPS[id],v=$('#appview');
   v.innerHTML=`<div class="apphead">${app.icon} ${app.name}</div><div class="appbody${app.full?' full':''}"><div class="appinner"></div></div>`;
@@ -1112,6 +1202,7 @@ function closeAppNow(){
 }
 function goHome(){
   closeMenus();closeCtx();
+  haptic();
   if(!appCtx){if(editMode)exitEdit();else goPage(0);return}
   const ctx=appCtx;$('#appview').classList.add('closing');
   setTimeout(()=>{if(appCtx===ctx)closeAppNow()},190);
@@ -1145,7 +1236,7 @@ function normLayout(){
 }
 function iconHTML(id){
   const a=APPS[id];
-  return `<div class="appicon${id===dragId?' ph':''}" data-id="${id}">${CORE.includes(id)?'':`<span class="del" data-delid="${id}">−</span>`}<div class="ic" style="background:${a.bg}">${a.icon}</div><span class="lbl">${a.name}</span></div>`;
+  return `<div class="appicon${id===dragId?' ph':''}" data-id="${id}">${id==='settings'&&pendingUpdate()?'<span class="badge">1</span>':''}${CORE.includes(id)?'':`<span class="del" data-delid="${id}">−</span>`}<div class="ic" style="background:${a.bg}">${a.icon}</div><span class="lbl">${a.name}</span></div>`;
 }
 function renderHome(){
   normLayout();
@@ -1159,8 +1250,8 @@ function renderHome(){
 }
 function drawDots(n){n=n||$$('#track .page').length;$('#dots').innerHTML=n>1?Array.from({length:n},(_,i)=>`<i class="${i===homePage?'on':''}"></i>`).join(''):''}
 function setTrack(dx,drag){const W=$('#home').clientWidth;const t=$('#track');t.classList.toggle('drag',!!drag);t.style.transform=`translate3d(${-homePage*W+dx}px,0,0)`}
-function goPage(i){const n=$$('#track .page').length;homePage=Math.max(0,Math.min(n-1,i));setTrack(0,false);drawDots(n)}
-function enterEdit(){if(editMode)return;editMode=true;renderHome()}
+function goPage(i){const n=$$('#track .page').length,old=homePage;homePage=Math.max(0,Math.min(n-1,i));if(old!==homePage)haptic('select');setTrack(0,false);drawDots(n)}
+function enterEdit(){if(editMode)return;editMode=true;haptic('heavy');renderHome()}
 function exitEdit(){if(!editMode)return;editMode=false;renderHome();save()}
 
 /* FLIP: Icons gleiten flüssig an ihren neuen Platz */
@@ -1263,7 +1354,7 @@ function confirmDelete(id){
     if(G.del){G.mode='del';return}
     if(icon){
       if(editMode)G.mode='maybe';
-      else G.lp=setTimeout(()=>{if(G&&!G.mode){G.mode='menu';icon.classList.add('lifted');openCtx(icon);if(navigator.vibrate)navigator.vibrate(12)}},430);
+      else G.lp=setTimeout(()=>{if(G&&!G.mode){G.mode='menu';icon.classList.add('lifted');openCtx(icon);haptic('heavy')}},430);
     }
   });
   home.addEventListener('pointermove',e=>{
@@ -1309,7 +1400,8 @@ function confirmBox(icon,title,okText,ok){
   c.innerHTML=`<div class="pinbox"><div class="pi">${icon}</div><b>${esc(title)}</b><div style="display:flex;gap:8px"><button class="btn" data-x style="flex:1">Abbrechen</button><button class="btn danger" data-ok style="flex:1">${okText}</button></div></div>`;
   c.classList.add('open');
   $('[data-x]',c).onclick=()=>c.classList.remove('open');
-  $('[data-ok]',c).onclick=()=>{c.classList.remove('open');ok()};
+  haptic('heavy');
+  $('[data-ok]',c).onclick=()=>{c.classList.remove('open');haptic('success');ok()};
 }
 
 /* ---------- Menü & Kontrollzentrum ---------- */
@@ -1323,10 +1415,10 @@ function doAction(a){
   if(a==='about'){openApp('settings');setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('info'),20)}
   if(a==='settings')openApp('settings');
   if(a==='logout')logout();
-  if(a==='restart'){closeAppNow();save();boot()}
+  if(a==='restart'){closeAppNow();advance();save();show('off');$('#off .center').style.opacity=0;setTimeout(()=>location.reload(),450)}
   if(a==='off'){closeAppNow();save();show('off')}
 }
-$('#powerBtn').onclick=boot;
+$('#powerBtn').onclick=()=>{haptic('heavy');advance();save();location.reload()};
 function updateCC(){
   const set=(k,on,txt,ic)=>{const t=$(`.cc-tile[data-t="${k}"]`);if(!t)return;t.classList.toggle('on',on);$('small',t).textContent=txt;if(ic)$('span',t).textContent=ic};
   set('loc',S.loc.isHome,(S.loc.isHome?'Zu Hause':'Unterwegs')+(S.loc.mode==='gps'?' · GPS':''),S.loc.isHome?'🏠':'🚶');
@@ -1336,7 +1428,7 @@ function updateCC(){
   $('#bright').value=S.brightness;
 }
 $$('.cc-tile').forEach(t=>t.onclick=()=>{
-  const k=t.dataset.t;
+  const k=t.dataset.t;haptic();
   if(k==='loc'){closeMenus();if(S.loc.mode==='gps'){openApp('standort');return}askHome(!S.loc.isHome);return}
   if(k==='sleep'){openApp('standort');return}
   if(k==='dark')S.theme=S.theme==='dark'?'light':'dark';
@@ -1432,7 +1524,7 @@ function useItem(k){
   const it=ITEMS[k];
   S.battery.level=Math.min(100,S.battery.level+pctOf(it));
   S.inv[k]--;save();renderBattery();
-  coinPop('+'+fmtPct(pctOf(it))+' 🔋');
+  haptic('success');coinPop('+'+fmtPct(pctOf(it))+' 🔋');
   notify(it.icon,'Powerbank eingelöst','+'+fmtPct(pctOf(it))+' Akku ('+it.min+' Min. Laufzeit)','#34c759');
 }
 function renderInventory(c,after){
@@ -1487,7 +1579,7 @@ render(body,ctx){
       askCode(`Abhaken: +${q.coins} Coins`,()=>{
         if(q.done||!S.daily.list.includes(q))return;
         q.done=true;S.coins+=q.coins;S.questDone.unshift({i:q.i,title:q.title,coins:q.coins,diff:q.diff,t:Date.now()});S.questDone=S.questDone.slice(0,300);
-        save();updateCoins();coinPop('+'+q.coins+' 🪙');notify('🏆','Quest geschafft!',`+${q.coins} Coins`,'#f5a524');draw();
+        save();updateCoins();haptic('success');coinPop('+'+q.coins+' 🪙');notify('🏆','Quest geschafft!',`+${q.coins} Coins`,'#f5a524');draw();
       });
     });
     const all=$('#qAll',body);if(all)all.onclick=()=>askCode('Tagesquests neu würfeln',()=>{S.daily.list=S.daily.list.map(q=>q.done?q:genQuest(q.diff,S.daily.list));save();draw()});
@@ -1552,7 +1644,7 @@ render(body,ctx){
     $$('[data-get]',body).forEach(b=>b.onclick=()=>{
       const id=b.dataset.get;busy[id]=0;draw();
       const iv=setInterval(()=>{busy[id]=Math.min(100,busy[id]+7+Math.random()*12);
-        if(busy[id]>=100){clearInterval(iv);delete busy[id];if(!S.installed.includes(id))S.installed.push(id);save();renderHome();notify(APPS[id].icon,APPS[id].name+' installiert','Jetzt auf deinem Homescreen.')}
+        if(busy[id]>=100){clearInterval(iv);haptic('success');delete busy[id];if(!S.installed.includes(id))S.installed.push(id);save();renderHome();notify(APPS[id].icon,APPS[id].name+' installiert','Jetzt auf deinem Homescreen.')}
         if(appCtx===ctx)draw()},120);
       ctx.cleanup.push(()=>clearInterval(iv));
     });
@@ -1561,7 +1653,7 @@ render(body,ctx){
     $$('[data-buy]',body).forEach(b=>b.onclick=()=>{
       const k=b.dataset.buy,it=ITEMS[k];if(S.coins<it.price)return;
       S.coins-=it.price;S.inv[k]=(S.inv[k]||0)+1;save();updateCoins();
-      coinPop('−'+it.price+' 🪙');notify('🛍️','Gekauft!',it.name+' liegt jetzt in deinem Inventar.','#f5a524');draw();
+      haptic('success');coinPop('−'+it.price+' 🪙');notify('🛍️','Gekauft!',it.name+' liegt jetzt in deinem Inventar.','#f5a524');draw();
     });
   }
   ctx.go=t=>{tab=t;draw()};
@@ -1653,16 +1745,18 @@ render(body,ctx){
 /* ---------- Einstellungen ---------- */
 settings:{name:'Einstellungen',icon:'⚙️',bg:'linear-gradient(135deg,#8e9eab,#4b5563)',
 render(body,ctx){
-  const TITLES={profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
+  const TITLES={update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
   const sw=(id,on)=>`<label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label>`;
   const row=(ic,col,label,right,attr='')=>`<${attr?'button':'div'} class="srow" ${attr}><span class="sic" style="background:${col}">${ic}</span><span class="sl">${label}</span>${right}</${attr?'button':'div'}>`;
   const nav=(ic,col,label,go,val='')=>row(ic,col,label,`${val?`<span class="sv">${val}</span>`:''}<span class="chev">›</span>`,`data-go="${go}"`);
   function home(){
     body.innerHTML=`<h1 class="stitle">Einstellungen</h1>
       <button class="sprof" data-go="profil"><div class="avatar">${esc((S.name||'?')[0].toUpperCase())}</div><div class="sl"><b style="font-size:19px">${esc(S.name)}</b><br><small class="muted">🪙 ${fmtNum(S.coins)} · 🏆 ${S.questDone.length} Quests</small></div><span class="chev">›</span></button>
+      ${pendingUpdate()?`<div class="sgroup">${nav('⬇️','#1c1c1e','Update verfügbar','update','<span class="badge static">1</span>')}</div>`:''}
       <div class="sgroup">
         ${row('🌙','#5e5ce6','Dunkelmodus',sw('hDark',S.theme==='dark'))}
         ${row('🔕','#8e8e93','Nicht stören',sw('hDnd',S.dnd))}
+        ${row('📳','#ff375f','Haptisches Feedback',sw('hHap',S.haptics!==false))}
         ${row('☀️','#ff9f0a','Helligkeit',`<input type="range" id="hBr" min="25" max="100" value="${S.brightness}" style="width:42%;accent-color:var(--accent)">`)}
       </div>
       <div class="sgroup">
@@ -1674,12 +1768,14 @@ render(body,ctx){
         ${nav('🔒','#34c759','Passwort','pw')}
       </div>
       <div class="sgroup">
+        ${nav('⚙️','#8e8e93','Softwareupdate','update','GufyUI '+GUFY.v)}
         ${nav('ℹ️','#4f8cff','Über GufyUI','info')}
         ${nav('🛠️','#636366','Admin','admin',adminOK?'Entsperrt':'')}
       </div>
       <div class="sgroup"><button class="srow sdanger" id="hOut">Abmelden</button></div>`;
     $('#hDark',body).onchange=e=>{S.theme=e.target.checked?'dark':'light';save();applyLook();renderBattery()};
     $('#hDnd',body).onchange=e=>{S.dnd=e.target.checked;save();updateCC()};
+    $('#hHap',body).onchange=e=>{S.haptics=e.target.checked;save();haptic()};
     $('#hBr',body).oninput=e=>{S.brightness=+e.target.value;save();applyLook()};
     $('#hOut',body).onclick=()=>logout();
     bindNav();
@@ -1690,6 +1786,26 @@ render(body,ctx){
     body.innerHTML=`<button class="sback">‹ Einstellungen</button><h1 class="stitle">${TITLES[tab]}</h1><div id="setc"></div>`;
     $('.sback',body).onclick=home;
     const c=$('#setc',body);
+    if(tab==='update'){
+      const p=pendingUpdate();
+      if(!p){
+        c.innerHTML=`<div class="upd"><div class="bmark" style="opacity:1">G</div><b style="font-size:20px">GufyUI ${GUFY.v}</b><span class="muted">GufyUI ist auf dem neuesten Stand.</span>
+          <button class="btn" id="uChk" style="margin-top:10px">Nach Updates suchen</button><small class="muted" id="uMsg"></small></div>`;
+        $('#uChk',c).onclick=async()=>{const b=$('#uChk',c);b.disabled=true;b.textContent='Suche …';
+          const found=await checkForUpdate();if(found)return go('update');
+          b.disabled=false;b.textContent='Nach Updates suchen';$('#uMsg',c).textContent='Kein neues Update gefunden.'};
+      }else{
+        c.innerHTML=`<div class="upd"><div class="bmark" style="opacity:1">G</div><b style="font-size:20px">GufyUI ${esc(p.v)}</b><span class="muted">Installiert: ${GUFY.v}</span></div>
+          <div class="sgroup" style="padding:14px 16px"><b>Neu in dieser Version</b><ul class="notes">${(p.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('')||'<li>Verbesserungen</li>'}</ul></div>
+          <div id="uBox"><button class="btn primary" id="uGo" style="width:100%;padding:14px">Laden und installieren</button></div>`;
+        $('#uGo',c).onclick=()=>{
+          haptic();
+          $('#uBox',c).innerHTML=`<div class="ubar"><i id="uFill"></i></div><div class="muted" id="uTxt" style="text-align:center;margin-top:8px">Wird geladen … 0 %</div>`;
+          installUpdate(p,k=>{$('#uFill',c)&&($('#uFill',c).style.transform=`scaleX(${k})`);const t=$('#uTxt',c);if(t)t.textContent='Wird geladen … '+Math.round(k*100)+' %'},
+            ()=>{haptic('success');const t=$('#uTxt',c);if(t)t.textContent='Wird installiert … GufyUI startet gleich neu'});
+        };
+      }
+    }
     if(tab==='profil'){
       c.innerHTML=`<div style="text-align:center;margin:4px 0 22px"><div class="avatar" style="margin:0 auto 10px;width:96px;height:96px;font-size:40px">${esc((S.name||'?')[0].toUpperCase())}</div><b style="font-size:22px">${esc(S.name)}</b></div>
         <div class="sgroup" style="padding:6px 14px">
@@ -1781,7 +1897,7 @@ render(body,ctx){
       $('#aLock',c).onclick=()=>{adminOK=false;go('admin')};
     }
     if(tab==='info'){
-      c.innerHTML=`<div style="text-align:center;margin:6px 0 22px"><div class="bmark" style="opacity:1;margin:0 auto 12px">G</div><div style="font-size:24px">Gufy<b>UI</b></div><span class="muted">Version 3.0</span></div>
+      c.innerHTML=`<div style="text-align:center;margin:6px 0 22px"><div class="bmark" style="opacity:1;margin:0 auto 12px">G</div><div style="font-size:24px">Gufy<b>UI</b></div><span class="muted">Version ${GUFY.v}</span></div>
         <div class="sgroup" style="padding:6px 14px"><div class="row"><span>Benutzer</span><b>${esc(S.name)}</b></div><div class="row"><span>Hintergründe</span><b>${WALLS.length}</b></div><div class="row"><span>Apps im Store</span><b>${Object.values(APPS).filter(a=>a.store).length}</b></div></div>
         <div class="sgroup"><button class="srow sdanger" id="rst">Auf Werkseinstellungen zurücksetzen</button></div>`;
       let armed=false;
