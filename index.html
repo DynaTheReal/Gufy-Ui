@@ -6,8 +6,10 @@
 /* =====================================================================
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
+   "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
+                   ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"4.8","notes":["Tipp in der Startanimation aufs G, um die Version zu sehen","Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus lässt sich dort direkt ausschalten · Updates werden bei leerem Akku sofort installiert"]};
+window.GUFY={"v":"4.9","quick":true,"notes":["Quick-Update: wird sofort installiert, auch bei leerem Akku","Fehler behoben: Bei leerem Akku stand „Lädt“, obwohl im Urlaubsmodus ohne Ladestation nicht geladen wird","Akku leer: Urlaubsmodus aus & Admin-Panel direkt dort (mit Secret Code)","Tipp in der Startanimation aufs G, um die Version zu sehen"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -18,7 +20,7 @@ window.GUFY={"v":"4.8","notes":["Tipp in der Startanimation aufs G, um die Versi
     var inst=JSON.parse(localStorage.getItem('gufyui_inst')||'null');
     var st=JSON.parse(localStorage.getItem('gufyui_v1')||'{}');
     var dead=st.battery&&st.battery.level<=0&&!st.betaBatt;   // Akku leer → Update sofort installieren (man kommt sonst nicht zum Installieren)
-    if(inst&&inst.html&&cmp(inst.v,GUFY.v)<0&&!dead){
+    if(inst&&inst.html&&cmp(inst.v,GUFY.v)<0&&!dead&&!GUFY.quick){   // Quick-Update → nie die alte Version starten
       localStorage.setItem('gufyui_pending',JSON.stringify({v:GUFY.v,notes:GUFY.notes}));
       document.write(inst.html.replace(/<head>/i,'<head><script>window.__GUFY_OLD=1<\/script>')+'<plaintext style="display:none">');
     }
@@ -1584,7 +1586,7 @@ function syncEdge(){
 detectPhone();addEventListener('resize',detectPhone);addEventListener('orientationchange',()=>setTimeout(detectPhone,300));
 function whatsNew(){
   if(S.seenV===GUFY.v)return;const first=!S.seenV;S.seenV=GUFY.v;save();
-  if(!first)setTimeout(()=>notify('✨','GufyUI '+GUFY.v+' installiert','Tippen, um zu sehen, was neu ist','#5e5ce6',openUpdatePage),1200);
+  if(!first)setTimeout(()=>notify(GUFY.quick?'⚡':'✨',(GUFY.quick?'Quick-Update · ':'')+'GufyUI '+GUFY.v+' installiert','Tippen, um zu sehen, was neu ist','#5e5ce6',openUpdatePage),1200);
 }
 function enterDesktop(){const was=current;show('desktop');renderHome();tick();announceUpdate();whatsNew();renderBattery();updateCoins();
   if(was!=='desktop'){$('#desktop').animate([{opacity:0,transform:'scale(1.08)'},{opacity:1,transform:'none'}],{duration:520,easing:EASE});
