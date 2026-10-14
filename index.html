@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.1","quick":true,"notes":["Quick-Update: Fehler behoben – auf dem iPhone ist alles hochgerutscht und unten war eine Lücke","Uhrzeit oben ist wieder sichtbar","Neu: Entwicklermodus in den Einstellungen (mit Secret Code) – zeigt den Namen jedes Bildschirm-Teils"]};
+window.GUFY={"v":"5.2","quick":true,"notes":["Quick-Update: Home-Taste ist nicht mehr abgeschnitten","Entwicklermodus: „Bildschirm anpassen“ – alles live nach unten schieben, bis es passt","Entwicklermodus: Namen von oben stehen jetzt zusätzlich unten im Info-Kasten"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -775,7 +775,7 @@ body.island .lk-top{top:calc(var(--sb) / 2 - 7px);right:30px}
 
 
 /* ===== 4.6: In Apps reicht die App bis ganz nach oben – dort steht nur die Uhrzeit ===== */
-body.phone #statusbar{position:fixed}
+body.phone #statusbar{position:absolute}
 body.phone.inapp #statusbar{background:var(--bg)!important;color:var(--text);text-shadow:none}
 body.phone.inapp #statusbar .right{visibility:hidden}
 body.phone.inapp #statusbar .left{flex:1}
@@ -784,7 +784,7 @@ body.phone.inapp #statusbar .left{flex:1}
 body.appfull #desktop>.wall{visibility:hidden}
 body.appfull #home{visibility:hidden}
 /* Kappe ganz oben in App-Farbe (wird vom Browser/System für den Bereich neben der Island genutzt) */
-#topcap{position:fixed;left:0;right:0;top:0;height:max(var(--sat),1px);z-index:450;pointer-events:none;background:transparent}
+#topcap{position:absolute;left:0;right:0;top:0;height:max(var(--sat),1px);z-index:450;pointer-events:none;background:transparent}
 body.phone.inapp #topcap{background:var(--bg)}
 
 /* Version beim Tippen aufs G in der Startanimation */
@@ -794,10 +794,6 @@ body.phone.inapp #topcap{background:var(--bg)}
 /* ===== 5.0: Seite fest am Bildschirm – iPhone darf sie nach der Tastatur nicht verschieben ===== */
 html,body{position:fixed!important;inset:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
 .screen{overflow:hidden}
-
-/* ===== 5.1: iPhone Home-Bildschirm-App – echte Bildschirmhöhe, kein „Void“ unten ===== */
-body.fullfix,html:has(body.fullfix){height:var(--fullh)!important;bottom:auto!important}
-body.fullfix .screen{bottom:auto;height:var(--fullh)}
 
 /* Entwicklermodus: Namen aller sichtbaren Oberflächen */
 #devlayer{position:fixed;inset:0;z-index:2500;pointer-events:none;display:none}
@@ -812,6 +808,9 @@ body.devmode #devlayer{display:block}
 #devpanel{position:fixed;left:8px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2501;display:none;background:rgba(0,0,0,.82);color:#30d158;font:600 11px/1.45 ui-monospace,Menlo,monospace;padding:7px 9px;border-radius:10px;max-width:calc(100vw - 16px);white-space:pre-wrap;pointer-events:auto}
 body.devmode #devpanel{display:block}
 #devpanel.min{opacity:.55}
+
+/* ===== 5.2: Bildschirm-Anpassung (Entwicklermodus) – verschiebt ALLES gemeinsam ===== */
+.screen{top:var(--adjT,0px)!important;bottom:var(--adjB,0px)!important}
 </style>
 </head>
 <body class="dark">
@@ -1463,7 +1462,8 @@ const DEV_PARTS=[
   ['#bigBatt','Akku-Symbol'],['#emptyTitle','Akku-Text'],['.ebtns','Akku-leer-Knöpfe'],['#eOn','Einschalten-Knopf']
 ];
 let devT=null;
-function devSync(){document.body.classList.toggle('devmode',!!S.dev);clearInterval(devT);if(S.dev){devDraw();devT=setInterval(devDraw,600)}else $('#devlayer').innerHTML=''}
+function applyAdj(){const r=document.documentElement.style;r.setProperty('--adjT',(S.adjT||0)+'px');r.setProperty('--adjB',(S.adjB||0)+'px')}
+function devSync(){applyAdj();document.body.classList.toggle('devmode',!!S.dev);clearInterval(devT);if(S.dev){devDraw();devT=setInterval(devDraw,600)}else $('#devlayer').innerHTML=''}
 function devDraw(){
   const L=$('#devlayer'),out=[],W=innerWidth,H=innerHeight;
   const vis=el=>{if(!el||!el.isConnected)return null;const r=el.getBoundingClientRect();if(r.width<4||r.height<4||r.bottom<0||r.right<0||r.top>H||r.left>W)return null;const cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||+cs.opacity===0)return null;return r};
@@ -1474,9 +1474,12 @@ function devDraw(){
     $$('#track .hitem',pg||document).forEach(el=>{const r=vis(el);if(!r)return;const id=el.dataset.id;box(r,isW(id)?'Widget: '+(WTYPES[S.widgets[id]?.type]?.name||id):'App-Icon: '+(APPS[id]?.name||id))})}
   DEV_PARTS.forEach(([sel,name])=>$$(sel).forEach(el=>{if(scr&&!scr.contains(el)&&el.closest('.screen'))return;const r=vis(el);if(r)box(r,name)}));
   L.innerHTML=out.slice(0,80).join('');
+  const topNames=[...new Set(out.map(h=>{const m=h.match(/top:([-\d.]+)px.*?<b>(.*?)<\/b>/);return m&&+m[1]<110?m[2]:null}).filter(Boolean))];
   const vv=window.visualViewport;
   const sat=getComputedStyle(document.documentElement).getPropertyValue('--sat').trim();
-  $('#devpanel').textContent=`🧑‍💻 ${SCREEN_NAMES[current]||current}${appCtx?' › App: '+APPS[appCtx.id].name:''}\nGufyUI ${GUFY.v} · Fenster ${innerWidth}×${innerHeight} · Bildschirm ${screen.width}×${screen.height}\nsafe-top ${sat} · Leiste ${getComputedStyle($('#statusbar')).height} · vv ${vv?Math.round(vv.height)+' @'+Math.round(vv.offsetTop):'-'} · scroll ${Math.round(scrollY)}\n${navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Browser'} · ${document.body.className}`;
+  const pr=document.createElement('div');pr.style.cssText='position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';document.body.append(pr);const ps=getComputedStyle(pr);const safe=[ps.paddingTop,ps.paddingBottom].map(x=>parseInt(x)).join('/');pr.remove();
+  const scrR=$('.screen.active')?.getBoundingClientRect();
+  $('#devpanel').textContent=`🧑‍💻 ${SCREEN_NAMES[current]||current}${appCtx?' › App: '+APPS[appCtx.id].name:''}\nOben: ${topNames.join(' · ')||'–'}\nsafe oben/unten ${safe} · client ${document.documentElement.clientHeight} · screen-Rect ${scrR?Math.round(scrR.top)+'–'+Math.round(scrR.bottom):'-'} · Anpassung ${S.adjT||0}/${S.adjB||0}\nGufyUI ${GUFY.v} · Fenster ${innerWidth}×${innerHeight} · Bildschirm ${screen.width}×${screen.height}\nsafe-top ${sat} · Leiste ${getComputedStyle($('#statusbar')).height} · vv ${vv?Math.round(vv.height)+' @'+Math.round(vv.offsetTop):'-'} · scroll ${Math.round(scrollY)}\n${navigator.standalone||matchMedia('(display-mode: standalone)').matches?'Home-Bildschirm-App':'Browser'} · ${document.body.className}`;
 }
 $('#devpanel').onclick=()=>$('#devpanel').classList.toggle('min');
 function boot(){
@@ -1630,7 +1633,7 @@ function detectPhone(){
   document.body.classList.toggle('sysbar',!!phone&&h>=34&&sys);
   // iPhone als Home-Bildschirm-App: innerHeight ist um die Statusleiste zu kurz → echte Bildschirmhöhe nehmen
   const full=sys&&/iPhone|iPad|iPod/.test(navigator.userAgent)?Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width)):0;
-  document.body.classList.toggle('fullfix',full>innerHeight+4);
+
   document.documentElement.style.setProperty('--fullh',(full||innerHeight)+'px');
   if(was!==document.body.className&&current==='desktop')renderHome();
   syncEdge();
@@ -2575,7 +2578,7 @@ render(body,ctx){
 /* ---------- Einstellungen ---------- */
 settings:{name:'Einstellungen',icon:'⚙️',bg:'linear-gradient(135deg,#8e9eab,#4b5563)',
 render(body,ctx){
-  const TITLES={beta:'Beta',update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
+  const TITLES={adj:'Bildschirm anpassen',beta:'Beta',update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
   const sw=(id,on)=>`<label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label>`;
   const row=(ic,col,label,right,attr='')=>`<${attr?'button':'div'} class="srow" ${attr}><span class="sic" style="background:${col}">${ic}</span><span class="sl">${label}</span>${right}</${attr?'button':'div'}>`;
   const nav=(ic,col,label,go,val='')=>row(ic,col,label,`${val?`<span class="sv">${val}</span>`:''}<span class="chev">›</span>`,`data-go="${go}"`);
@@ -2601,6 +2604,7 @@ render(body,ctx){
       </div>
       <div class="sgroup">
         ${nav('⚙️','#8e8e93','Softwareupdate','update','GufyUI '+GUFY.v)}
+        ${S.dev?nav('📐','#30d158','Bildschirm anpassen','adj',((S.adjT||0)||(S.adjB||0))?(S.adjT||0)+' / '+(S.adjB||0)+' px':''):''}
         ${nav('🧪','#af52de','Beta','beta',S.betaBatt?'An':'')}
         ${nav('ℹ️','#4f8cff','Über GufyUI','info')}
         ${nav('🛠️','#636366','Admin','admin',adminOK?'Entsperrt':'')}
@@ -2628,6 +2632,15 @@ render(body,ctx){
     $('.sback',body).onclick=()=>{home();slideIn(body,-1);haptic('select')};
     slideIn(body,1);
     const c=$('#setc',body);
+    if(tab==='adj'){
+      const sl=(id,label,v,min,max)=>`<div class="srow" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>${label}</span><b id="${id}V">${v} px</b></div><input type="range" id="${id}" min="${min}" max="${max}" step="1" value="${v}" class="slider"><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" data-step="${id}" data-d="-1">−1</button><button class="btn" data-step="${id}" data-d="1">+1</button></div></div>`;
+      c.innerHTML=`<div class="sgroup">${sl('aT','Alles nach unten schieben',S.adjT||0,-80,140)}${sl('aB','Unten Platz lassen',S.adjB||0,-80,140)}</div>
+        <div class="sgroup"><button class="srow sdanger" id="aRst" style="color:var(--accent)">Zurücksetzen (0 / 0)</button></div>`;
+      const set=(id,v)=>{v=Math.max(-80,Math.min(140,Math.round(v)));if(id==='aT')S.adjT=v;else S.adjB=v;$('#'+id,c).value=v;$('#'+id+'V',c).textContent=v+' px';applyAdj();save()};
+      ['aT','aB'].forEach(id=>{$('#'+id,c).oninput=e=>set(id,+e.target.value)});
+      $$('[data-step]',c).forEach(b=>b.onclick=()=>{const id=b.dataset.step;set(id,+$('#'+id,c).value+ +b.dataset.d);haptic('select')});
+      $('#aRst',c).onclick=()=>{set('aT',0);set('aB',0);haptic()};
+    }
     if(tab==='beta'){
       const sup=!!navigator.getBattery;
       c.innerHTML=`<div class="sgroup">
