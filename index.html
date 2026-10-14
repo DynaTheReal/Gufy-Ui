@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.9","notes":["Nur noch 1 Sport-Quest pro Tag – mit machbaren Zahlen pro Person","Jeden Tag eine Quest mit den Eltern","Neue witzige Eltern-Quests"]};
+window.GUFY={"v":"4.0","notes":["Quests geben weniger Coins: Belohnung × 2 ÷ 10 (z. B. 50 → 10, 400 → 80)"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1955,7 +1955,9 @@ const DIFFS=[['mittel','Mittel','#e0a800','🟡'],['schwer','Schwer','#ff9500','
 const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit Eltern',own:'⭐ Eigene'};
 // Erlaubte Belohnungen je Schwierigkeit (kein 25er mehr)
 const COINSTEPS={mittel:[50,100],schwer:[100,200,300],extrem:[300,400,500,1000]};
-const COINALL=[50,100,200,300,400,500,1000];
+// Belohnung = Grundwert × 2 ÷ 10 (z. B. 50 → 10, 400 → 80, 1000 → 200)
+const QUEST_PAY=v=>Math.round(v*2/10);
+const COINALL=[10,20,40,60,80,100,200];
 // Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
   {i:'🧗',g:'sport',t:n=>`Ihr müsst beide ${n} Klimmzüge schaffen`,r:{mittel:[5,5],schwer:[10,10],extrem:[15,15]},cv:{mittel:100,schwer:200,extrem:400}},
@@ -2027,6 +2029,7 @@ function genQuest(diff,avoid,kind){
     }
     if(!avoid.some(x=>x.title===q.title||x.i===q.i))break;
   }
+  if(q.tag!=='own')q.coins=QUEST_PAY(q.coins);
   q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
@@ -2035,7 +2038,9 @@ const DAILY_SLOTS=[['mittel','fun'],['mittel','parents'],['schwer','sport'],['sc
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
-  (S.customQ||[]).forEach(o=>{if(!COINSTEPS[o.diff])o.diff='mittel';if(o.coins<50)o.coins=50});
+  (S.customQ||[]).forEach(o=>{if(!COINSTEPS[o.diff])o.diff='mittel';if(!S.payV2&&o.coins>=50)o.coins=QUEST_PAY(o.coins)});
+  // einmalig: offene Quests von heute auf die neuen Belohnungen umrechnen
+  if(!S.payV2){if(S.daily)S.daily.list.forEach(q=>{if(!q.done&&q.coins>=50)q.coins=QUEST_PAY(q.coins)});S.payV2=true;save()}
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
     S.daily={day:dayKey(),list,v:2};save();
@@ -2130,7 +2135,7 @@ render(body,ctx){
     const nq=$('#qNew',body);if(nq)nq.onclick=()=>askCode('Quest erstellen',form);
   }
   function form(){
-    let fd='mittel',fc=100;
+    let fd='mittel',fc=20;
     function fdraw(){
       body.innerHTML=`<h2 style="font-size:22px;margin-bottom:14px">＋ Neue Quest</h2>
         <div style="display:flex;gap:8px;margin-bottom:10px"><input class="input" id="fI" value="⭐" maxlength="4" style="width:70px;text-align:center;font-size:24px"><input class="input" id="fT" placeholder="Was muss man machen?" maxlength="120"></div>
