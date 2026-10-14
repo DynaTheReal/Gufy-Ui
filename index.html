@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"5.7","quick":true,"notes":["Quick-Update: Der Streifen ganz unten hat jetzt genau die Farbe vom unteren Rand deines Hintergrundbilds","Der ⓘ-Knopf für die Entwickler-Info ist wieder da"]};
+window.GUFY={"v":"5.9","notes":["Urlaubsmodus ohne Ladestation: Der Akku geht jetzt auch zu Hause leer (wie unterwegs)"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -829,6 +829,9 @@ body.devmode #devtoggle{display:grid}
 /* weicher Übergang am unteren Fensterrand in die Streifenfarbe */
 body.phone #desktop::before,body.phone #lock::before{content:"";position:absolute;left:0;right:0;bottom:0;height:110px;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--strip,transparent))}
 body.phone.appfull #desktop::before{display:none}
+
+/* Apps auf dem Handy: Inhalt läuft unten weich in die App-Farbe aus – der Streifen darunter hat dieselbe Farbe */
+body.phone #appview.open::after{content:"";position:absolute;left:0;right:0;bottom:0;height:90px;pointer-events:none;z-index:4;background:linear-gradient(to bottom,transparent,var(--bg))}
 </style>
 </head>
 <body class="dark">
@@ -1270,7 +1273,7 @@ function isSleepTime(d){
   return f<t?(m>=f&&m<t):(m>=f||m<t);
 }
 const hasStation=()=>(S.inv&&S.inv.station>0);
-function rate(d,lv){if(!S.loc.isHome)return R_AWAY;if(S.vacation&&!hasStation())return 0;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
+function rate(d,lv){if(!S.loc.isHome)return R_AWAY;if(S.vacation&&!hasStation())return R_AWAY;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
 let realBatt=null;
 if(navigator.getBattery)navigator.getBattery().then(b=>{realBatt=b;['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,()=>{if(S.betaBatt)batteryTick()}));if(S.betaBatt)batteryTick()}).catch(()=>{});
 const realOn=()=>!!(S.betaBatt&&realBatt);
@@ -1283,11 +1286,13 @@ function advance(mult=1){
   let t=S.battery.last||now;
   if(now-t>60*864e5)t=now-60*864e5;          // max. 60 Tage nachrechnen
   let lv=S.battery.level;
+  if(lv<=0&&S.setupDone)S.wasDead=true;   // war leer → erst ~1 Min laden
   while(t<now){
     const st=Math.min(now-t,60000-(t%60000)); // minutengenau
     let r=rate(new Date(t),lv);if(r<0)r*=mult;
     lv+=r*st/3600000;
     lv=Math.max(0,Math.min(100,lv));
+    if(lv<=0&&S.setupDone)S.wasDead=true;
     t+=st;
   }
   S.battery.level=lv;S.battery.last=now;
@@ -1304,7 +1309,7 @@ function statusInfo(){
   if(realOn())return realBatt.charging?{ic:'🔌',t:'Echter Akku · lädt',r:'Beta',col:'linear-gradient(135deg,#34c759,#0a8f3c)'}:{ic:'📱',t:'Echter Akku',r:'Beta',col:'linear-gradient(135deg,#636366,#2c2c2e)'};
   if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:inUse()?'−40 % pro Std. (in Benutzung)':'−20 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
   const full=S.battery.level>=99.95;
-  if(S.vacation&&!hasStation())return{ic:'🏖️',t:'Urlaub · Zu Hause',r:'Lädt nicht – Ladestation fehlt',col:'linear-gradient(135deg,#ff9f0a,#ff375f)'};
+  if(S.vacation&&!hasStation())return{ic:'🏖️',t:'Urlaub · Zu Hause',r:(inUse()?'−40 % pro Std.':'−20 % pro Std.')+' · keine Ladestation',col:'linear-gradient(135deg,#ff9f0a,#ff375f)'};
   if(S.vacation)return{ic:'🔌',t:'Urlaub · Ladestation',r:full?'Voll geladen':'Lädt über Ladestation',col:'linear-gradient(135deg,#30b0c7,#0a84ff)'};
   if(isSleepTime(new Date()))return{ic:'😴',t:'Schlafenszeit',r:full?'Voll geladen':'Lädt',col:'linear-gradient(135deg,#5e5ce6,#2b1f7a)'};
   return{ic:'🏠',t:'Zu Hause',r:full?'Voll geladen':(S.battery.level<80?'Lädt schnell':'Lädt langsam'),col:'linear-gradient(135deg,#34c759,#0a8f3c)'};
@@ -1353,6 +1358,7 @@ function renderBattery(){
 }
 let emptyAdmin=false,emptyGeoT=null,emptyGeoAt=0;
 function batteryDead(){
+  if(!S.wasDead){S.wasDead=true;save()}
   closeAppNow();closeMenus();
   show('empty');updateEmpty();emptyGeoLoop();
 }
@@ -1363,21 +1369,22 @@ function emptyGeoLoop(){
   const run=()=>{if(current!=='empty'){clearInterval(emptyGeoT);emptyGeoT=null;return}emptyGeoAt=Date.now();checkGeoOnce();updateEmpty()};
   run();emptyGeoT=setInterval(run,10000);
 }
+// Nach leerem Akku muss erst ca. 1 Minute geladen werden, bevor man einschalten kann (≈ „1 %“)
+const START_MIN=R_FAST/60;
 function updateEmpty(){
-  const lv=S.battery.level,dead=lv<=0;
+  const lv=S.battery.level,r=rate(new Date()),ready=lv>=START_MIN||lv>=1,dead=lv<=0&&r<=0;
   const t=$('#emptyTitle');
-  t.textContent=dead?'AKKU LEER':'Akku: '+dispPct()+' %';
-  t.classList.toggle('blink',dead);t.classList.toggle('ok',!dead);
-  $('#bigBatt').classList.toggle('ok',!dead);
-  $('#bigBatt i').style.width=Math.min(100,lv)+'%';
+  const secs=r>0&&!ready?Math.max(1,Math.ceil((START_MIN-lv)/r*3600)):0;
+  t.textContent=ready?'Akku: '+dispPct()+' %':(r>0?'Lädt …':'AKKU LEER');
+  t.classList.toggle('blink',!ready&&r<=0);t.classList.toggle('ok',ready||r>0);
+  $('#bigBatt').classList.toggle('ok',ready||r>0);
+  $('#bigBatt i').style.width=Math.min(100,ready?lv:Math.max(2,lv/START_MIN*3))+'%';
   const st=statusInfo();
-  $('#emptyTxt').textContent=dead
-    ?(rate(new Date())>0?`${st.ic} Lädt …`:(S.loc.isHome&&S.vacation?'🏖️ Urlaubsmodus ist an – ohne Ladestation lädt der Akku zu Hause nicht':''))
-    :'';
+  $('#emptyTxt').textContent=ready?'':(r>0?`${st.ic} Startbereit in ${secs} s`:(S.loc.isHome&&S.vacation&&!hasStation()?'🏖️ Urlaubsmodus ist an – ohne Ladestation lädt der Akku zu Hause nicht':''));
   const g=$('#eGeo');
-  if(g)g.textContent=dead&&emptyGeoT?(S.loc.isHome?'📍 Zu Hause erkannt':'📍 Standort wird alle 10 Sek. geprüft …'+(emptyGeoAt?' (zuletzt vor '+Math.round((Date.now()-emptyGeoAt)/1000)+' s)':'')):'';
+  if(g)g.textContent=!ready&&emptyGeoT?(S.loc.isHome?'📍 Zu Hause erkannt':'📍 Standort wird alle 10 Sek. geprüft …'+(emptyGeoAt?' (zuletzt vor '+Math.round((Date.now()-emptyGeoAt)/1000)+' s)':'')):'';
   $('#eHome').textContent=S.loc.mode==='gps'?'📍 Standort prüfen':(S.loc.isHome?'🚶 Ich bin unterwegs':'🏠 Ich bin zu Hause');
-  $('#eOn').style.display=dead?'none':'';
+  $('#eOn').style.display=ready?'':'none';
   $('#eVac').style.display=dead&&S.vacation&&!hasStation()?'':'none';
 }
 $('#eVac').onclick=()=>askCode('Urlaubsmodus ausschalten',()=>{advance();S.vacation=false;save();updateEmpty();notify('🏖️','Urlaubsmodus aus','Zu Hause lädt der Akku wieder.','#ff9f0a')});
@@ -1388,7 +1395,7 @@ $('#eAdmin').onclick=()=>askCode('Admin-Panel',()=>{
 $('#eInv').onclick=()=>{renderInventory($('#eInvBody'),updateEmpty);$('#eSheet').classList.add('open')};
 $('#eSheetClose').onclick=()=>$('#eSheet').classList.remove('open');
 $('#eHome').onclick=()=>{if(S.loc.mode==='gps'){checkGeoOnce()}else askHome(!S.loc.isHome,updateEmpty)};
-$('#eOn').onclick=()=>{$('#eSheet').classList.remove('open');boot()};
+$('#eOn').onclick=()=>{$('#eSheet').classList.remove('open');S.wasDead=false;save();boot()};
 setInterval(batteryTick,1000);
 // Beim Wechsel sichtbar/unsichtbar die Zeit davor richtig abrechnen
 addEventListener('visibilitychange',()=>{advance(document.visibilityState==='visible'?1:USE_MULT);batteryTick();save()});
@@ -1512,7 +1519,7 @@ function boot(){
   setTimeout(()=>bt.classList.add('out'),2950);
   setTimeout(()=>{
     advance();
-    if(S.setupDone&&S.battery.level<=0){batteryDead();return}
+    if(S.setupDone&&(S.battery.level<=0||(S.wasDead&&S.battery.level<START_MIN))){batteryDead();return}
     applyLook();
     if(!S.setupDone){step=0;show('setup');renderSetup()}
     else if(S.loggedIn)enterDesktop();
@@ -1692,7 +1699,7 @@ function syncEdge(){
   if(wallOnPage){const full=Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width))+40;
     H.style.backgroundSize=`100% ${full}px`;H.style.backgroundPosition='center top';H.style.backgroundRepeat='no-repeat';
     const bc=wallBottomColor(S.wall),sc=current==='lock'?darken(bc,.45):bc;H.style.backgroundColor=sc;H.style.setProperty('--strip',sc)}
-  if(current==='desktop'&&B.contains('appfull'))c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';
+  if(current==='desktop'&&B.contains('appfull')){c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';H.style.backgroundColor=c}
   else if(current==='desktop'&&B.contains('inapp'))c=wallTopColor();
   else if(current==='desktop'||current==='lock')c=wallTopColor();
   else if(current==='setup')c='#0b0b12';
@@ -1816,7 +1823,7 @@ function closeAppNow(){
   document.body.classList.remove('inapp','appfull');syncEdge();
   if(!closingHome&&homeAnim){homeAnim.cancel();homeAnim=null}
   $('#sbApp').textContent='Home';
-  if(emptyAdmin){emptyAdmin=false;advance();if(S.battery.level<=0)batteryDead();}
+  if(emptyAdmin){emptyAdmin=false;advance();if(S.battery.level<=0||(S.wasDead&&S.battery.level<START_MIN))batteryDead();}
 }
 let closingHome=false;
 function goHome(){
@@ -2665,7 +2672,7 @@ render(body,ctx){
       askCode(v?'Urlaubsmodus einschalten':'Urlaubsmodus ausschalten',()=>{
         advance(inUse()?USE_MULT:1);S.vacation=v;save();renderBattery();updateCC();
         const t=$('#hVac',body);if(t)t.checked=v;
-        notify('🏖️',v?'Urlaubsmodus an':'Urlaubsmodus aus',v?(hasStation()?'Zu Hause lädt jetzt deine Ladestation.':'Zu Hause wird nicht geladen – im Gufy Store gibt es die Ladestation.'):'Laden zu Hause funktioniert wieder normal.','#ff9f0a');
+        notify('🏖️',v?'Urlaubsmodus an':'Urlaubsmodus aus',v?(hasStation()?'Zu Hause lädt jetzt deine Ladestation.':'Ohne Ladestation verliert der Akku auch zu Hause Strom – die Ladestation gibt es im Gufy Store.'):'Laden zu Hause funktioniert wieder normal.','#ff9f0a');
       })};
     $('#hBr',body).oninput=e=>{S.brightness=+e.target.value;save();applyLook()};
     $('#hOut',body).onclick=()=>logout();
