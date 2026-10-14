@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.3","notes":["Widgets: lange auf den Homescreen drücken, mit ＋ hinzufügen, verschieben und in der Größe ändern","Standort-App mit echter Karte und sichtbarem Umkreis","Neue, flüssigere Animationen überall","Aufgeräumtere Apps"]};
+window.GUFY={"v":"3.4","notes":["10 neue Hintergründe: Galaxie, Unterwasser, Gewitter, Mars, Eisberg und mehr","Weicher Übergang in den Bearbeiten-Modus","Flüssigeres Wischen zwischen den Seiten","Karte lädt jetzt immer – notfalls die normale OpenStreetMap"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -709,6 +709,28 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
 .notelist button.note{background:var(--panel-solid);border:1px solid var(--border);border-radius:18px}
 .calgrid button.today{background:var(--accent)}
 .emptyinv{padding:46px 10px}
+
+.mapframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+/* ===== 3.4: Bearbeiten-Übergang & flüssiges Wischen ===== */
+#track{transition:transform .5s cubic-bezier(.22,1,.36,1);backface-visibility:hidden}
+.page{contain:layout paint;transform:translateZ(0)}
+.page .apps{transform-origin:50% 40%;transition:transform .42s cubic-bezier(.2,1.15,.3,1)}
+#home.edit .page .apps{transform:scale(.93)}
+#home.editing .hitem .del{transition:transform .3s cubic-bezier(.2,1.4,.3,1),opacity .2s}
+#home .hitem .del{display:grid;transform:scale(0);opacity:0;transition:transform .25s ease,opacity .2s;pointer-events:none}
+#home.edit .hitem .del{transform:scale(1);opacity:1;pointer-events:auto;animation:none}
+#home.edit .appicon .ic,#home.edit .wdg .wbox{animation-delay:.35s}
+.editbar{display:flex!important;transform:translateY(90px);opacity:0;transition:transform .45s cubic-bezier(.2,1.1,.3,1),opacity .3s}
+#home.edit .editbar{transform:none;opacity:1}
+.editbar button{animation:none}
+#home:not(.edit) .editbar{pointer-events:none}
+#home:not(.edit) .editbar button{pointer-events:none}
+#dots{transition:transform .4s cubic-bezier(.2,1.1,.3,1)}
+#home.edit #dots{transform:translateY(-6px)}
+/* Widgets ohne Live-Weichzeichner: viel flüssiger beim Wischen */
+.wbox{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:linear-gradient(160deg,rgba(40,40,52,.62),rgba(14,14,20,.58))!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 12px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.1)!important}
+.appicon .ic{will-change:auto}
 </style>
 </head>
 <body class="dark">
@@ -1011,6 +1033,87 @@ const SCENES=(()=>{
 })();
 const SCENE0=WALLS.length;
 SCENES.forEach(x=>{WALLS.push(x.bg);WALLNAMES.push(x.n)});
+/* ---------- Hintergrund-Update 2: zehn weitere Szenen ---------- */
+const SCENES2=(()=>{
+  const R=seed=>()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
+  const svg=(inner,defs='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice"><defs>${defs}</defs>${inner}</svg>`;
+  const url=x=>`url('data:image/svg+xml,${encodeURIComponent(x).replace(/'/g,'%27')}') center/cover no-repeat, #000`;
+  const stops=a=>a.map(([o,c,op])=>`<stop offset="${o}" stop-color="${c}"${op!==undefined?` stop-opacity="${op}"`:''}/>`).join('');
+  const lg=(id,a,x2=0,y2=1)=>`<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops(a)}</linearGradient>`;
+  const rg=(id,a,cx=.5,cy=.5,r=.5)=>`<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}">${stops(a)}</radialGradient>`;
+  const blur=(id,d)=>`<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${d}"/></filter>`;
+  const stars=(r,n,maxY=1920,big=2)=>{let o='';for(let i=0;i<n;i++)o+=`<circle cx="${(r()*1080)|0}" cy="${(r()*maxY)|0}" r="${(.4+r()*big).toFixed(1)}" fill="#fff" opacity="${(.2+r()*.8).toFixed(2)}"/>`;return o};
+  const L=[];
+
+  // Galaxie
+  {const r=R(31),cols=['#c4b5fd','#93c5fd','#fff','#f9a8d4'];let st='',neb='';
+   for(let arm=0;arm<2;arm++)for(let i=0;i<520;i++){const t=i/520,a=t*7.5+arm*Math.PI,rad=30+t*620,j=(r()-.5)*(30+t*120),x=Math.cos(a)*(rad+j),y=Math.sin(a)*(rad+j);
+     st+=`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(.6+r()*2.2).toFixed(1)}" fill="${cols[i%4]}" opacity="${(.35+r()*.65).toFixed(2)}"/>`;
+     if(i%26===0)neb+=`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(40+t*90)|0}" fill="${arm?'#7c3aed':'#2563eb'}" opacity=".35"/>`}
+   L.push(['Galaxie',svg(`<rect width="1080" height="1920" fill="#03020b"/>${stars(r,260)}<g transform="translate(540 940) rotate(-24) scale(1 .62)"><g filter="url(#b)">${neb}</g>${st}<circle r="150" fill="url(#core)"/></g>`,
+     blur('b',40)+rg('core',[[0,'#fff'],[.25,'#fde7ff',.9],[1,'#a855f7',0]]))]);}
+
+  // Unterwasser
+  {const r=R(41);let rays='',bub='',weed='';
+   for(let i=0;i<7;i++){const x=80+i*150+r()*60;rays+=`<polygon points="${x},0 ${x+70},0 ${x+260+r()*120},1900 ${x-90},1900" fill="#e0fbff" opacity="${(.05+r()*.07).toFixed(2)}"/>`}
+   for(let i=0;i<60;i++){const rr=3+r()*16;bub+=`<circle cx="${(r()*1080)|0}" cy="${(300+r()*1500)|0}" r="${rr.toFixed(1)}" fill="none" stroke="#e0fbff" stroke-width="${rr>10?2:1.4}" opacity="${(.25+r()*.5).toFixed(2)}"/>`}
+   for(let i=0;i<14;i++){const x=r()*1080,h=200+r()*360;weed+=`<path d="M${x|0} 1920 C${(x-60)|0} ${(1920-h*.4)|0} ${(x+70)|0} ${(1920-h*.7)|0} ${(x+(r()-.5)*80)|0} ${(1920-h)|0}" stroke="#0a3b3a" stroke-width="${(10+r()*10)|0}" fill="none" stroke-linecap="round"/>`}
+   L.push(['Unterwasser',svg(`<rect width="1080" height="1920" fill="url(#s)"/><g filter="url(#b)">${rays}</g>${bub}${weed}<path d="M0 1920 L0 1780 Q 270 1700 540 1770 T 1080 1740 L1080 1920Z" fill="#021a26"/>`,
+     lg('s',[[0,'#22d3ee'],[.35,'#0e7490'],[.75,'#063c58'],[1,'#02121d']])+blur('b',14))]);}
+
+  // Gewitter
+  {const r=R(51);let cl='',rain='';
+   for(let i=0;i<34;i++)cl+=`<circle cx="${(r()*1080)|0}" cy="${(r()*620)|0}" r="${(120+r()*170)|0}" fill="${['#1e2533','#2a3244','#151b27'][i%3]}"/>`;
+   for(let i=0;i<160;i++){const x=r()*1180-100,y=500+r()*1420;rain+=`<line x1="${x|0}" y1="${y|0}" x2="${(x-22)|0}" y2="${(y+70)|0}"/>`}
+   const bolt='M560 520 L500 820 L590 830 L470 1180 L660 760 L560 750 L640 520 Z';
+   L.push(['Gewitter',svg(`<rect width="1080" height="1920" fill="url(#s)"/><g filter="url(#b)">${cl}</g><path d="${bolt}" fill="#c7d2fe" filter="url(#g)" opacity=".9"/><path d="${bolt}" fill="#fff"/><g stroke="#9fb3d1" stroke-width="2" opacity=".35">${rain}</g><rect y="1650" width="1080" height="270" fill="#070a10"/>`,
+     lg('s',[[0,'#0a0e17'],[.5,'#1b2436'],[1,'#0b0f18']])+blur('b',45)+blur('g',22))]);}
+
+  // Mars
+  {const d=(y,c,k)=>`<path d="M-50 1920 L-50 ${y} Q ${300+k*80} ${y-150} 600 ${y-30} T 1130 ${y-70} L1130 1920Z" fill="${c}"/>`;
+   L.push(['Mars',svg(`<rect width="1080" height="1920" fill="url(#s)"/><circle cx="780" cy="420" r="46" fill="#f5d0b5"/><circle cx="320" cy="300" r="22" fill="#e8c2a6"/><circle cx="540" cy="1050" r="240" fill="url(#g)"/>`+
+     d(1150,'#c2552d',0)+d(1330,'#a8431f',2)+d(1520,'#8a3418',-1)+d(1700,'#6a2711',1)+d(1860,'#4a1a0a',3),
+     lg('s',[[0,'#3b1d1a'],[.45,'#9a4a2c'],[.75,'#e08a5a'],[1,'#f2b48a']])+rg('g',[[0,'#ffd7a8',.55],[1,'#ffd7a8',0]]))]);}
+
+  // Eisberg
+  {const ice='M300 1180 L380 900 L470 820 L560 640 L640 760 L700 720 L790 900 L860 1180 Z';
+   L.push(['Eisberg',svg(`<rect width="1080" height="1920" fill="url(#s)"/><rect y="1180" width="1080" height="740" fill="url(#sea)"/>`+
+     `<path d="${ice}" fill="#f4fbff"/><path d="M560 640 L640 760 L600 1180 L470 1180 Z" fill="#cfe6f5"/><path d="M640 760 L700 720 L790 900 L860 1180 L600 1180Z" fill="#a9d2ec"/>`+
+     `<g transform="translate(0 2360) scale(1 -1)" opacity=".28"><path d="${ice}" fill="#e6f4ff"/></g><rect y="1180" width="1080" height="4" fill="#fff" opacity=".5"/>`,
+     lg('s',[[0,'#6fa8dc'],[.5,'#b7d8f0'],[.62,'#e4f2fb']])+lg('sea',[[0,'#2b6b9a'],[1,'#0b2740']]))]);}
+
+  // Meer-Sonnenaufgang
+  {const r=R(61);let refl='';for(let y=1110;y<1920;y+=14){const w=(40+r()*180)*(1+(y-1100)/700);refl+=`<rect x="${(540-w/2+(r()-.5)*40)|0}" y="${y}" width="${w|0}" height="4" rx="2" fill="#ffd8a8" opacity="${(.15+r()*.5).toFixed(2)}"/>`}
+   L.push(['Meeresmorgen',svg(`<rect width="1080" height="1920" fill="url(#s)"/><circle cx="540" cy="1100" r="420" fill="url(#g)"/><circle cx="540" cy="1100" r="150" fill="#ffe7c2"/><rect y="1100" width="1080" height="820" fill="url(#sea)"/>${refl}`,
+     lg('s',[[0,'#1d1340'],[.35,'#6b2e7a'],[.55,'#d8608c'],[.57,'#ffb38a']])+lg('sea',[[0,'#3d2a5c'],[1,'#0c0a1c']])+rg('g',[[0,'#ffc78f',.6],[1,'#ffc78f',0]]))]);}
+
+  // Wolken
+  {const r=R(71);let c='';const clouds=[[230,520,1],[820,760,1.2],[380,1100,1.5],[900,1380,1.3],[200,1640,1.7],[700,1820,1.9]];clouds.forEach(([cx,cy,k])=>{for(let i=0;i<11;i++){const a=r()*Math.PI,d=r()*140*k;c+=`<circle cx="${(cx+Math.cos(a)*d*1.6)|0}" cy="${(cy-Math.sin(a)*d*.55)|0}" r="${((50+r()*70)*k)|0}" fill="#fff" opacity="${(.7+r()*.3).toFixed(2)}"/>`}c+=`<ellipse cx="${cx}" cy="${cy+20*k}" rx="${240*k|0}" ry="${50*k|0}" fill="#fff" opacity=".85"/>`});
+   L.push(['Wolken',svg(`<rect width="1080" height="1920" fill="url(#s)"/><g filter="url(#b)">${c}</g>`,lg('s',[[0,'#6d8ff0'],[.55,'#b9b4f7'],[1,'#f9c6e0']])+blur('b',12))]);}
+
+  // Hexagon
+  {const r=R(81),sz=64,hx=sz*Math.sqrt(3);let g='',lit='';
+   for(let row=-1;row<20;row++)for(let col=-1;col<11;col++){const cx=col*hx+(row%2?hx/2:0),cy=row*sz*1.5;
+     const pts=Array.from({length:6},(_,k)=>{const a=Math.PI/180*(60*k-30);return `${(cx+sz*.94*Math.cos(a)).toFixed(0)},${(cy+sz*.94*Math.sin(a)).toFixed(0)}`}).join(' ');
+     g+=`<polygon points="${pts}"/>`;if(r()<.09)lit+=`<polygon points="${pts}" fill="url(#n${r()<.5?1:2})" opacity="${(.5+r()*.5).toFixed(2)}"/>`}
+   L.push(['Hexagon',svg(`<rect width="1080" height="1920" fill="#07080d"/><g filter="url(#b)">${lit}</g>${lit}<g fill="none" stroke="#1f2633" stroke-width="3">${g}</g>`,
+     lg('n1',[[0,'#22d3ee'],[1,'#6366f1']],1,1)+lg('n2',[[0,'#f472b6'],[1,'#a855f7']],1,1)+blur('b',22))]);}
+
+  // Flow
+  {const r=R(91);let p='';for(let i=0;i<46;i++){const y=200+i*34,a=180+r()*260;p+=`<path d="M-50 ${y} C 300 ${(y-a)|0}, 700 ${(y+a)|0}, 1130 ${(y-a*.4)|0}" opacity="${(.25+r()*.6).toFixed(2)}"/>`}
+   L.push(['Flow',svg(`<rect width="1080" height="1920" fill="#08080d"/><g fill="none" stroke="url(#f)" stroke-width="2.4">${p}</g>`,lg('f',[[0,'#06b6d4'],[.5,'#8b5cf6'],[1,'#ec4899']],1,0))]);}
+
+  // Prisma
+  {const fan=['#ff3b30','#ff9500','#ffcc00','#34c759','#0a84ff','#5e5ce6'];let rays='';
+   fan.forEach((c,i)=>{const y1=1010+i*8,y2=1180+i*150;rays+=`<polygon points="600,${y1} 600,${y1+10} 1100,${y2+120} 1100,${y2}" fill="${c}" opacity=".85"/>`});
+   L.push(['Prisma',svg(`<rect width="1080" height="1920" fill="url(#bg)"/><polygon points="-20,1180 560,1010 560,1022 -20,1196" fill="#fff" opacity=".9"/><g filter="url(#b)">${rays}</g>${rays}`+
+     `<polygon points="540,800 760,1180 320,1180" fill="url(#gl)" stroke="#fff" stroke-opacity=".6" stroke-width="3"/>`,
+     lg('bg',[[0,'#05060b'],[1,'#11131c']])+lg('gl',[[0,'#ffffff',.22],[1,'#ffffff',.04]],1,1)+blur('b',26))]);}
+
+  return L.map(([n,x])=>({n,bg:url(x)}));
+})();
+SCENES2.forEach(x=>{WALLS.push(x.bg);WALLNAMES.push(x.n)});
+
 const ACCENTS=['#4f8cff','#a855f7','#ec4899','#f97316','#22c55e','#14b8a6','#eab308','#ef4444'];
 
 function applyLook(){
@@ -1169,15 +1272,23 @@ function startGeo(){
   if(geoWatch===null)geoWatch=navigator.geolocation.watchPosition(onGeo,onGeoErr,geoOpts);
 }
 let leafletP=null;
+const LEAFLET_CDNS=[
+  ['https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'],
+  ['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'],
+  ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css']];
 function loadLeaflet(){
   if(window.L&&L.map)return Promise.resolve();
   if(leafletP)return leafletP;
-  leafletP=new Promise((res,rej)=>{
-    const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.append(l);
-    const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-    sc.onload=()=>res();sc.onerror=()=>{leafletP=null;sc.remove();rej()};document.head.append(sc);
-    setTimeout(()=>{if(!(window.L&&L.map)){leafletP=null;rej()}},12000);
+  const tryOne=i=>new Promise((res,rej)=>{
+    if(i>=LEAFLET_CDNS.length)return rej();
+    const[js,css]=LEAFLET_CDNS[i];
+    const l=document.createElement('link');l.rel='stylesheet';l.href=css;document.head.append(l);
+    const sc=document.createElement('script');sc.src=js;
+    let done=false;const fail=()=>{if(done)return;done=true;sc.remove();l.remove();tryOne(i+1).then(res,rej)};
+    sc.onload=()=>{if(done)return;done=true;window.L&&L.map?res():fail()};sc.onerror=fail;
+    setTimeout(fail,6000);document.head.append(sc);
   });
+  leafletP=tryOne(0).catch(e=>{leafletP=null;throw e});
   return leafletP;
 }
 function stopGeo(){if(geoWatch!==null){navigator.geolocation.clearWatch(geoWatch);geoWatch=null}}
@@ -1326,7 +1437,7 @@ function tryUnlock(){
 function enterDesktop(){const was=current;show('desktop');renderHome();tick();announceUpdate();renderBattery();updateCoins();
   if(was!=='desktop'){$('#desktop').animate([{opacity:0,transform:'scale(1.08)'},{opacity:1,transform:'none'}],{duration:520,easing:EASE});
     const pg=$$('#track .page')[homePage];if(pg)stagger($$('.hitem',pg),{opacity:0,transform:'scale(.6)'},24)}
-  if(!S.wallUpd){S.wallUpd=true;save();if(!S.firstLogin)setTimeout(()=>notify('🎨','Hintergrund-Update',SCENES.length+' neue Hintergründe in den Einstellungen'),900)}}
+  if(!S.wallUpd2){S.wallUpd=S.wallUpd2=true;save();if(!S.firstLogin)setTimeout(()=>notify('🎨','Hintergrund-Update',SCENES2.length+' neue Hintergründe – Einstellungen › Hintergrund','#5e5ce6',()=>{openApp('settings');setTimeout(()=>appCtx&&appCtx.go&&appCtx.go('wall'),20)}),900)}}
 function logout(){adminOK=false;S.loggedIn=false;save();showLock()}
 $('#lkGo').onclick=tryUnlock;
 $('#lkPw').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
@@ -1534,10 +1645,20 @@ function renderHome(){
   tick();renderBattery();updateCoins();updateWidgets(t);
 }
 function drawDots(n){n=n||$$('#track .page').length;$('#dots').innerHTML=n>1?Array.from({length:n},(_,i)=>`<i class="${i===homePage?'on':''}"></i>`).join(''):''}
-function setTrack(dx,drag){const W=$('#home').clientWidth;const t=$('#track');t.classList.toggle('drag',!!drag);t.style.transform=`translate3d(${-homePage*W+dx}px,0,0)`}
+let trackW=0;
+function setTrack(dx,drag){const t=$('#track');if(!drag||!trackW)trackW=$('#home').clientWidth;if(t.classList.contains('drag')!==!!drag)t.classList.toggle('drag',!!drag);t.style.transform=`translate3d(${-homePage*trackW+dx}px,0,0)`}
 function goPage(i){const n=$$('#track .page').length,old=homePage;homePage=Math.max(0,Math.min(n-1,i));if(old!==homePage)haptic('select');setTrack(0,false);drawDots(n)}
-function enterEdit(){if(editMode)return;editMode=true;haptic('heavy');renderHome()}
-function exitEdit(){if(!editMode)return;editMode=false;closeWSheet();renderHome();save()}
+function enterEdit(){
+  if(editMode)return;editMode=true;haptic('heavy');
+  renderHome();const h=$('#home');h.classList.remove('edit');void h.offsetWidth;
+  h.classList.add('editing');requestAnimationFrame(()=>{h.classList.add('edit')});
+  setTimeout(()=>h.classList.remove('editing'),420);
+}
+function exitEdit(){
+  if(!editMode)return;editMode=false;closeWSheet();haptic();
+  const h=$('#home');h.classList.add('editing');h.classList.remove('edit');
+  setTimeout(()=>{h.classList.remove('editing');if(!editMode){renderHome();save()}},380);
+}
 
 /* FLIP: Elemente gleiten flüssig an ihren neuen Platz */
 function flipRender(){
@@ -1680,9 +1801,10 @@ function closeWSheet(){$('#wsheet').classList.remove('open');$('#wscrim').classL
     const dx=e.clientX-G.x,dy=e.clientY-G.y,dist=Math.hypot(dx,dy);
     if(G.mode==='drag')return moveDrag(e);
     if(G.mode==='swipe'){
-      const n=$$('#track .page').length;let d=dx;
+      const n=G.n||(G.n=$$('#track .page').length);let d=dx;
       if((homePage===0&&d>0)||(homePage===n-1&&d<0))d*=.3;
-      return setTrack(d,true);
+      const now=performance.now();G.v=(e.clientX-(G.lx??G.x))/Math.max(1,now-(G.lt??now-16));G.lx=e.clientX;G.lt=now;
+      G.sd=d;if(!G.raf)G.raf=requestAnimationFrame(()=>{if(G){G.raf=0;setTrack(G.sd,true)}});return;
     }
     if(G.mode==='menu'&&dist>10){closeCtx();enterEdit();return startDrag(G.id,e)}
     if(G.mode==='maybe'&&dist>6)return startDrag(G.id,e);
@@ -1694,7 +1816,9 @@ function closeWSheet(){$('#wsheet').classList.remove('open');$('#wscrim').classL
     const g=G;G=null;
     const dx=(e.clientX||g.x)-g.x,W=home.clientWidth;
     if(g.mode==='swipe'){
-      if(!cancel&&dx<-W*.16)goPage(homePage+1);else if(!cancel&&dx>W*.16)goPage(homePage-1);else goPage(homePage);return;
+      if(g.raf)cancelAnimationFrame(g.raf);
+      const v=g.v||0;
+      if(!cancel&&(dx<-W*.16||v<-.35))goPage(homePage+1);else if(!cancel&&(dx>W*.16||v>.35))goPage(homePage-1);else goPage(homePage);return;
     }
     if(g.mode==='drag')return endDrag();
     if(cancel)return;
@@ -2058,10 +2182,15 @@ render(body,ctx){
     const ly=$('#lLayer',body);if(ly)ly.onclick=()=>{haptic();sat=!sat;ly.classList.toggle('on',sat);setTiles()};
   }
   /* ---------- Echte Karte (Leaflet + OpenStreetMap/CARTO/Esri) ---------- */
+  let tileMode='styled';
   function setTiles(){
     if(!map)return;if(tiles)map.removeLayer(tiles);
+    if(tileMode==='osm'&&!sat){tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);return}
+    let ok=0,bad=0;
     tiles=sat?L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'})
       :L.tileLayer(`https://{s}.basemaps.cartocdn.com/${S.theme==='dark'?'dark_all':'rastertiles/voyager'}/{z}/{x}/{y}{r}.png`,{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'});
+    tiles.on('tileload',()=>ok++);
+    tiles.on('tileerror',()=>{bad++;if(bad>=3&&ok===0){if(sat){sat=false;const ly=$('#lLayer',body);if(ly)ly.classList.remove('on')}tileMode='osm';setTiles()}});
     tiles.addTo(map);
   }
   function initMap(){
@@ -2072,7 +2201,14 @@ render(body,ctx){
       map.attributionControl.setPrefix('');
       setTiles();updateMap();
       setTimeout(()=>map&&map.invalidateSize(),460);
-    }).catch(()=>{const el=$('#lMap',body);if(el)el.innerHTML='<div class="mapload">Karte braucht Internet</div>'});
+    }).catch(()=>embedMap());
+  }
+  function embedMap(){ // einfache OpenStreetMap-Karte als Ausweich
+    const el=$('#lMap',body);if(!el)return;
+    const c=geoPos||S.loc.home;if(!c){el.innerHTML='<div class="mapload">Warte auf Standort …</div>';return}
+    const d=Math.max(.004,S.loc.radius/50000);const m=geoPos?`&marker=${geoPos.lat},${geoPos.lon}`:'';
+    el.innerHTML=`<iframe class="mapframe" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=${c.lon-d*1.6},${c.lat-d},${c.lon+d*1.6},${c.lat+d}&layer=mapnik${m}"></iframe>`;
+    const btns=$('.mapbtns',body);if(btns)btns.style.display='none';
   }
   function destroyMap(){if(map){map.remove();map=null;tiles=me=acc=homeM=homeC=null;fitted=false}}
   function updateMap(){
@@ -2098,6 +2234,7 @@ render(body,ctx){
   }
   function refresh(){
     const s=$('#lStat',body);if(!s)return;
+    if(!map&&S.loc.mode==='gps'&&$('#lMap iframe',body)===null&&!(window.L&&L.map)&&geoPos){const el=$('#lMap',body);if(el&&!el.dataset.tried){el.dataset.tried=1;initMap()}}
     s.innerHTML=statusHTML();
     if(S.loc.mode!=='gps'){$('#lGps',body).innerHTML=gpsHTML();bindGps();return}
     const inf=$('#lInfo',body);if(inf)inf.innerHTML=infoHTML();
