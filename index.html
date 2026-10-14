@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"6.9","notes":["Snake komplett neu: groß, flüssig, mit Sternen für 5 Punkte","5 neue Spiele im Store: 2048, Flappy Gufy, Reaktion, Tic Tac Toe, Memory","Akku um 0 Uhr genau 0 %? Dann gibt es 10 % geschenkt"]};
+window.GUFY={"v":"7.0","notes":["8 Live-Hintergründe (Aurora, Sternschnuppen, Lavalampe, Neon-Grid, Ozean, Regenstadt, Glühwürmchen, Galaxie)","6 neue Szenen: Schwarzes Loch, Cyber City, Kirschblüte, Vulkan, Nordlichtsee, Neon-Ringe","Hintergründe nach Kategorien sortiert","Kontrollzentrum: Akkulaufzeit an und aus","Nur noch 3 Quests pro Tag"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -959,6 +959,61 @@ body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
 .mem .mb{background:var(--panel-solid);border:1px solid var(--border);font-size:34px;transform:rotateY(180deg)}
 .mem button.up .mf{transform:rotateY(180deg)}.mem button.up .mb{transform:none}
 .mem button.ok .mb{background:rgba(52,199,89,.2);border-color:#34c759}
+/* 7.0: Kontrollzentrum an/aus */
+.ccrem{display:flex;gap:12px;flex-wrap:wrap;margin-top:3px;font-size:12.5px;color:var(--muted)}
+.ccrem b{color:var(--text);font-weight:700}
+/* 7.0: Hintergrund-Kategorien */
+.wcats{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 16px;padding:2px 16px}
+.wcats::-webkit-scrollbar{display:none}
+.wcats button{flex:none;padding:9px 14px;border-radius:999px;background:var(--panel-solid);border:1px solid var(--border);font-weight:650;font-size:14px;white-space:nowrap;transition:background .2s,color .2s}
+.wcats button small{opacity:.55;margin-left:3px;font-weight:600}
+.wcats button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.wprev{position:relative;overflow:hidden}
+.wprev .wclock{position:relative;z-index:2}
+.wlive{position:absolute;top:8px;right:8px;z-index:2;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px}
+/* 7.0: Live-Hintergründe */
+.livew{position:absolute;inset:0;overflow:hidden;pointer-events:none;contain:strict}
+.livew i,.livew b{position:absolute;display:block;will-change:transform}
+body.appfull #desktop>.livew{display:none}
+body.phone.livebg #desktop>.wall,body.phone.livebg #lock>.wall{display:block!important;visibility:visible}
+body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
+.lw-au{left:-30%;width:160%;height:50%;border-radius:50%;opacity:1}
+.lw-au.a1{top:6%;background:radial-gradient(ellipse,rgba(61,255,160,.85),rgba(61,255,160,.25) 40%,transparent 68%);animation:au1 18s ease-in-out infinite alternate}
+.lw-au.a2{top:16%;background:radial-gradient(ellipse,rgba(0,200,255,.6),rgba(0,163,255,.18) 40%,transparent 68%);animation:au2 24s ease-in-out infinite alternate}
+.lw-au.a3{top:0;background:radial-gradient(ellipse,rgba(193,139,255,.6),rgba(193,139,255,.15) 40%,transparent 68%);animation:au1 30s ease-in-out infinite alternate-reverse}
+@keyframes au1{from{transform:translateX(-12%) rotate(-8deg) scaleY(.8)}to{transform:translateX(12%) rotate(6deg) scaleY(1.25)}}
+@keyframes au2{from{transform:translateX(10%) rotate(5deg)}to{transform:translateX(-10%) rotate(-7deg) scaleY(1.3)}}
+.lw-tw{width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 6px 2px rgba(255,255,255,.7);animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.4)}}
+.lw-sh{width:30%;height:2px;border-radius:2px;background:linear-gradient(90deg,#fff,rgba(255,255,255,0));opacity:0;transform-origin:0 50%;animation:sh 9s linear infinite}
+.lw-sh.s1{top:12%;left:72%;animation-delay:1s}.lw-sh.s2{top:26%;left:95%;animation-duration:13s;animation-delay:5s}.lw-sh.s3{top:6%;left:45%;animation-duration:17s;animation-delay:9s}
+@keyframes sh{0%{opacity:0;transform:rotate(-35deg) translateX(0) scaleX(.3)}1.5%{opacity:1}7%{opacity:0;transform:rotate(-35deg) translateX(-170%) scaleX(1)}100%{opacity:0;transform:rotate(-35deg) translateX(-170%)}}
+.lw-lava{top:100%;height:100%;animation:lava 22s linear infinite}
+.lw-lava b{left:0;top:0;width:100%;aspect-ratio:1;border-radius:50%;opacity:.95;animation:sway 7s ease-in-out infinite alternate}
+@keyframes lava{from{transform:translateY(0)}to{transform:translateY(-160%)}}
+@keyframes sway{from{transform:translateX(-18%) scale(.85)}to{transform:translateX(18%) scale(1.15)}}
+.lw-hl{left:0;right:0;top:63%;height:37%;animation:hl 3.6s cubic-bezier(.6,0,1,1) infinite}
+.lw-hl b{left:0;right:0;top:0;height:3px;background:#ff3fdc;box-shadow:0 0 8px #ff3fdc}
+@keyframes hl{from{transform:translateY(0);opacity:.25}to{transform:translateY(100%);opacity:1}}
+.lw-glow{left:0;right:0;top:62.6%;height:4px;background:#ff5fe0;box-shadow:0 0 24px 8px rgba(255,47,216,.55);animation:glow 3s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.6}to{opacity:1}}
+.lw-wave{left:0;width:200%;background-size:50% 100%;background-repeat:repeat-x;animation:wave 14s linear infinite}
+.lw-wave.w3{bottom:30%;height:14%;animation-duration:22s;opacity:.85}.lw-wave.w2{bottom:13%;height:20%;animation-duration:16s;animation-direction:reverse}.lw-wave.w1{bottom:-3%;height:22%;animation-duration:11s}
+@keyframes wave{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.lw-glint{left:42%;width:16%;top:57%;height:20%;background:repeating-linear-gradient(transparent 0 9px,rgba(255,214,160,.55) 9px 12px);opacity:.7;animation:glint 2.4s ease-in-out infinite alternate}
+@keyframes glint{from{transform:scaleX(.7);opacity:.45}to{transform:scaleX(1.15);opacity:.85}}
+.lw-rain{left:-10%;width:120%;top:-160px;height:calc(100% + 320px);background-size:120px 160px;animation:rain .55s linear infinite}
+.lw-rain.r2{background-size:80px 106.67px;opacity:.5;animation-duration:.8s}
+@keyframes rain{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,160px,0)}}
+.lw-rain.r2{animation-name:rain2}@keyframes rain2{to{transform:translate3d(0,106.67px,0)}}
+.lw-flash{inset:0;background:#cfe3ff;opacity:0;animation:flash 11s infinite}
+@keyframes flash{0%,92%,100%{opacity:0}93%{opacity:.35}94%{opacity:.05}95.5%{opacity:.28}97%{opacity:0}}
+.lw-ff{width:6px;height:6px;border-radius:50%;background:#eaff7a;box-shadow:0 0 12px 5px rgba(220,255,90,.55);animation:ffm 10s ease-in-out infinite alternate,ffb 2s ease-in-out infinite alternate}
+@keyframes ffm{0%{transform:translate(0,0)}33%{transform:translate(34px,-40px)}66%{transform:translate(-22px,-14px)}100%{transform:translate(16px,-64px)}}
+@keyframes ffb{from{opacity:.15}to{opacity:1}}
+.lw-gal{left:50%;top:50%;width:240%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:cover!important;animation:gal 240s linear infinite}
+@keyframes gal{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.livew *{animation-duration:0s!important}}
 </style>
 </head>
 <body class="dark">
@@ -1024,7 +1079,7 @@ body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
       <button class="cc-tile" data-t="dnd"><span>🔕</span><div><b>Nicht stören</b><small></small></div></button>
     </div>
     <label class="cc-slider">☀️<input type="range" id="bright" min="25" max="100"></label>
-    <div class="cc-batt"><span class="batt"><span class="bfill"></span></span><div><b><span class="bpct">100%</span></b> <span class="bbolt">⚡</span><br><small class="muted js-bstate"></small><br><small class="muted js-bremain"></small></div></div>
+    <div class="cc-batt"><span class="batt"><span class="bfill"></span></span><div><b><span class="bpct">100%</span></b> <span class="bbolt">⚡</span><br><small class="muted js-bstate"></small><br><div class="ccrem js-ccrem"></div></div></div>
     <div class="cc-actions">
       <button data-a="logout">🚪 Abmelden</button>
       <button data-a="restart">↻ Neustart</button>
@@ -1348,6 +1403,125 @@ const SCENES2=(()=>{
   return L.map(([n,x])=>({n,bg:url(x)}));
 })();
 SCENES2.forEach(x=>{WALLS.push(x.bg);WALLNAMES.push(x.n)});
+/* ---------- Hintergrund-Update 3: neue Szenen + Live-Hintergründe ---------- */
+const WCAT={};   // Name → Kategorie
+const LIVE={};   // Index → HTML der bewegten Ebenen
+(()=>{
+  const R=seed=>()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
+  const svg=(inner,defs='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice"><defs>${defs}</defs>${inner}</svg>`;
+  const url=x=>`url('data:image/svg+xml,${encodeURIComponent(x).replace(/'/g,'%27')}') center/cover no-repeat, #000`;
+  const stops=a=>a.map(([o,c,op])=>`<stop offset="${o}" stop-color="${c}"${op!==undefined?` stop-opacity="${op}"`:''}/>`).join('');
+  const lg=(id,a,x2=0,y2=1)=>`<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops(a)}</linearGradient>`;
+  const rg=(id,a,cx=.5,cy=.5,r=.5)=>`<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}">${stops(a)}</radialGradient>`;
+  const blur=(id,d)=>`<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${d}"/></filter>`;
+  const stars=(r,n,maxY=1920,big=2)=>{let o='';for(let i=0;i<n;i++)o+=`<circle cx="${(r()*1080)|0}" cy="${(r()*maxY)|0}" r="${(.4+r()*big).toFixed(1)}" fill="#fff" opacity="${(.2+r()*.8).toFixed(2)}"/>`;return o};
+  const ridge=(r,base,amp,col,step=80)=>{let p=`M-60 1920 L-60 ${base}`;for(let x=-60,i=0;x<=1160;x+=step,i++)p+=` L${x} ${(base-(i%2?r()*amp:r()*amp*.35)).toFixed(0)}`;return `<path d="${p} L1160 1920Z" fill="${col}"/>`};
+  const pines=(r,y,n,h,col)=>{let o='';for(let i=0;i<n;i++){const x=r()*1100-10,hh=h*(.6+r()*.6),w=hh*.32;o+=`<path d="M${x} ${y-hh} L${x+w} ${y} L${x-w} ${y}Z" fill="${col}"/>`}return o};
+  const add=(n,cat,x)=>{WALLS.push(typeof x==='string'&&x.startsWith('<svg')?url(x):x);WALLNAMES.push(n);WCAT[n]=cat;return WALLS.length-1};
+
+  /* ===== Neue Szenen ===== */
+  {const r=R(101);add('Schwarzes Loch','Weltraum',svg(
+    `<rect width="1080" height="1920" fill="#000"/>${stars(r,320)}<g transform="translate(540 900) rotate(-12)">
+     <circle r="520" fill="url(#halo)"/>
+     <ellipse rx="560" ry="130" fill="none" stroke="url(#d)" stroke-width="90" filter="url(#b1)" opacity=".85"/>
+     <ellipse rx="300" ry="290" fill="none" stroke="#ffd9a0" stroke-width="26" filter="url(#b2)"/>
+     <circle r="262" fill="#000"/>
+     <path d="M-560 0 A560 130 0 0 0 560 0" fill="none" stroke="url(#d)" stroke-width="70" filter="url(#b2)"/>
+     <path d="M-560 0 A560 130 0 0 0 560 0" fill="none" stroke="#fff6e0" stroke-width="6" opacity=".8"/></g>`,
+    lg('d',[[0,'#ff4d00',0],[.2,'#ff7a1a'],[.45,'#ffe0a3'],[.5,'#fff'],[.55,'#ffe0a3'],[.8,'#ff7a1a'],[1,'#ff4d00',0]],1,0)+rg('halo',[[0,'#ff8a3d',.35],[.6,'#ff5e00',.08],[1,'#000',0]])+blur('b1',22)+blur('b2',8)))}
+
+  {const r=R(202);let b='',refl='',win='';
+   for(let x=-20;x<1100;){const w=60+r()*110,h=380+r()*820,y=1280-h,c=r()<.5?'#ff2fd8':'#22e3ff';
+     b+=`<rect x="${x|0}" y="${y|0}" width="${w|0}" height="${h|0}" fill="#0c0920"/><rect x="${x|0}" y="${y|0}" width="${w|0}" height="4" fill="${c}" opacity=".9"/>`;
+     for(let wy=y+30;wy<1260;wy+=34)for(let wx=x+10;wx<x+w-14;wx+=22)if(r()<.32)win+=`<rect x="${wx|0}" y="${wy|0}" width="10" height="16" fill="${r()<.6?'#ffd27a':c}" opacity="${(.5+r()*.5).toFixed(2)}"/>`;
+     x+=w+6+r()*14}
+   add('Cyber City','Stadt & Neon',svg(
+    `<rect width="1080" height="1920" fill="url(#s)"/>${stars(r,90,700,1.4)}<circle cx="760" cy="520" r="170" fill="url(#m)"/>
+     <g id="city">${b}${win}</g><rect y="1280" width="1080" height="640" fill="url(#w)"/>
+     <g transform="translate(0 2560) scale(1 -1)" opacity=".35" filter="url(#bl)">${b}${win}</g>
+     <rect y="1280" width="1080" height="3" fill="#ff2fd8" opacity=".7"/><rect y="1180" width="1080" height="200" fill="url(#fog)"/>`,
+    lg('s',[[0,'#05010f'],[.5,'#1c0b3d'],[.68,'#4a1366'],[.72,'#0d0626']])+rg('m',[[0,'#ff7bd5',.9],[.6,'#ff2fd8',.25],[1,'#ff2fd8',0]])+lg('w',[[0,'#12062a'],[1,'#02010a']])+lg('fog',[[0,'#ff2fd8',0],[.5,'#ff2fd8',.14],[1,'#ff2fd8',0]])+blur('bl',4)))}
+
+  {const r=R(303);let bl='',pet='';
+   for(let i=0;i<70;i++){const a=r()*Math.PI*2,rad=Math.sqrt(r())*330,x=430+Math.cos(a)*rad*1.35,y=860+Math.sin(a)*rad*.75;bl+=`<circle cx="${x|0}" cy="${y|0}" r="${(40+r()*70)|0}" fill="${['#ffb7d5','#ff9cc4','#ffd1e3','#f58fb8'][i%4]}" opacity="${(.55+r()*.4).toFixed(2)}"/>`}
+   for(let i=0;i<60;i++){const px=(r()*1080)|0,py=(600+r()*1300)|0;pet+=`<ellipse cx="${px}" cy="${py}" rx="9" ry="5" transform="rotate(${(r()*180)|0} ${px} ${py})" fill="#ffc2da" opacity="${(.5+r()*.5).toFixed(2)}"/>`}
+   add('Kirschblüte','Natur',svg(
+    `<rect width="1080" height="1920" fill="url(#s)"/><circle cx="760" cy="760" r="110" fill="#fff4e6" opacity=".9"/>
+     <path d="M-50 1350 L330 1000 Q420 930 470 960 L520 1000 Q560 1030 620 980 L760 880 Q800 850 840 880 L1130 1150 L1130 1920 L-50 1920Z" fill="#c9b6d9"/>
+     <path d="M760 880 L700 930 L730 935 L760 905 L795 940 L820 930Z" fill="#fff"/>
+     <path d="M-50 1500 Q300 1400 600 1480 T1130 1450 L1130 1920 L-50 1920Z" fill="#7d6a97"/>
+     <path d="M330 1920 Q300 1600 370 1350 Q420 1180 400 1020" stroke="#3b2333" stroke-width="58" fill="none" stroke-linecap="round"/><path d="M390 1130 Q520 1020 640 900 M380 1210 Q260 1120 200 960 M400 1020 Q380 900 450 790" stroke="#3b2333" stroke-width="26" fill="none" stroke-linecap="round"/>
+     <g filter="url(#sb)">${bl}</g>${bl}${pet}<rect y="1700" width="1080" height="220" fill="#5a4a72"/>`,
+    lg('s',[[0,'#ffd6e8'],[.5,'#f9c4d8'],[1,'#e7b6d6']])+blur('sb',12)))}
+
+  {const r=R(404);let ash='';for(let i=0;i<140;i++)ash+=`<circle cx="${(r()*1080)|0}" cy="${(r()*1300)|0}" r="${(1+r()*3).toFixed(1)}" fill="#ffb27a" opacity="${(.2+r()*.6).toFixed(2)}"/>`;
+   add('Vulkan','Natur',svg(
+    `<rect width="1080" height="1920" fill="url(#s)"/><ellipse cx="540" cy="760" rx="520" ry="380" fill="url(#gl)"/>${ash}
+     <path d="M-60 1920 L-60 1500 L300 1180 L470 820 L610 820 L790 1180 L1140 1520 L1140 1920Z" fill="#160606"/>
+     <path d="M470 820 Q540 790 610 820 L600 860 Q540 840 480 860Z" fill="#ff7a1a"/>
+     <g filter="url(#lb)"><path d="M520 840 Q500 1000 430 1150 Q380 1260 300 1420" stroke="#ff5a00" stroke-width="30" fill="none"/><path d="M570 840 Q600 1050 680 1200 Q740 1320 830 1500" stroke="#ff8a00" stroke-width="24" fill="none"/></g>
+     <path d="M520 840 Q500 1000 430 1150 Q380 1260 300 1420" stroke="#ffd36b" stroke-width="8" fill="none"/><path d="M570 840 Q600 1050 680 1200 Q740 1320 830 1500" stroke="#ffd36b" stroke-width="6" fill="none"/>
+     ${ridge(r,1640,140,'#0a0303')}`,
+    lg('s',[[0,'#0b0303'],[.5,'#3a0a05'],[1,'#7a1a06']])+rg('gl',[[0,'#ff6a00',.75],[.5,'#ff3d00',.25],[1,'#ff3d00',0]])+blur('lb',14)))}
+
+  {const r=R(505);let cur='';for(let i=0;i<5;i++){const x=80+i*220+r()*60;cur+=`<path d="M${x} 250 Q${x+140} 600 ${x-40} 900 Q${x+60} 1050 ${x+20} 1150" stroke="url(#a${i%2})" stroke-width="${(120+r()*80)|0}" fill="none" opacity="${(.5+r()*.4).toFixed(2)}"/>`}
+   add('Nordlichtsee','Natur',svg(
+    `<rect width="1080" height="1920" fill="url(#s)"/>${stars(r,200,1100,1.6)}<g filter="url(#ab)">${cur}</g>
+     ${pines(r,1180,26,260,'#020b10')}<rect y="1180" width="1080" height="740" fill="url(#lake)"/>
+     <g transform="translate(0 2360) scale(1 -1)" opacity=".4" filter="url(#rb)">${cur}</g>
+     <g transform="translate(0 2360) scale(1 -1)" opacity=".7">${pines(R(505),1180,26,260,'#010508')}</g>`,
+    lg('s',[[0,'#01040c'],[.6,'#03162a'],[1,'#062a3a']])+lg('a0',[[0,'#7dffb1',0],[.4,'#3dffa0'],[1,'#00a3ff',0]])+lg('a1',[[0,'#c18bff',0],[.5,'#4dffc3'],[1,'#00ffb3',0]])+lg('lake',[[0,'#04202c'],[1,'#010608']])+blur('ab',40)+blur('rb',10)))}
+
+  {let rings='';for(let i=0;i<9;i++)rings+=`<circle cx="540" cy="900" r="${120+i*80}" fill="none" stroke="url(#g${i%2})" stroke-width="${10-i*.6}" opacity="${(1-i*.08).toFixed(2)}"/>`;
+   add('Neon-Ringe','Abstrakt',svg(
+    `<rect width="1080" height="1920" fill="#06040d"/><circle cx="540" cy="900" r="700" fill="url(#bg)"/><g filter="url(#nb)">${rings}</g>${rings}`,
+    rg('bg',[[0,'#3a0a5e',.8],[1,'#06040d',0]])+lg('g0',[[0,'#ff2fd8'],[1,'#22e3ff']],1,1)+lg('g1',[[0,'#22e3ff'],[1,'#7c3aed']],1,1)+blur('nb',18)))}
+
+  /* ===== Live-Hintergründe (nur transform/opacity → flüssig) ===== */
+  const live=(n,bg,layers)=>{const i=add(n,'Live',bg);LIVE[i]=layers;return i};
+  const dots=(r,n,cls,fn)=>Array.from({length:n},(_,i)=>fn(i)).join('');
+
+  {const r=R(11);live('Aurora Live',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/>${stars(r,220,1300,1.6)}${ridge(r,1560,200,'#020a12')}${ridge(r,1720,150,'#01050a')}`,lg('s',[[0,'#01030c'],[.7,'#04152a'],[1,'#062236']]))),
+    `<i class="lw-au a1"></i><i class="lw-au a2"></i><i class="lw-au a3"></i>`)}
+  {const r=R(12);live('Sternschnuppen',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/>${stars(r,380,1500,1.8)}<rect y="0" width="1080" height="1920" fill="url(#mw)" transform="rotate(-30 540 900)" opacity=".5"/>${ridge(r,1580,220,'#0a0f24')}${ridge(r,1740,150,'#04060f')}`,
+      lg('s',[[0,'#02030a'],[.7,'#0b1236'],[1,'#1b1f4a']])+lg('mw',[[0,'#fff',0],[.47,'#9fb4ff',.0],[.5,'#c9d4ff',.25],[.53,'#9fb4ff',0],[1,'#fff',0]],1,0))),
+    dots(r,14,'',i=>`<i class="lw-tw" style="left:${(r()*100).toFixed(1)}%;top:${(r()*65).toFixed(1)}%;animation-delay:-${(r()*4).toFixed(1)}s;animation-duration:${(2+r()*3).toFixed(1)}s"></i>`)+
+    `<i class="lw-sh s1"></i><i class="lw-sh s2"></i><i class="lw-sh s3"></i>`)}
+  {const r=R(13);live('Lavalampe','linear-gradient(180deg,#1a0530,#3b0a45 60%,#5c0d3a)',
+    dots(r,10,'',i=>`<i class="lw-lava" style="left:${(r()*60).toFixed(0)}%;width:${(35+r()*25).toFixed(0)}%;animation-duration:${(18+r()*14).toFixed(0)}s;animation-delay:-${(r()*30).toFixed(0)}s"><b style="background:radial-gradient(circle,${['#ff5f6d','#ffc371','#ff2fd8','#ff8a00'][i%4]} 0 34%,transparent 68%);animation-duration:${(5+r()*5).toFixed(1)}s"></b></i>`))}
+  {live('Neon-Grid',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/><g mask="url(#mk)"><circle cx="540" cy="900" r="330" fill="url(#sun)"/></g>${stars(R(14),80,700,1.4)}<g stroke="#ff3fdc" stroke-width="3" opacity=".85">${Array.from({length:25},(_,k)=>`<line x1="${540+(k-12)*34}" y1="1210" x2="${540+(k-12)*300}" y2="1920"/>`).join('')}</g><rect y="1206" width="1080" height="6" fill="#ff5fe0"/>`,
+      lg('s',[[0,'#0a0322'],[.45,'#3a0b5e'],[.62,'#ff2f8f'],[.63,'#14062e'],[1,'#05010f']])+lg('sun',[[0,'#ffe66b'],[.55,'#ff7a3d'],[1,'#ff2f8f']])+
+      `<mask id="mk"><rect width="1080" height="1920" fill="#fff"/>${[0,1,2,3,4,5].map(k=>`<rect y="${960+k*42}" width="1080" height="${6+k*5}" fill="#000"/>`).join('')}</mask>`)),
+    Array.from({length:8},(_,k)=>`<i class="lw-hl" style="animation-delay:-${(k*.45).toFixed(2)}s"><b></b></i>`).join('')+`<i class="lw-glow"></i>`)}
+  {live('Ozean Live',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/><circle cx="540" cy="1050" r="200" fill="url(#sun)"/><rect y="1100" width="1080" height="820" fill="url(#sea)"/>`,
+      lg('s',[[0,'#1d1a4f'],[.45,'#c2477d'],[.58,'#ff9a5a']])+rg('sun',[[0,'#fff1c7'],[.5,'#ffc27a',.8],[1,'#ff8a5a',0]])+lg('sea',[[0,'#3b2f6e'],[1,'#0a1030']]))),
+    (()=>{const wv=c=>`url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" preserveAspectRatio="none"><path d="M0 70 Q125 10 250 70 T500 70 T750 70 T1000 70 V200 H0Z" fill="${c}"/></svg>`)}')`;
+      return `<i class="lw-glint"></i><i class="lw-wave w3" style="background-image:${wv('#5a4590')}"></i><i class="lw-wave w2" style="background-image:${wv('#2c2a66')}"></i><i class="lw-wave w1" style="background-image:${wv('#0c1236')}"></i>`})())}
+  {const r=R(16);let b='',win='';for(let x=-20;x<1100;){const w=70+r()*120,h=300+r()*700,y=1500-h;b+=`<rect x="${x|0}" y="${y|0}" width="${w|0}" height="${h|0}" fill="#0b0f1a"/>`;
+     for(let wy=y+24;wy<1480;wy+=30)for(let wx=x+8;wx<x+w-12;wx+=20)if(r()<.25)win+=`<rect x="${wx|0}" y="${wy|0}" width="9" height="14" fill="#ffd27a" opacity="${(.4+r()*.5).toFixed(2)}"/>`;x+=w+4}
+   live('Regenstadt',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/>${b}${win}<rect y="1500" width="1080" height="420" fill="#05070c"/><rect y="1500" width="1080" height="420" fill="url(#rf)"/>`,
+      lg('s',[[0,'#05070d'],[.7,'#1a2233'],[1,'#2a3348']])+lg('rf',[[0,'#ffd27a',.18],[1,'#ffd27a',0]]))),
+    (()=>{const rr=R(77);let l='';for(let k=0;k<14;k++){const x=rr()*120,y=rr()*160;l+=`<line x1="${x.toFixed(0)}" y1="${y.toFixed(0)}" x2="${(x-5).toFixed(0)}" y2="${(y+26).toFixed(0)}"/>`}
+      const pat=`url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160"><g stroke="#bcd3ff" stroke-width="1.6" stroke-linecap="round" opacity=".55">${l}</g></svg>`)}')`;
+      return `<i class="lw-rain r1" style="background-image:${pat}"></i><i class="lw-rain r2" style="background-image:${pat}"></i><i class="lw-flash"></i>`})())}
+  {const r=R(17);live('Glühwürmchen',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/>${pines(r,1300,18,700,'#04110b')}${pines(r,1550,22,520,'#020a06')}<rect y="1550" width="1080" height="370" fill="#010503"/>`,
+      lg('s',[[0,'#020806'],[.6,'#0a2618'],[1,'#0f3a24']]))),
+    dots(r,22,'',i=>`<i class="lw-ff" style="left:${(r()*95).toFixed(1)}%;top:${(30+r()*65).toFixed(1)}%;animation-duration:${(6+r()*8).toFixed(1)}s,${(1.5+r()*2.5).toFixed(1)}s;animation-delay:-${(r()*8).toFixed(1)}s,-${(r()*3).toFixed(1)}s"></i>`))}
+  {const gi=WALLNAMES.indexOf('Galaxie');if(gi>=0)live('Galaxie Live','#03020b',`<i class="lw-gal" style="background:${WALLS[gi].replace(', #000','')}"></i>`)}
+})();
+/* Kategorien der älteren Hintergründe */
+['Mondnacht','Planet','Galaxie','Mars'].forEach(n=>WCAT[n]??='Weltraum');
+['Bergsonne','Polarlicht','Wellen','Dünen','Nebelwald','Unterwasser','Gewitter','Eisberg','Meeresmorgen','Wolken'].forEach(n=>WCAT[n]??='Natur');
+['Synthwave','Skyline'].forEach(n=>WCAT[n]??='Stadt & Neon');
+const WCATS=['Live','Weltraum','Natur','Stadt & Neon','Abstrakt','Verläufe'];
+const wallCat=i=>i<SCENE0?'Verläufe':(WCAT[WALLNAMES[i]]||'Abstrakt');
+function liveLayer(i){return LIVE[i]?`<div class="livew">${LIVE[i]}</div>`:''}
+function applyLive(){
+  $$('#desktop>.livew,#lock>.livew').forEach(e=>e.remove());
+  const h=liveLayer(S.wall);document.body.classList.toggle('livebg',!!h);if(!h)return;
+  $$('#desktop>.wall,#lock>.wall').forEach(w=>w.insertAdjacentHTML('afterend',h));
+}
+
 
 const ACCENTS=['#4f8cff','#a855f7','#ec4899','#f97316','#22c55e','#14b8a6','#eab308','#ef4444'];
 
@@ -1355,6 +1529,7 @@ function applyLook(){
   document.body.classList.toggle('dark',S.theme==='dark');
   document.documentElement.style.setProperty('--accent',S.accent);
   $$('.wall').forEach(w=>w.style.background=WALLS[S.wall]||WALLS[0]);
+  applyLive();
   $('#dim').style.opacity=(1-S.brightness/100)*0.75;
   const ini=(S.name||'?').trim().charAt(0).toUpperCase()||'?';
   $$('.js-initial').forEach(e=>e.textContent=ini);
@@ -1483,6 +1658,8 @@ function renderBattery(){
   $$('.js-bstate').forEach(e=>e.textContent=`${st.ic} ${st.t} · ${st.r}`);
   const rem=remainText();
   $$('.js-bremain').forEach(e=>e.textContent=rem);
+  const ccr=$('.js-ccrem');if(ccr){const lvv=S.battery.level;
+    ccr.innerHTML=!realOn()&&rate(new Date())<0?`<span>📱 An: <b>${approxDur(lvv/(-R_AWAY*USE_MULT))}</b></span><span>💤 Aus: <b>${approxDur(lvv/(-R_AWAY))}</b></span>`:`<span>${rem}</span>`}
   $$('.js-locicon').forEach(e=>e.textContent=st.ic);
   const col=chg?'#34c759':lv<=20?'#ff3b30':'var(--accent)';
   $$('.js-ring').forEach(r=>r.style.background=`radial-gradient(rgba(12,12,16,.82) 58%,transparent 59%),conic-gradient(${col} ${lv*3.6}deg,rgba(255,255,255,.14) 0)`);
@@ -2591,7 +2768,7 @@ function failDebt(d){d.status='failed';S.coins=-1000;save();updateCoins();haptic
   notify('💸','Schuld nicht erledigt',`„${d.title}“ wurde nicht gemacht – Coins auf −1.000.`,'#ff453a')}
 function checkDebts(){S.debts??=[];const t=dayKey();S.debts.forEach(d=>{if(d.status==='open'&&d.day!==t)failDebt(d)})}
 // 5 Tagesquests: genau 1× Sport, immer 1× mit den Eltern, Rest witzig/peinlich
-const DAILY_SLOTS=[['mittel','fun'],['schwer','parents'],['schwer','sport'],['extrem','fun'],['extrem','fun']];
+const DAILY_SLOTS=[['extrem','fun'],['schwer','parents'],['schwer','sport']];
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
@@ -2618,6 +2795,13 @@ function ensureQuests(){
     L.length=DAILY_SLOTS.length;
     if(L.filter(q=>q.tag==='sport').length>1)L.forEach((q,i)=>{if(q.tag==='sport'&&!q.done)L[i]=genQuest(q.diff,L,'fun')});
     S.daily.v=2;save();
+  }
+  if(S.daily&&S.daily.list.length!==DAILY_SLOTS.length){ // 3 Quests pro Tag: Erledigtes bleibt, Rest passend auffüllen
+    const L=S.daily.list,used=new Set(),out=[];
+    L.forEach((q,i)=>{if(q.done&&out.length<DAILY_SLOTS.length){out.push(q);used.add(i)}});
+    DAILY_SLOTS.slice(out.length).forEach(([d,k])=>{let j=L.findIndex((q,i)=>!used.has(i)&&q.diff===d&&(q.kind===k||q.tag===k));
+      if(j>=0){used.add(j);out.push(L[j])}else out.push(genQuest(d,out,k))});
+    S.daily.list=out;save();
   }
   // Reparatur: „erledigt“ ohne Eintrag im Verlauf (= ohne Coins) → wieder offen
   if(S.daily&&S.histClr!==dayKey()){
@@ -3063,11 +3247,18 @@ render(body,ctx){
       $$('[data-acc]',c).forEach(b=>b.onclick=()=>{S.accent=b.dataset.acc;save();applyLook();go('look')});
     }
     if(tab==='wall'){
-      const tile=i=>`<button class="wtile ${i===S.wall?'sel':''}" data-w="${i}"><div class="wprev" style="background:${WALLS[i]}"><span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span></div><small>${WALLNAMES[i]}</small></button>`;
-      const sc=[],gr=[];WALLS.forEach((_,i)=>(i>=SCENE0?sc:gr).push(i));
-      c.innerHTML=`<div class="slabel">✨ Szenen · Neu</div><div class="wgrid">${sc.map(tile).join('')}</div>
-        <div class="slabel">Verläufe</div><div class="wgrid">${gr.map(tile).join('')}</div>`;
-      $$('[data-w]',c).forEach(b=>b.onclick=()=>{S.wall=+b.dataset.w;save();applyLook();$$('[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))});
+      const tile=i=>`<button class="wtile ${i===S.wall?'sel':''}" data-w="${i}"><div class="wprev" style="background:${WALLS[i]}">${liveLayer(i)}<span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span>${LIVE[i]?'<em class="wlive">LIVE</em>':''}</div><small>${WALLNAMES[i]}</small></button>`;
+      const CI={'Live':'✨','Weltraum':'🪐','Natur':'🏔️','Stadt & Neon':'🌃','Abstrakt':'🔷','Verläufe':'🎨'};
+      let wc=wallCat(S.wall);
+      const drawW=()=>{
+        const list=WALLS.map((_,i)=>i).filter(i=>wallCat(i)===wc);
+        c.innerHTML=`<div class="wcats">${WCATS.map(k=>`<button data-wc="${k}" class="${k===wc?'on':''}">${CI[k]} ${k} <small>${WALLS.filter((_,i)=>wallCat(i)===k).length}</small></button>`).join('')}</div>
+          <div class="wgrid">${list.map(tile).join('')}</div>`;
+        $$('[data-wc]',c).forEach(b=>b.onclick=()=>{if(wc===b.dataset.wc)return;wc=b.dataset.wc;haptic('select');drawW();fadeIn($('.wgrid',c))});
+        $$('[data-w]',c).forEach(b=>b.onclick=()=>{S.wall=+b.dataset.w;save();applyLook();$$('[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))});
+        const on=$('.wcats .on',c);if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+      };
+      drawW();
     }
     if(tab==='pw'){
       c.innerHTML=`<div class="sgroup" style="padding:14px">
