@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"6.1","notes":["Unten kein Streifen mehr: GufyUI liegt jetzt unter der iPhone-Statusleiste und geht bis ganz nach unten","Neu: Daten sichern & wiederherstellen (Über GufyUI)","Urlaubsmodus ohne Ladestation: Der Akku geht auch zu Hause leer"]};
+window.GUFY={"v":"6.3","notes":["Beta: „Bildschirm bis ganz unten“ zum Ein- und Ausschalten","Karte: Wenn Karte und Satellit nicht laden, kommt eine einfache Ersatzkarte","Neu: Daten sichern & wiederherstellen (Über GufyUI)"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -33,7 +33,7 @@ window.GUFY={"v":"6.1","notes":["Unten kein Streifen mehr: GufyUI liegt jetzt un
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="GufyUI">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="gufyui-icon-180.png">
 <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
@@ -835,6 +835,13 @@ body.phone.appfull #desktop::before{display:none}
 html.altlay,html.altlay body{position:relative!important;inset:auto!important;height:100%!important;min-height:100lvh}
 html.altlay.wallbg{position:relative!important;height:auto!important;min-height:100lvh}
 html.altlay .screen{position:absolute!important}
+/* 6.2: Bildschirm „Homescreen“ (#desktop) geht um die Lücke weiter nach unten.
+   Home-Taste, Punkte und Icons bleiben im sichtbaren Bereich. */
+body.phone.gap.fulldown #desktop{bottom:calc(var(--adjB,0px) - var(--gapH,0px))!important}
+body.phone.gap.fulldown #homebtn{bottom:calc(14px + env(safe-area-inset-bottom) + var(--gapH,0px))}
+body.phone.gap.fulldown #dots{bottom:calc(92px + env(safe-area-inset-bottom) + var(--gapH,0px))}
+body.phone.gap.fulldown #home{bottom:var(--gapH,0px)}
+body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
 </style>
 </head>
 <body class="dark">
@@ -1662,7 +1669,10 @@ function detectPhone(){
   document.body.classList.toggle('island',!!phone&&h>=34);
   const sys=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
   document.body.classList.toggle('sysbar',!!phone&&h>=34&&sys);
-  document.body.classList.toggle('gap',!!phone&&sys&&h>=34&&(innerWidth<innerHeight?screen.height:screen.width)-innerHeight-h>=20);
+  const gapH=!!phone&&sys&&h>=34?Math.max(0,(innerWidth<innerHeight?screen.height:screen.width)-innerHeight):0;
+  document.body.classList.toggle('gap',gapH>=20);
+  document.body.classList.toggle('fulldown',!!S.betaDown);
+  document.documentElement.style.setProperty('--gapH',(gapH>=20?gapH:0)+'px');
   // iPhone als Home-Bildschirm-App: innerHeight ist um die Statusleiste zu kurz → echte Bildschirmhöhe nehmen
   const full=sys&&/iPhone|iPad|iPod/.test(navigator.userAgent)?Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width)):0;
 
@@ -2566,7 +2576,11 @@ render(body,ctx){
     [tiles,labels].forEach(l=>l&&map.removeLayer(l));labels=null;
     const ly=$('#lLayer',body);if(ly){ly.classList.toggle('on',!sat);ly.textContent=sat?'🗺️':'🛰️';ly.title=sat?'Karte':'Satellit'}
     if(sat){
-      tiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'}).addTo(map);
+      let sok=0,sbad=0;
+      tiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
+      tiles.on('tileload',()=>sok++);
+      tiles.on('tileerror',()=>{sbad++;if(sbad>=3&&sok===0){destroyMap();embedMap()}});
+      tiles.addTo(map);
       labels=L.layerGroup([
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:.85}),
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]).addTo(map);
@@ -2705,8 +2719,10 @@ render(body,ctx){
       const sup=!!navigator.getBattery;
       c.innerHTML=`<div class="sgroup">
           <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
+          <div class="srow"><span class="sic" style="background:#5e5ce6">📐</span><span class="sl">Bildschirm bis ganz unten</span><label class="switch"><input type="checkbox" id="bDown" ${S.betaDown?'checked':''}><span></span></label></div>
         </div>
         <p class="slabel" style="text-transform:none;letter-spacing:0;font-weight:500;line-height:1.5">${sup?(realBatt?`Gerät: ${Math.round(realBatt.level*100)} %${realBatt.charging?' · lädt':''}`:'Akku wird gelesen …'):'Dieser Browser gibt den Akku nicht frei (z. B. iPhone/Safari).'}</p>`;
+      $('#bDown',c).onchange=e=>{S.betaDown=e.target.checked;save();detectPhone();haptic()};
       const t=$('#bReal',c);
       if(t)t.onchange=e=>{const v=e.target.checked;e.target.checked=!v;
         askCode(v?'Beta: Echten Akku nutzen':'Beta ausschalten',()=>{
