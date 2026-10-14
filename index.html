@@ -7,7 +7,7 @@
    GufyUI-VERSION – bei jedem Update hier die Nummer erhöhen
    und in "notes" kurz reinschreiben, was neu ist.
    ===================================================================== */
-window.GUFY={"v":"3.7","notes":["Zu Hause lädt der Akku jetzt in ca. 8 Stunden voll","Laden wie beim echten Handy: bis 80 % schnell, danach langsamer","Restzeiten werden ungefähr angezeigt (z. B. „ca. 7½ Std.“)"]};
+window.GUFY={"v":"3.8","notes":["5 Tagesquests – mit mehr peinlichen Aufgaben","Wenn GufyUI benutzt wird, verbraucht der Akku unterwegs doppelt so viel","Karte startet als Satellit mit Straßennamen","Wischen zwischen Seiten gleitet jetzt mit Schwung weiter","Apps öffnen ohne Ruckler"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -731,6 +731,11 @@ button:active:not(#homebtn):not(.srow):not(.sprof):not(.sb-btn):not(:disabled){t
 /* Widgets ohne Live-Weichzeichner: viel flüssiger beim Wischen */
 .wbox{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:linear-gradient(160deg,rgba(40,40,52,.62),rgba(14,14,20,.58))!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 12px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.1)!important}
 .appicon .ic{will-change:auto}
+
+/* 3.8: Leistung */
+#appview{contain:strict}
+.qcard{animation:none}
+#track.drag{transition:none!important}
 </style>
 </head>
 <body class="dark">
@@ -1132,7 +1137,10 @@ let current='';
 function show(id){$$('.screen').forEach(s=>s.classList.toggle('active',s.id===id));current=id}
 
 /* ---------- Uhrzeit ---------- */
+// Während gewischt/gezogen wird, keine DOM-Updates (sonst kurze Hänger)
+const homeBusy=()=>typeof G!=='undefined'&&(!!G||!!springRaf);
 function tick(){
+  if(homeBusy())return;
   const d=new Date();
   const t=pad(d.getHours())+':'+pad(d.getMinutes());
   $$('.js-time').forEach(e=>e.textContent=t);
@@ -1164,7 +1172,10 @@ function rate(d,lv){if(!S.loc.isHome)return R_AWAY;const l=lv??S.battery.level;r
 let realBatt=null;
 if(navigator.getBattery)navigator.getBattery().then(b=>{realBatt=b;['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,()=>{if(S.betaBatt)batteryTick()}));if(S.betaBatt)batteryTick()}).catch(()=>{});
 const realOn=()=>!!(S.betaBatt&&realBatt);
-function advance(){
+// GufyUI wird gerade benutzt = Seite sichtbar und Gerät an → doppelter Verbrauch (Laden bleibt gleich)
+const USE_MULT=2;
+const inUse=()=>document.visibilityState==='visible'&&!['off','empty','boot'].includes(current);
+function advance(mult=1){
   const now=Date.now();
   if(realOn()){S.battery.level=Math.max(0,Math.min(100,realBatt.level*100));S.battery.last=now;return}
   let t=S.battery.last||now;
@@ -1172,7 +1183,8 @@ function advance(){
   let lv=S.battery.level;
   while(t<now){
     const st=Math.min(now-t,60000-(t%60000)); // minutengenau
-    lv+=rate(new Date(t),lv)*st/3600000;
+    let r=rate(new Date(t),lv);if(r<0)r*=mult;
+    lv+=r*st/3600000;
     lv=Math.max(0,Math.min(100,lv));
     t+=st;
   }
@@ -1188,7 +1200,7 @@ function approxDur(hrs){
 function fmtDur(hrs){const m=Math.round(hrs*60),H=Math.floor(m/60),M=m%60;return H?`${H} Std. ${M} Min.`:`${M} Min.`}
 function statusInfo(){
   if(realOn())return realBatt.charging?{ic:'🔌',t:'Echter Akku · lädt',r:'Beta',col:'linear-gradient(135deg,#34c759,#0a8f3c)'}:{ic:'📱',t:'Echter Akku',r:'Beta',col:'linear-gradient(135deg,#636366,#2c2c2e)'};
-  if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:'−20 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
+  if(!S.loc.isHome)return{ic:'🚶',t:'Unterwegs',r:inUse()?'−40 % pro Std. (in Benutzung)':'−20 % pro Std.',col:'linear-gradient(135deg,#ff9500,#ff5e3a)'};
   const full=S.battery.level>=99.95;
   if(isSleepTime(new Date()))return{ic:'😴',t:'Schlafenszeit',r:full?'Voll geladen':'Lädt',col:'linear-gradient(135deg,#5e5ce6,#2b1f7a)'};
   return{ic:'🏠',t:'Zu Hause',r:full?'Voll geladen':(S.battery.level<80?'Lädt schnell':'Lädt langsam'),col:'linear-gradient(135deg,#34c759,#0a8f3c)'};
@@ -1198,7 +1210,7 @@ function remainText(){
   if(realOn()){const c=realBatt.charging,t=c?realBatt.chargingTime:realBatt.dischargingTime;
     if(c&&lv>=99.95)return 'Voll geladen';
     return isFinite(t)&&t>0?(c?'Voll in ':'Reicht noch ')+approxDur(t/3600):(c?'Lädt …':'Vom Gerät');}
-  if(rate(new Date())<0)return 'Reicht noch '+approxDur(lv/(-R_AWAY));
+  if(rate(new Date())<0)return 'Reicht noch '+approxDur(lv/(-R_AWAY*(inUse()?USE_MULT:1)));
   if(lv>=99.95)return 'Voll geladen';
   let t=Date.now(),l=lv;
   for(let i=0;i<4320;i++){l+=rate(new Date(t),l)/60;t+=60000;if(l>=100)return 'Voll in '+approxDur((t-Date.now())/3600000)}
@@ -1206,7 +1218,7 @@ function remainText(){
 }
 let saveCount=0;
 function batteryTick(){
-  advance();
+  advance(inUse()?USE_MULT:1);
   const lv=S.battery.level;
   if(lv<=0){S.w20=S.w10=true}
   if(rate(new Date())<0){
@@ -1218,7 +1230,7 @@ function batteryTick(){
   if(charging())S.wasCharging=true;
   if(lv<=0&&!['empty','setup','boot','off'].includes(current))batteryDead();
   if(current==='empty')updateEmpty();
-  renderBattery();
+  if(!homeBusy())renderBattery();
   if(++saveCount%5===0)save();
 }
 function renderBattery(){
@@ -1257,7 +1269,8 @@ $('#eSheetClose').onclick=()=>$('#eSheet').classList.remove('open');
 $('#eHome').onclick=()=>{if(S.loc.mode==='gps'){checkGeoOnce()}else askHome(!S.loc.isHome,updateEmpty)};
 $('#eOn').onclick=()=>{$('#eSheet').classList.remove('open');boot()};
 setInterval(batteryTick,1000);
-addEventListener('visibilitychange',()=>{batteryTick();save()});
+// Beim Wechsel sichtbar/unsichtbar die Zeit davor richtig abrechnen
+addEventListener('visibilitychange',()=>{advance(document.visibilityState==='visible'?1:USE_MULT);batteryTick();save()});
 
 /* ---------- Zuhause / Unterwegs ---------- */
 function setHome(v,quiet){
@@ -1537,10 +1550,16 @@ function openApp(id){
   $('#sbApp').textContent=app.name;
   const o=appOrigin(id);v.style.transformOrigin=`${o.x}px ${o.y}px`;
   v.getAnimations().forEach(a=>a.cancel());
-  v.style.borderRadius='40px';
-  v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:440,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius=''};
-  if(homeAnim)homeAnim.cancel();
-  homeAnim=$('#home').animate([{transform:'scale(1)',opacity:1},{transform:'scale(.92)',opacity:.3}],{duration:440,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'});
+  // erst fertig aufbauen & zeichnen lassen (unsichtbar), dann ohne Bildaussetzer animieren
+  v.style.borderRadius='40px';v.style.opacity='0';v.style.transform=`scale(${o.s})`;
+  const ctx0=appCtx;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(appCtx!==ctx0)return;
+    v.style.opacity='';v.style.transform='';
+    v.animate([{transform:`scale(${o.s})`,opacity:0},{opacity:1,offset:.3},{transform:'scale(1)',opacity:1}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)'}).onfinish=()=>{v.style.borderRadius=''};
+    if(homeAnim)homeAnim.cancel();
+    homeAnim=$('#home').animate([{transform:'scale(1)',opacity:1},{transform:'scale(.92)',opacity:.3}],{duration:420,easing:'cubic-bezier(.2,.9,.22,1)',fill:'forwards'});
+  }));
 }
 let homeAnim=null;
 function appOrigin(id){
@@ -1551,7 +1570,7 @@ function appOrigin(id){
 function closeAppNow(){
   if(!appCtx)return;
   appCtx.cleanup.forEach(f=>{try{f()}catch(e){}});
-  appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';delete v.dataset.closing;v.className='';v.innerHTML='';
+  appCtx=null;const v=$('#appview');v.getAnimations().forEach(a=>a.cancel());v.style.borderRadius='';v.style.opacity='';v.style.transform='';delete v.dataset.closing;v.className='';v.innerHTML='';
   document.body.classList.remove('inapp');
   if(!closingHome&&homeAnim){homeAnim.cancel();homeAnim=null}
   $('#sbApp').textContent='Home';
@@ -1603,7 +1622,7 @@ const WTYPES={
   coins:{name:'Coins',sizes:['s'],open:()=>'shop',
     html:()=>`<div class="wt">Coins</div><div class="wcenter col"><div style="font-size:34px">🪙</div><div class="wbig js-coins" style="color:#ffd60a;font-size:34px"></div></div>`},
   quests:{name:'Tagesquests',sizes:['l'],open:()=>'quests',html:()=>`<div class="wt">Tagesquests <span class="js-qn" style="float:right"></span></div><div class="js-ql"></div>`,
-    upd:el=>{ensureQuests();const L=S.daily.list;$('.js-qn',el).textContent=L.filter(q=>q.done).length+'/3';
+    upd:el=>{ensureQuests();const L=S.daily.list;$('.js-qn',el).textContent=L.filter(q=>q.done).length+'/'+L.length;
       $('.js-ql',el).innerHTML=L.map(q=>`<div class="wq ${q.done?'done':''}"><i style="background:${(DIFFS.find(d=>d[0]===q.diff)||DIFFS[0])[2]}"></i><span>${esc(q.title)}</span><b>${q.done?'✓':q.coins}</b></div>`).join('')}},
   calendar:{name:'Kalender',sizes:['s'],open:()=>appAvail('calendar')?'calendar':null,html:()=>`<div class="wt js-wday" style="color:#ff453a"></div><div class="wcal js-day"></div><div class="wsub js-month"></div>`},
   analog:{name:'Analoguhr',sizes:['s'],open:()=>appAvail('clock')?'clock':null,
@@ -1624,7 +1643,7 @@ function updateWidgets(root){
   $$('.js-month',root).forEach(e=>e.textContent=d.toLocaleDateString('de-DE',{month:'long'}));
   $$('.wdg[data-type]',root).forEach(el=>{const t=WTYPES[el.dataset.type];if(t&&t.upd)try{t.upd(el)}catch(e){}});
 }
-setInterval(()=>{if(current==='desktop'&&!appCtx)updateWidgets($('#track'))},1000);
+setInterval(()=>{if(current==='desktop'&&!appCtx&&!G&&!springRaf)updateWidgets($('#track'))},1000);
 
 /* ---------- Raster ---------- */
 function measureGrid(){
@@ -1670,6 +1689,24 @@ function renderHome(){
 function drawDots(n){n=n||$$('#track .page').length;$('#dots').innerHTML=n>1?Array.from({length:n},(_,i)=>`<i class="${i===homePage?'on':''}"></i>`).join(''):''}
 let trackW=0;
 function setTrack(dx,drag){const t=$('#track');if(!drag||!trackW)trackW=$('#home').clientWidth;if(t.classList.contains('drag')!==!!drag)t.classList.toggle('drag',!!drag);t.style.transform=`translate3d(${-homePage*trackW+dx}px,0,0)`}
+/* Feder-Physik: die Seite gleitet mit genau der Geschwindigkeit des Fingers weiter (kein Ruck beim Loslassen) */
+let springRaf=0;
+function springTo(target,startDx,velPxMs){
+  cancelAnimationFrame(springRaf);
+  const t=$('#track'),W=trackW||$('#home').clientWidth,old=homePage;
+  let x=-old*W+startDx,v=velPxMs*1000;const xT=-target*W;
+  homePage=target;if(old!==target)haptic('select');drawDots();
+  t.classList.add('drag');
+  const K=210,C=2*Math.sqrt(K)*1.02; // fast kritisch gedämpft
+  let last=performance.now();
+  const step=now=>{
+    let dt=Math.min(.032,(now-last)/1000);last=now;
+    for(let i=0;i<2;i++){const h=dt/2,a=-K*(x-xT)-C*v;v+=a*h;x+=v*h}
+    if(Math.abs(x-xT)<.4&&Math.abs(v)<15){t.style.transform=`translate3d(${xT}px,0,0)`;springRaf=0;t.classList.remove('drag');return}
+    t.style.transform=`translate3d(${x.toFixed(2)}px,0,0)`;springRaf=requestAnimationFrame(step);
+  };
+  springRaf=requestAnimationFrame(step);
+}
 function goPage(i){const n=$$('#track .page').length,old=homePage;homePage=Math.max(0,Math.min(n-1,i));if(old!==homePage)haptic('select');setTrack(0,false);drawDots(n)}
 function enterEdit(){
   if(editMode)return;editMode=true;haptic('heavy');
@@ -1826,7 +1863,7 @@ function closeWSheet(){$('#wsheet').classList.remove('open');$('#wscrim').classL
     if(G.mode==='swipe'){
       const n=G.n||(G.n=$$('#track .page').length);let d=dx;
       if((homePage===0&&d>0)||(homePage===n-1&&d<0))d*=.3;
-      const now=performance.now();G.v=(e.clientX-(G.lx??G.x))/Math.max(1,now-(G.lt??now-16));G.lx=e.clientX;G.lt=now;
+      const now=performance.now(),iv=(e.clientX-(G.lx??G.x))/Math.max(1,now-(G.lt??now-16));G.v=G.v===undefined?iv:G.v*.6+iv*.4;G.lx=e.clientX;G.lt=now;
       G.sd=d;if(!G.raf)G.raf=requestAnimationFrame(()=>{if(G){G.raf=0;setTrack(G.sd,true)}});return;
     }
     if(G.mode==='menu'&&dist>10){closeCtx();enterEdit();return startDrag(G.id,e)}
@@ -1840,8 +1877,10 @@ function closeWSheet(){$('#wsheet').classList.remove('open');$('#wscrim').classL
     const dx=(e.clientX||g.x)-g.x,W=home.clientWidth;
     if(g.mode==='swipe'){
       if(g.raf)cancelAnimationFrame(g.raf);
-      const v=g.v||0;
-      if(!cancel&&(dx<-W*.16||v<-.35))goPage(homePage+1);else if(!cancel&&(dx>W*.16||v>.35))goPage(homePage-1);else goPage(homePage);return;
+      const v=g.v||0,n=$$('#track .page').length;let tgt=homePage;
+      if(!cancel&&(dx<-W*.16||v<-.3))tgt=homePage+1;else if(!cancel&&(dx>W*.16||v>.3))tgt=homePage-1;
+      tgt=Math.max(0,Math.min(n-1,tgt));
+      springTo(tgt,g.sd??dx,cancel?0:v);return;
     }
     if(g.mode==='drag')return endDrag();
     if(cancel)return;
@@ -1933,33 +1972,45 @@ const QF={
     ['🥒','Telefonier draußen 2 Minuten mit einer Gurke als Handy',100],
     ['🎙️','Kommentiere wie ein Fußballreporter live, wie deine Eltern kochen',100],
     ['🧀','Geh ernst zu deinen Eltern: „Wir müssen reden …“ – und halt einen Vortrag über Käse',50],
-    ['🏴‍☠️','Sprich eine Stunde nur mit Piratenstimme – auch mit deinen Eltern',50]
+    ['🏴‍☠️','Sprich eine Stunde nur mit Piratenstimme – auch mit deinen Eltern',50],
+    ['🦆','Watschel 1 Minute wie eine Ente durch einen Supermarktgang',100],
+    ['🎭','Sing beim Abendessen jede Bitte („Gib mir mal das Salz“) wie ein Opernsänger',50],
+    ['🗿','Steh 2 Minuten draußen wie eine Statue – ohne dich zu bewegen',100],
+    ['🙇','Begrüß heute jedes Familienmitglied mit Verbeugung und „Seid gegrüßt“',50],
+    ['🐒','Mach jedes Mal Affengeräusche, wenn ein Elternteil das Zimmer betritt – eine Stunde lang',50]
   ],
   schwer:[
     ['🗺️','Frag eine fremde Person nach dem Weg – komplett in Reimform',200],
     ['🎤','Antworte deinen Eltern 30 Minuten lang nur als Musical-Lied',200],
     ['🌟','Wink 10 Leuten zu wie ein Weltstar auf dem roten Teppich',200],
     ['👔','Dein Freund sucht dein Outfit aus – und du gehst so raus',300],
-    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken',100]
+    ['📺','Präsentier deinen Eltern eine „Sondersendung“ über deine Socken',100],
+    ['🛒','Frag im Laden ganz ernst, ob es „unsichtbare Schuhe“ gibt',200],
+    ['🎶','Sing draußen 30 Sekunden laut den Refrain deines Lieblingssongs',200],
+    ['👟','Geh mit zwei verschiedenen Schuhen eine Runde durch die Stadt',100],
+    ['🤖','Beweg dich draußen 15 Minuten nur wie ein Roboter',200]
   ],
   extrem:[
     ['🦸','Ein ganzer Tag als Superheld: Kostüm, Heldenname, Heldenstimme',500],
     ['🎥','Musikvideo in voller Verkleidung drehen und der Familie vorspielen',400],
     ['🎶','Sing draußen laut einen Song, bis jemand klatscht oder lacht',500],
     ['🖼️','Dein Freund sucht dein Profilbild aus – 24 Stunden lang',300],
-    ['🏆','Mini-Olympiade mit 5 Disziplinen – mit Siegerehrung und Medaillen',1000]
+    ['🏆','Mini-Olympiade mit 5 Disziplinen – mit Siegerehrung und Medaillen',1000],
+    ['🕺','Tanz 1 Minute in der Fußgängerzone, bis jemand lacht oder mitmacht',500],
+    ['🧙','Geh komplett verkleidet einkaufen – und bleib die ganze Zeit in der Rolle',400],
+    ['📢','Halte draußen eine 1-Minuten-Rede darüber, warum Käse die Welt rettet',400]
   ]
 };
 const snapCoins=(raw,diff)=>COINSTEPS[diff].reduce((b,v)=>Math.abs(v-raw)<Math.abs(b-raw)?v:b);
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const nice=n=>n<20?n:n<100?Math.round(n/5)*5:n<1000?Math.round(n/10)*10:Math.round(n/500)*500;
-function genQuest(diff,avoid){
+function genQuest(diff,avoid,kind){
   let q;
   const own=(S.customQ||[]).filter(x=>x.diff===diff);
   for(let k=0;k<40;k++){
-    if(own.length&&Math.random()<.3){
+    if(!kind&&own.length&&Math.random()<.3){
       const o=own[rnd(0,own.length-1)];q={i:o.i,title:o.title,coins:o.coins,tag:'own'};
-    }else if(Math.random()<.5){
+    }else if(kind==='sport'||(!kind&&Math.random()<.5)){
       const tpl=QT[rnd(0,QT.length-1)],[a,b]=tpl.r[diff],n=nice(rnd(a,b));
       q={i:tpl.i,title:tpl.t(n),coins:snapCoins(tpl.c(n),diff),tag:tpl.g,hint:tpl.h||''};
     }else{
@@ -1968,16 +2019,20 @@ function genQuest(diff,avoid){
     }
     if(!avoid.some(x=>x.title===q.title||x.i===q.i))break;
   }
-  q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;
+  q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
+// 5 Tagesquests: zwei Mittel, zwei Schwer, eine Extrem – davon mindestens drei peinlich/witzig
+const DAILY_SLOTS=[['mittel','fun'],['mittel','sport'],['schwer','fun'],['schwer',''],['extrem','fun']];
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
   (S.customQ||[]).forEach(o=>{if(!COINSTEPS[o.diff])o.diff='mittel';if(o.coins<50)o.coins=50});
   if(!S.daily||S.daily.day!==dayKey()){
-    const list=[];DIFFS.forEach(([d])=>list.push(genQuest(d,list)));
+    const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
     S.daily={day:dayKey(),list};save();
+  }else if(S.daily.list.length<DAILY_SLOTS.length){ // Update von 3 auf 5 Quests: heute direkt auffüllen
+    DAILY_SLOTS.slice(S.daily.list.length).forEach(([d,k])=>S.daily.list.push(genQuest(d,S.daily.list,k)));save();
   }
 }
 
@@ -2027,7 +2082,7 @@ render(body,ctx){
   function draw(){
     ensureQuests();
     const L=S.daily.list,doneN=L.filter(q=>q.done).length;
-    let html=`<div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Heute geschafft</small><b>🏆 ${doneN}/3</b></div></div>
+    let html=`<div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Heute geschafft</small><b>🏆 ${doneN}/${L.length}</b></div></div>
       <div class="tabs"><button data-tab="today" class="${tab==='today'?'on':''}">📅 Heute</button><button data-tab="own" class="${tab==='own'?'on':''}">⭐ Eigene</button><button data-tab="hist" class="${tab==='hist'?'on':''}">📜 Verlauf</button></div>`;
     if(tab==='today'){
       html+=L.map((q,i)=>{const d=dcol(q.diff);return `<div class="qcard ${q.done?'qdoneC':''}" style="--dc:${d[2]}"><div class="qic">${esc(q.i)}</div>
@@ -2046,7 +2101,7 @@ render(body,ctx){
     }
     body.innerHTML=html;
     $$('[data-tab]',body).forEach(b=>b.onclick=()=>{if(tab===b.dataset.tab)return;tab=b.dataset.tab;haptic('select');draw();fadeIn(body)});
-    $$('[data-re]',body).forEach(b=>b.onclick=()=>{const q=L[+b.dataset.re];askCode('Quest neu würfeln',()=>{const k=S.daily.list.indexOf(q);if(k<0)return;S.daily.list[k]=genQuest(q.diff,S.daily.list);save();draw()})});
+    $$('[data-re]',body).forEach(b=>b.onclick=()=>{const q=L[+b.dataset.re];askCode('Quest neu würfeln',()=>{const k=S.daily.list.indexOf(q);if(k<0)return;S.daily.list[k]=genQuest(q.diff,S.daily.list,q.kind);save();draw()})});
     $$('[data-done]',body).forEach(b=>b.onclick=()=>{
       const q=L[+b.dataset.done];
       askCode(`Abhaken: +${q.coins} Coins`,()=>{
@@ -2056,7 +2111,7 @@ render(body,ctx){
         const card=$$('.qcard',body)[S.daily.list.indexOf(q)];if(card)card.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:420,easing:SPRING});
       });
     });
-    const all=$('#qAll',body);if(all)all.onclick=()=>askCode('Tagesquests neu würfeln',()=>{S.daily.list=S.daily.list.map(q=>q.done?q:genQuest(q.diff,S.daily.list));save();draw()});
+    const all=$('#qAll',body);if(all)all.onclick=()=>askCode('Tagesquests neu würfeln',()=>{S.daily.list=S.daily.list.map(q=>q.done?q:genQuest(q.diff,S.daily.list,q.kind));save();draw()});
     $$('[data-del]',body).forEach(b=>b.onclick=()=>askCode('Quest löschen',()=>{S.customQ.splice(+b.dataset.del,1);save();draw()}));
     const nq=$('#qNew',body);if(nq)nq.onclick=()=>askCode('Quest erstellen',form);
   }
@@ -2144,7 +2199,7 @@ render(body,ctx){
 /* ---------- Standort ---------- */
 standort:{name:'Standort',icon:'📍',bg:'linear-gradient(135deg,#ff5e3a,#ff2a68)',
 render(body,ctx){
-  let map=null,tiles=null,sat=false,me=null,acc=null,homeM=null,homeC=null,fitted=false;
+  let map=null,tiles=null,labels=null,sat=S.mapSat!==false,me=null,acc=null,homeM=null,homeC=null,fitted=false;
   const fmtD=d=>d<1000?Math.round(d)+' m':(d/1000).toFixed(1).replace('.',',')+' km';
   function statusHTML(){
     const st=statusInfo();
@@ -2203,18 +2258,26 @@ render(body,ctx){
       rd.onchange=e=>{const v=+e.target.value;askCode('Umkreis ändern',()=>{S.loc.radius=v;save();if(geoPos&&S.loc.home)setHome(distM(geoPos,S.loc.home)<=S.loc.radius);fitted=false;refresh()},()=>{rd.value=S.loc.radius;$('#lRadV',body).textContent=S.loc.radius+' m';if(homeC)homeC.setRadius(S.loc.radius)})};
     }
     const ce=$('#lCenter',body);if(ce)ce.onclick=()=>{haptic();fitted=false;updateMap()};
-    const ly=$('#lLayer',body);if(ly)ly.onclick=()=>{haptic();sat=!sat;ly.classList.toggle('on',sat);setTiles()};
+    const ly=$('#lLayer',body);if(ly)ly.onclick=()=>{haptic();sat=!sat;S.mapSat=sat;save();setTiles()};
   }
   /* ---------- Echte Karte (Leaflet + OpenStreetMap/CARTO/Esri) ---------- */
-  let tileMode='styled';
+  // Standard: Satellit mit Straßennamen (braucht keinen API-Key). „Karte“ (CARTO) ist optional;
+  // lädt sie nicht oder fehlt ein Zugang, schaltet GufyUI automatisch zurück auf Satellit.
   function setTiles(){
-    if(!map)return;if(tiles)map.removeLayer(tiles);
-    if(tileMode==='osm'&&!sat){tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);return}
+    if(!map)return;
+    [tiles,labels].forEach(l=>l&&map.removeLayer(l));labels=null;
+    const ly=$('#lLayer',body);if(ly){ly.classList.toggle('on',!sat);ly.textContent=sat?'🗺️':'🛰️';ly.title=sat?'Karte':'Satellit'}
+    if(sat){
+      tiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'}).addTo(map);
+      labels=L.layerGroup([
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:.85}),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]).addTo(map);
+      return;
+    }
     let ok=0,bad=0;
-    tiles=sat?L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'})
-      :L.tileLayer(`https://{s}.basemaps.cartocdn.com/${S.theme==='dark'?'dark_all':'rastertiles/voyager'}/{z}/{x}/{y}{r}.png`,{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'});
+    tiles=L.tileLayer(`https://{s}.basemaps.cartocdn.com/${S.theme==='dark'?'dark_all':'rastertiles/voyager'}/{z}/{x}/{y}{r}.png`,{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'});
     tiles.on('tileload',()=>ok++);
-    tiles.on('tileerror',()=>{bad++;if(bad>=3&&ok===0){if(sat){sat=false;const ly=$('#lLayer',body);if(ly)ly.classList.remove('on')}tileMode='osm';setTiles()}});
+    tiles.on('tileerror',()=>{bad++;if(bad>=2&&ok===0){sat=true;S.mapSat=true;save();setTiles();notify('🛰️','Satellit aktiv','Die Karte ist hier nicht verfügbar – Satellit ist eingeschaltet.','#0a84ff')}});
     tiles.addTo(map);
   }
   function initMap(){
@@ -2234,7 +2297,7 @@ render(body,ctx){
     el.innerHTML=`<iframe class="mapframe" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=${c.lon-d*1.6},${c.lat-d},${c.lon+d*1.6},${c.lat+d}&layer=mapnik${m}"></iframe>`;
     const btns=$('.mapbtns',body);if(btns)btns.style.display='none';
   }
-  function destroyMap(){if(map){map.remove();map=null;tiles=me=acc=homeM=homeC=null;fitted=false}}
+  function destroyMap(){if(map){map.remove();map=null;tiles=labels=me=acc=homeM=homeC=null;fitted=false}}
   function updateMap(){
     if(!map)return;
     const pts=[];
