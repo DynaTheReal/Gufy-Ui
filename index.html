@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.7","notes":["Neue App im Store: Öfis – Bus & Bahn weltweit: Haltestelle suchen, alle Abfahrten des Tages","Bus- und Bahnradar: Fahrzeuge live als Punkte auf der Satellitenkarte","Geschwindigkeit-App im Store"]};
+window.GUFY={"v":"8.8","notes":["Öfis: Busse werden jetzt auch gefunden, wenn der weltweite Fahrplan sie nicht kennt (z. B. Sylt) – dann nimmt Öfis den DB-Fahrplan","Busradar: in Deutschland Ersatz über DB, wenn keine Busse angezeigt werden","Mehr Infos in Einstellungen → Logs"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -4298,18 +4298,34 @@ render(body,ctx){
       return r.filter(x=>x.type==='stop'||x.type==='station').map(x=>({id:x.id,name:x.name,lat:x.location.latitude,lon:x.location.longitude,area:'',modes:[],prov:'db'}))}
   }
   async function departures(st,mode){
+    let r=await departures0(st,mode);
+    if(st.prov!=='db'&&!r.length){ // 1) ohne Verkehrsmittel-Filter nochmal (manche Busse sind anders eingetragen)
+      glog('Öfis',`0 Abfahrten (${mode}) bei ${st.name} → ohne Filter`);
+      r=(await departures0(st,mode,true)).filter(x=>mode==='bus'?!MODES.bahn.includes(x.mode):!MODES.bus.includes(x.mode));
+      glog('Öfis',`ohne Filter: ${r.length}`);
+    }
+    if(!r.length&&st.lat>35&&st.lat<72&&st.lon>-11&&st.lon<32){ // 2) Europa: DB-Fahrplan der Haltestelle in der Nähe
+      try{const n=await j(`${DB}/locations/nearby?latitude=${st.lat}&longitude=${st.lon}&results=4&distance=400`);
+        const near=n.filter(x=>x.type==='stop'||x.type==='station')[0];
+        if(near){glog('Öfis','DB-Ersatz: '+near.name);r=await departures0({...st,id:near.id,prov:'db'},mode)}}
+      catch(e){glog('Öfis','DB-Ersatz: '+e.message)}
+    }
+    return r;
+  }
+  async function departures0(st,mode,noFilter){
     const d0=new Date();d0.setHours(0,0,0,0);d0.setDate(d0.getDate()+dayOff);const d1=new Date(d0);d1.setDate(d1.getDate()+1);
     if(st.prov==='db'){
       const prod=mode==='bus'?'&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false':'&bus=false&ferry=false&taxi=false';
       const r=await j(`${DB}/stops/${encodeURIComponent(st.id)}/departures?when=${d0.toISOString()}&duration=1440&results=600&remarks=false${prod}`);
-      return (r.departures||r).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||'',ic:x.line&&x.line.product==='bus'?'🚌':'🚆',track:x.platform||'',cancel:!!x.cancelled}));
+      return (r.departures||r).map(x=>({mode:x.line&&x.line.product,t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||'',ic:x.line&&x.line.product==='bus'?'🚌':'🚆',track:x.platform||'',cancel:!!x.cancelled}));
     }
     const out=[];let cur=null;
     for(let pg=0;pg<10;pg++){
-      const u=`${TT}/v6/stoptimes?stopId=${encodeURIComponent(st.id)}&time=${d0.toISOString()}&n=150&mode=${MODES[mode].join(',')}${cur?'&pageCursor='+encodeURIComponent(cur):''}`;
+      const u=`${TT}/v6/stoptimes?stopId=${encodeURIComponent(st.id)}&time=${d0.toISOString()}&n=150${noFilter?'':'&mode='+MODES[mode].join(',')}${cur?'&pageCursor='+encodeURIComponent(cur):''}`;
       let r;try{r=await j(u)}catch(e){if(pg===0&&/404/.test(e.message))r=await j(u.replace('/v6/','/v5/'));else throw e}
       (r.stopTimes||[]).forEach(x=>{const t=x.place.departure||x.place.scheduledDeparture;if(!t)return;
-        out.push({t,p:x.place.scheduledDeparture||t,line:x.displayName||x.routeShortName||x.tripShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',ic:ICON[x.mode]||'🚏',track:x.place.track||x.place.scheduledTrack||'',cancel:!!(x.cancelled||x.tripCancelled),col:x.routeColor})});
+        out.push({mode:x.mode,t,p:x.place.scheduledDeparture||t,line:x.displayName||x.routeShortName||x.tripShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',ic:ICON[x.mode]||'🚏',track:x.place.track||x.place.scheduledTrack||'',cancel:!!(x.cancelled||x.tripCancelled),col:x.routeColor})});
+      if(pg===0)glog('Öfis',`${st.name}: ${(r.stopTimes||[]).length} Einträge${noFilter?' (ohne Filter)':''}`);
       const last=out[out.length-1];cur=r.nextPageCursor;
       if(!cur||!last||new Date(last.t)>=d1||!(r.stopTimes||[]).length)break;
     }
@@ -4323,13 +4339,17 @@ render(body,ctx){
     if(z<11){radarSeg=[];drawDots();if(info)info.textContent='🔍 Reinzoomen, um Fahrzeuge zu sehen';return}
     const st=cur();
     try{
-      if(st&&st.prov==='db'){
-        const r=await j(`${DB}/radar?north=${b.getNorth()}&west=${b.getWest()}&south=${b.getSouth()}&east=${b.getEast()}&results=256&duration=30&frames=1&polylines=false`);
-        radarSeg=(r.movements||r).filter(m=>m.location&&((O.mode==='bus')===(m.line&&m.line.product==='bus'))).map(m=>({fix:[m.location.latitude,m.location.longitude],name:m.line.name,dir:m.direction||''}));
-      }else{
+      let useDb=st&&st.prov==='db';
+      if(!useDb){
         const prec=z>=11?5:4;
         const r=await j(`${TT}/v6/map/trips?zoom=${Math.round(z)}&min=${b.getSouth()},${b.getEast()}&max=${b.getNorth()},${b.getWest()}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+120000).toISOString()}&precision=${prec}`);
         radarSeg=r.filter(s=>MODES[O.mode].includes(s.mode)).map(s=>({dep:+new Date(s.departure),arr:+new Date(s.arrival),pts:decode(s.polyline,prec),name:(s.trips&&s.trips[0]&&(s.trips[0].displayName||s.trips[0].routeShortName))||'',to:s.to&&s.to.name||'',col:s.routeColor,ic:ICON[s.mode]||'•'}));
+        const c=map.getCenter();
+        if(!radarSeg.filter(s=>posOf(s,Date.now())).length&&c.lat>47&&c.lat<55.2&&c.lng>5.5&&c.lng<15.5){useDb=true;glog('Öfis','Radar: Transitous leer → DB')}
+      }
+      if(useDb){
+        const r2=await j(`${DB}/radar?north=${b.getNorth()}&west=${b.getWest()}&south=${b.getSouth()}&east=${b.getEast()}&results=256&duration=30&frames=1&polylines=false`);
+        radarSeg=(r2.movements||r2).filter(m=>m.location&&((O.mode==='bus')===(m.line&&m.line.product==='bus'))).map(m=>({fix:[m.location.latitude,m.location.longitude],name:m.line.name,dir:m.direction||'',ic:m.line&&m.line.product==='bus'?'🚌':'🚆'}));
       }
       if(info)info.textContent=`🛰️ ${radarSeg.length} ${O.mode==='bus'?(radarSeg.length===1?'Bus':'Busse'):(radarSeg.length===1?'Bahn':'Bahnen')} unterwegs · live`;
     }catch(e){glog('Öfis','Radar: '+e.message);if(info)info.textContent='Radar gerade nicht erreichbar'}
