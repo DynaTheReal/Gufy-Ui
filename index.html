@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.7","notes":["Beta: AI-Quests ✨ – jeden Tag leichter Sport (Klimmzüge, Rad oder Joggen), eine andere Quest und eine verrückte, schwere AI-Quest von Gufy AI für 50 Coins","Einschalten: Einstellungen › Beta › AI-Quests","Assistent: Tastatur klappt beim Öffnen sofort aus","Gufy AI startet bei langen Fragen nur noch einmal"]};
+window.GUFY={"v":"10.8","notes":["AI-Quest steht immer ganz unten","AI-Quests finden jetzt draußen statt (Straße, Supermarkt, Strand …) statt zu Hause","Beta: AI-Quests ✨ – jeden Tag leichter Sport (Klimmzüge, Rad oder Joggen), eine andere Quest und eine verrückte, schwere AI-Quest von Gufy AI für 50 Coins","Einschalten: Einstellungen › Beta › AI-Quests","Assistent: Tastatur klappt beim Öffnen sofort aus","Gufy AI startet bei langen Fragen nur noch einmal"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -3107,7 +3107,7 @@ const NICE_PAY=[25,50,100,200,500];               // Belohnungs-Stufen
 const roundPay=v=>NICE_PAY.reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)||(Math.abs(x-v)===Math.abs(b-v)&&x>b)?x:b);
 const QUEST_PAY=v=>roundPay(v);   // Werte stehen direkt bei den Quests
 const QUEST_SORT=1;   // 1 = wenigste Coins oben, -1 = meiste Coins oben
-const sortQ=L=>L.map((q,i)=>i).sort((a,b)=>QUEST_SORT*(L[a].coins-L[b].coins));
+const sortQ=L=>L.map((q,i)=>i).sort((a,b)=>((L[a].tag==='ai')-(L[b].tag==='ai'))||QUEST_SORT*(L[a].coins-L[b].coins));   // AI-Quest immer ganz unten
 const COINALL=NICE_PAY;
 // Sport: Zahlen gelten PRO PERSON ("Ihr müsst beide …"), cv = Coins je Schwierigkeit
 const QT=[
@@ -3215,7 +3215,7 @@ async function aiQuestFill(){
   if(!gemGet()){q.title='Für AI-Quests brauchst du Gufy AI – sag dem Assistenten „API-Key“';q.noKey=true;return}
   aiQBusy=true;q.noKey=false;
   const old=(S.aiQOld||[]).slice(-12).join(' | ');
-  const sys=`Du erfindest für GufyUI genau EINE witzige, total zufällige und SCHWERE Tagesquest auf Deutsch für einen Jugendlichen (er macht Quests oft mit seinem besten Freund). Stil: absurd, peinlich-lustig, kreativ, sehr konkret – z. B. „Sing auf der Straße so laut du kannst ‚Alle meine Entchen‘ im Würstchen-Style und wünsch danach deinem Würstchen-Freund einen guten Donut-Geburtstag“. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, nichts mit Fremden anfassen, heute machbar. Höchstens 2 Sätze. Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>"}`;
+  const sys=`Du erfindest für GufyUI genau EINE witzige, total zufällige und SCHWERE Tagesquest auf Deutsch für einen Jugendlichen (er macht Quests oft mit seinem besten Freund). Stil: absurd, peinlich-lustig, kreativ, sehr konkret – z. B. „Sing auf der Straße so laut du kannst ‚Alle meine Entchen‘ im Würstchen-Style und wünsch danach deinem Würstchen-Freund einen guten Donut-Geburtstag“. WICHTIG: Die Quest muss DRAUSSEN in der Öffentlichkeit stattfinden – z. B. auf der Straße, im Supermarkt, beim Bäcker, am Strand, im Bus, auf dem Spielplatz oder in der Fußgängerzone, wo andere Leute es sehen können. KEINE Quests zu Hause oder nur mit den Eltern – zu Hause ist es zu leicht. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, nichts mit Fremden anfassen, heute machbar. Höchstens 2 Sätze. Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>"}`;
   try{
     const t=await gemAsk(`Erfinde die AI-Quest für heute (${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}). Nicht wiederholen: ${old||'–'}`,null,{sys,temp:1.1});
     let o=null;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
