@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.1","notes":["Akku hält jetzt unterwegs 8 Std. (vorher 5 Std.)","Wenn du GufyUI benutzt: 4 Std.","Manuell ausgeschaltet (⏻): 100 % halten 24 Std. – GufyUI bleibt aus, bis du es wieder einschaltest","Kontrollzentrum zeigt alle drei Zeiten"]};
+window.GUFY={"v":"9.2","notes":["Anmelden: kurzer Lade-Kreis um dein Profilbild, dann geht GufyUI auf","Ausschalten: neue Animation – der Bildschirm zieht sich wie ein alter Fernseher zu einem leuchtenden Strich zusammen","Neuer Aus-Bildschirm: leuchtender Einschaltknopf, Akkustand und wie lange er ausgeschaltet noch hält"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1149,6 +1149,38 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .wt-list span{font-size:12px;font-weight:700;color:var(--muted)}.wt-list b{font-size:19px}.wt-list small{font-size:11.5px;color:var(--muted)}
 .wt-more{display:flex;gap:14px;margin-top:10px;font-size:13.5px;font-weight:600}
 .wt-more:empty{display:none}
+/* Aus-Bildschirm */
+#off{overflow:hidden}
+.off-glow{position:absolute;left:50%;top:50%;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;background:radial-gradient(circle,rgba(127,90,240,.16),rgba(79,140,255,.06) 40%,transparent 68%);animation:offBreath 6s ease-in-out infinite;pointer-events:none}
+@keyframes offBreath{0%,100%{transform:scale(.85);opacity:.6}50%{transform:scale(1.08);opacity:1}}
+.off-brand{font-size:15px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,.22);margin-bottom:6px}
+.off-brand i{font-style:normal;color:rgba(160,140,255,.45)}
+#powerBtn{position:relative;width:104px;height:104px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.75);background:radial-gradient(circle at 50% 35%,#1c1c22,#0a0a0d 70%);border:none;box-shadow:0 0 0 1px rgba(255,255,255,.07),0 12px 40px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .2s,color .2s,box-shadow .3s;cursor:pointer}
+#powerBtn:active{transform:scale(.92);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.15),0 0 40px rgba(127,90,240,.55)}
+#powerBtn svg{position:relative;filter:drop-shadow(0 0 8px rgba(140,120,255,.6))}
+.pw-ring{position:absolute;inset:-6px;border-radius:50%;padding:2px;background:conic-gradient(from 0deg,transparent 0 55%,rgba(127,90,240,.9),rgba(79,140,255,.9),transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pwSpin 3.2s linear infinite;opacity:.8}
+@keyframes pwSpin{to{transform:rotate(360deg)}}
+#powerBtn.go .pw-ring{animation-duration:.5s;opacity:1}
+#powerBtn.go{color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.2),0 0 60px rgba(127,90,240,.8)}
+.off-hint{color:rgba(255,255,255,.35);font-size:13.5px;letter-spacing:.3px;animation:offHint 3s ease-in-out infinite}
+@keyframes offHint{0%,100%{opacity:.55}50%{opacity:1}}
+.off-bat{position:absolute;left:50%;bottom:calc(46px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5);font-size:12.5px;white-space:nowrap}
+.off-bat b{color:rgba(255,255,255,.8);font-weight:650}
+.off-bat:empty{display:none}
+.off-bat .batt{opacity:.75}
+/* Ausschalt-Animation */
+.pwr-fx{position:fixed;inset:0;pointer-events:none;z-index:99999;display:grid;place-items:center}
+.pwr-fx i{display:block;width:100vw;height:3px;border-radius:3px;background:#fff;box-shadow:0 0 18px 6px rgba(170,150,255,.9),0 0 60px 20px rgba(110,90,255,.5);opacity:0}
+/* Anmelde-Animation */
+.lk-login .avatar{position:relative}
+.lk-spin{position:absolute;inset:-9px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#fff;border-right-color:rgba(255,255,255,.7);opacity:0;transition:opacity .2s}
+.lk-login.busy .lk-spin{opacity:1;animation:pwSpin .7s linear infinite}
+.lk-login .lk-field,.lk-login .lk-err{transition:opacity .25s,transform .25s}
+.lk-login.busy .lk-field,.lk-login.busy .lk-err{opacity:0;transform:translateY(8px);pointer-events:none}
+.lk-busy{position:absolute;bottom:22px;font-size:15px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none}
+.lk-login.busy .lk-busy{opacity:.9}
+.lk-login.busy .avatar{animation:lkPulse 1s ease-in-out}
+@keyframes lkPulse{50%{transform:scale(1.06)}}
 </style>
 </head>
 <body class="dark">
@@ -1176,10 +1208,11 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
   <div class="lk-top"><span class="js-locicon"></span><span class="bpct">100%</span><span class="batt"><span class="bfill"></span></span><span class="bbolt">⚡</span></div>
   <div class="lk-time"><div class="d js-date"></div><div class="t js-time"></div></div>
   <div class="lk-login" id="lkLogin">
-    <div class="avatar js-initial">?</div>
+    <div class="avatar"><span class="js-initial">?</span><span class="lk-spin"></span></div>
     <div class="lk-name js-name"></div>
     <div class="lk-field"><input id="lkPw" type="password" placeholder="Passwort eingeben" autocomplete="off"><button id="lkGo">→</button></div>
     <div class="lk-err" id="lkErr"></div>
+    <div class="lk-busy">Anmelden …</div>
   </div>
 </div>
 
@@ -1252,10 +1285,13 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 
 <!-- AUS -->
 <div id="off" class="screen">
+  <div class="off-glow"></div>
   <div class="center">
-    <button class="btn" id="powerBtn" style="width:84px;height:84px;border-radius:50%;font-size:34px;background:#111;color:#aaa;border:2px solid #333">⏻</button>
-    <p style="color:#666;font-size:14px">Zum Einschalten tippen</p>
+    <div class="off-brand">Gufy<i>UI</i></div>
+    <button id="powerBtn" aria-label="Einschalten"><span class="pw-ring"></span><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
+    <p class="off-hint">Zum Einschalten tippen</p>
   </div>
+  <div class="off-bat" id="offBat"></div>
 </div>
 
 <div id="devlayer"></div><div id="devpanel"></div><button id="devtoggle" aria-label="Entwickler-Info ein/aus">ⓘ</button>
@@ -2143,12 +2179,17 @@ function showLock(){
   $('#lkPw').value='';$('#lkErr').textContent='';
   setTimeout(()=>$('#lkPw').focus(),200);
 }
+let lkBusy=false;
 function tryUnlock(){
   const v=$('#lkPw').value;
+  if(lkBusy)return;
   if(hash(v)===S.pw){
+    lkBusy=true;$('#lkPw').blur();const L=$('#lkLogin');L.classList.add('busy');haptic('select');
+    setTimeout(()=>{lkBusy=false;L.classList.remove('busy');if(current!=='lock')return;
     S.loggedIn=true;save();haptic('success');
     enterDesktop();
     if(S.firstLogin){S.firstLogin=false;save();setTimeout(()=>notify('🎉','Willkommen, '+S.name+'!','Öffne „Quests“ und verdiene deine ersten Coins.'),500)}
+    },1000);
   }else{
     haptic('error');$('#lkErr').textContent=v?'Falsches Passwort':'Bitte Passwort eingeben';
     const l=$('#lkLogin');l.classList.remove('shake');void l.offsetWidth;l.classList.add('shake');
@@ -2859,9 +2900,25 @@ function doAction(a){
   if(a==='settings')openApp('settings');
   if(a==='logout')logout();
   if(a==='restart'){closeAppNow();advance();save();show('off');$('#off .center').style.opacity=0;setTimeout(()=>location.reload(),450)}
-  if(a==='off'){closeAppNow();advance(inUse()?USE_MULT:1);S.poweredOff=true;save();show('off');glog('Akku','Manuell ausgeschaltet bei '+S.battery.level.toFixed(1)+' %')}
+  if(a==='off'){closeAppNow();advance(inUse()?USE_MULT:1);S.poweredOff=true;save();powerOffFx();glog('Akku','Manuell ausgeschaltet bei '+S.battery.level.toFixed(1)+' %')}
 }
-$('#powerBtn').onclick=()=>{haptic('heavy');advance();if(S.poweredOff)glog('Akku','Eingeschaltet bei '+S.battery.level.toFixed(1)+' %');S.poweredOff=false;save();location.reload()};
+function offInfo(){const e=$('#offBat');if(!e)return;if(!S.poweredOff||!S.setupDone){e.innerHTML='';return}
+  advance();const lv=S.battery.level,r=rate(new Date());
+  e.innerHTML=`<span class="batt${lv<=20?' low':''}${r>0?' chg':''}"><span class="bfill" style="width:${dispPct()}%"></span></span><b>${dispPct()} %</b> · ${r>0?(lv>=99.95?'Voll geladen':'⚡ Lädt ausgeschaltet'):lv<=0?'Leer':'hält aus noch '+approxDur(lv/(-r))}`}
+setInterval(()=>{if(current==='off')offInfo()},30000);
+function powerOffFx(){
+  const sc=$('.screen.active'),fx=h('<div class="pwr-fx"><i></i></div>');document.body.appendChild(fx);haptic('heavy');
+  const under=h('<div style="position:fixed;inset:0;background:#000;z-index:-1"></div>');document.body.appendChild(under);
+  const D=760;
+  if(sc&&sc.id!=='off')sc.animate([{transform:'none',filter:'brightness(1)',opacity:1},{transform:'scale(1.02,.004)',filter:'brightness(3)',opacity:1,offset:.42},{transform:'scale(0,.004)',filter:'brightness(4)',opacity:.6,offset:.62},{transform:'scale(0,0)',opacity:0}],{duration:D,easing:'cubic-bezier(.6,0,.4,1)',fill:'forwards'});
+  $('i',fx).animate([{opacity:0,transform:'scaleX(1)'},{opacity:0,transform:'scaleX(1)',offset:.36},{opacity:1,transform:'scaleX(1)',offset:.44},{opacity:1,transform:'scaleX(.008)',offset:.66},{opacity:1,transform:'scaleX(.008) scaleY(1.6)',offset:.74},{opacity:0,transform:'scaleX(.002) scaleY(.4)'}],{duration:D+240,easing:'cubic-bezier(.5,0,.3,1)',fill:'forwards'});
+  setTimeout(()=>{if(sc)sc.getAnimations().forEach(a=>a.cancel());show('off');offInfo();
+    const c=$('#off .center');c.style.opacity='';c.animate([{opacity:0,transform:'scale(.94)'},{opacity:1,transform:'none'}],{duration:700,delay:250,easing:'cubic-bezier(.2,.9,.22,1)',fill:'backwards'});
+    $('#offBat').animate([{opacity:0},{opacity:1}],{duration:600,delay:500,fill:'backwards'})},D+60);
+  setTimeout(()=>{fx.remove();under.remove()},D+400);
+}
+$('#powerBtn').onclick=()=>{if($('#powerBtn').classList.contains('go'))return;$('#powerBtn').classList.add('go');haptic('heavy');
+  $('#off .center').animate([{opacity:1},{opacity:1,offset:.5},{opacity:0,transform:'scale(1.06)'}],{duration:650,easing:'ease-in',fill:'forwards'});setTimeout(()=>{advance();if(S.poweredOff)glog('Akku','Eingeschaltet bei '+S.battery.level.toFixed(1)+' %');S.poweredOff=false;save();location.reload()},600)};
 function updateCC(){
   const set=(k,on,txt,ic)=>{const t=$(`.cc-tile[data-t="${k}"]`);if(!t)return;t.classList.toggle('on',on);$('small',t).textContent=txt;if(ic)$('span',t).textContent=ic};
   set('loc',S.loc.isHome,(S.loc.isHome?'Zu Hause':'Unterwegs')+(S.loc.mode==='gps'?' · GPS':''),S.loc.isHome?'🏠':'🚶');
@@ -4811,7 +4868,7 @@ if(S.setupDone){ensureQuests();checkDebts()}
 if(S.loc.mode==='gps'&&S.setupDone)startGeo();
 addEventListener('beforeunload',()=>{advance();save()});
 addEventListener('pagehide',()=>{advance();bsnap(true);save()});
-if(S.poweredOff&&S.setupDone)show('off');else{S.poweredOff=false;boot()}
+if(S.poweredOff&&S.setupDone){show('off');offInfo()}else{S.poweredOff=false;boot()}
 </script>
 </body>
 </html>
