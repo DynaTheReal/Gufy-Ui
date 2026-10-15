@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.5","notes":["Assistent öffnet sich schneller: Home-Taste nur noch ¾ Sekunde halten","Gufy AI kann jetzt Sachen ausführen – z. B. „Kannst du mich abmelden und dann ausschalten?“","Der Assistent versteht „ausschalten“, „herunterfahren“ und „melde mich ab“ jetzt auch direkt","Gufy AI: Fortschrittsbalken und Modell-Wechsel für den restlichen Tag"]};
+window.GUFY={"v":"10.6","notes":["Bugfix: Lange Fragen starten nicht mehr 5× Gufy AI gleichzeitig – die ganze Nachricht geht genau einmal an Gufy AI","Assistent öffnet sich schneller: Home-Taste nur noch ¾ Sekunde halten","Gufy AI kann jetzt Sachen ausführen – z. B. „Kannst du mich abmelden und dann ausschalten?“","Der Assistent versteht „ausschalten“, „herunterfahren“ und „melde mich ab“ jetzt auch direkt","Gufy AI: Fortschrittsbalken und Modell-Wechsel für den restlichen Tag"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -5108,8 +5108,9 @@ async function runAssistant(text){
   let plans=parts.map(planCmd);const rid=Date.now().toString(36);
   const gemQ=q=>({ic:'✨',txt:'Gufy AI',gem:true,q});
   if(gemGet()){
-    if(plans.every(p=>p.unknown))plans=[gemQ(text)];          // ganze Frage an Gemini (nicht zerstückeln)
-    else plans=plans.map(p=>p.unknown?gemQ(p.raw):p);
+    // Versteht der Assistent irgendeinen Teil nicht → die GANZE Nachricht EINMAL an Gufy AI.
+    // Gufy AI erledigt dann auch die bekannten Teile über [[BEFEHL: …]] (keine doppelten Anfragen mehr).
+    if(plans.some(p=>p.unknown))plans=[gemQ(text)];
   }else if(plans.some(p=>p.unknown))plans.forEach(p=>{if(p.unknown)p.err+=' Sag „API-Key“, dann frage ich Gufy AI.'});
   const ch=$('.as-chips',box);if(ch)ch.style.display='none';
   const hb=$('.as-hist',box);if(hb)box.prepend(hb);
