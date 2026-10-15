@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.1","notes":["Neue App im Store: Wetter – Windstärke jetzt und in den nächsten Stunden, Regen ja/nein","Gufy Assistent: Home-Taste 2 Sek. halten, sprechen oder schreiben – mehrere Befehle auf einmal","Timer laufen im Hintergrund weiter (oben sichtbar)","Neues Widget: Wetter"]};
+window.GUFY={"v":"7.3","notes":["Assistent: Home-Taste 1 Sek. halten – das Fenster kommt sofort, ohne Loslassen","Spracheingabe startet direkt, die Tastatur nur wenn du ins Feld tippst","Neue Befehle: Wecker, Spiel-Vorschlag, Quest-Vorschlag, Powerbank, Zu Hause/Unterwegs, Stoppuhr, Zufallszahl, Neustart, Sperren u. v. m."]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1039,19 +1039,25 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 #tpill{position:fixed;top:calc(var(--sb,30px) + 6px);left:50%;transform:translateX(-50%);z-index:1250;padding:6px 14px;border-radius:999px;background:rgba(255,159,10,.95);color:#000;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;box-shadow:0 6px 18px rgba(0,0,0,.3);border:0}
 #tpill.arm{background:#ff453a;color:#fff}#tpill small{opacity:.7}
 /* 7.1: Home-Taste halten → Assistent */
-#homebtn.hold::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(#a78bfa var(--ha,0deg),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:hold 2s linear forwards}
+#homebtn.hold::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(#a78bfa var(--ha,0deg),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:hold 1s linear forwards}
 @property --ha{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes hold{to{--ha:360deg}}
 #homebtn.ready{box-shadow:0 0 0 3px #a78bfa,0 0 30px 8px rgba(167,139,250,.6)!important}
 #homebtn{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 #asst{position:fixed;inset:0;z-index:1400;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 #asst.open{display:flex}
-.as-sheet{position:relative;width:min(100%,520px);margin:0 10px calc(14px + env(safe-area-inset-bottom));padding:22px 16px 14px;border-radius:30px;background:rgba(22,22,30,.92);color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px;max-height:75vh;overflow:hidden}
+.as-sheet{position:relative;width:min(100%,520px);margin:0 10px calc(92px + env(safe-area-inset-bottom));transition:transform .25s;padding:22px 16px 14px;border-radius:30px;background:rgba(22,22,30,.92);color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px;max-height:70%;overflow:hidden}
 .as-sheet::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;background:linear-gradient(120deg,#7c5cff,#ff5fa2,#ffb35c,#4fd1ff,#7c5cff);background-size:300% 300%;animation:asg 4s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 @keyframes asg{to{background-position:300% 0}}
-.as-orb{width:44px;height:44px;border-radius:50%;margin:0 auto;background:radial-gradient(circle at 35% 30%,#fff,#a78bfa 30%,#ff5fa2 60%,#4fd1ff);box-shadow:0 0 30px rgba(167,139,250,.7);animation:orb 2.4s ease-in-out infinite alternate}
+.as-orb{width:38px;height:38px;flex:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#a78bfa 30%,#ff5fa2 60%,#4fd1ff);box-shadow:0 0 30px rgba(167,139,250,.7);animation:orb 2.4s ease-in-out infinite alternate}
 @keyframes orb{to{transform:scale(1.12) rotate(40deg)}}
-.as-title{text-align:center;font-size:18px}
+.as-title{font-size:17px;display:block}
+.as-head{display:flex;align-items:center;gap:12px}
+.as-st{display:block;font-size:13px;color:rgba(255,255,255,.65);min-height:16px;margin-top:2px}
+.as-st.listen{color:#c4b5fd;font-weight:650}.as-st.warn{color:#ffb35c}
+.as-orb.listen{animation:orbL .5s ease-in-out infinite alternate;box-shadow:0 0 40px 6px rgba(167,139,250,.9)}
+@keyframes orbL{from{transform:scale(.9)}to{transform:scale(1.25)}}
+#asMic{background:rgba(167,139,250,.25)}
 .as-log{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:40px}
 .as-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .as-chips button{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:12.5px}
@@ -2213,10 +2219,10 @@ $('#homebtn').onclick=goHome;
   const stop=()=>{clearTimeout(holdT);hb.classList.remove('hold','ready')};
   hb.addEventListener('contextmenu',e=>e.preventDefault());
   hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
-    if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');haptic('heavy')},2000)}});
+    if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},1000)}});
   hb.addEventListener('pointerup',e=>{stop();
-    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();openAssistant();return}
-    if(Date.now()-t0<800){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
+    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();return}
+    if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
   hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
 addEventListener('keydown',e=>{if(e.key==='Escape'&&current==='desktop')goHome()});
@@ -4117,11 +4123,27 @@ function findApp(s){
 }
 const JOKES=['Warum können Geister so schlecht lügen? Weil man durch sie hindurchsieht. 👻','Was macht ein Pirat am Computer? Er drückt die Enter-Taste. 🏴‍☠️','Treffen sich zwei Magnete. Sagt der eine: „Was soll ich heute bloß anziehen?“ 🧲','Was ist grün und klopft an die Tür? Ein Klopfsalat. 🥬','Wie nennt man einen Bumerang, der nicht zurückkommt? Stock. 🪵'];
 /* ein Satz → mehrere Befehle */
-function splitCmd(t){return t.replace(/[.!?]+/g,',').split(/\s*(?:,|;|\bund\s+dann\b|\bund\s+danach\b|\bdanach\b|\banschließend\b|\bdann\b|\bund\b|\bsowie\b|\bplus\b)\s*/i).map(x=>x.trim()).filter(x=>x.length>1)}
+function splitCmd(t){t=t.replace(/zwischen\s+(\S+)\s+und\s+(\S+)/gi,'zwischen $1 bis $2');return t.replace(/[.!?]+/g,',').split(/\s*(?:,|;|\bund\s+dann\b|\bund\s+danach\b|\bdanach\b|\banschließend\b|\bdann\b|\bund\b|\bsowie\b|\bplus\b)\s*/i).map(x=>x.trim()).filter(x=>x.length>1)}
 function planCmd(raw){
   const s=raw.toLowerCase().replace(/[„“"]/g,'').trim();
   const on=/\b(an|ein|einschalten|anschalten|anmachen|aktivier\w*)\b/.test(s),off=/\b(aus|ausschalten|ausmachen|deaktivier\w*|stopp\w*|beende\w*)\b/.test(s);
   let m;
+  // Smalltalk & Hilfe
+  if(/^(hallo|hi|hey|servus|moin|guten (morgen|tag|abend))\b/.test(s))return{ic:'👋',txt:'Hallo',run:()=>`Hallo ${S.name||''}! Was kann ich für dich tun?`};
+  if(/^danke|dankeschön/.test(s))return{ic:'😊',txt:'Bitte',run:()=>'Gern geschehen!'};
+  if(/wer bist du|wie heißt du/.test(s))return{ic:'✨',txt:'Über mich',run:()=>'Ich bin der Gufy Assistent. Halte die Home-Taste 1 Sekunde und sag mir, was ich tun soll.'};
+  if(/was kannst du|hilfe|befehle/.test(s))return{ic:'💡',txt:'Hilfe',run:()=>'Timer, Wecker, Taschenlampe, Apps öffnen, Wetter, Akku, Coins, Quests, Notizen, Rechnen, Helligkeit, Dunkelmodus, Hintergrund, Powerbank, Würfeln, Witze und mehr – auch mehrere Sachen auf einmal.'};
+  if(/stimme aus|nicht vorlesen|vorlesen aus|sei leise/.test(s))return{ic:'🔇',txt:'Vorlesen aus',run:()=>{S.asstVoice=false;save();return 'Ich lese nicht mehr vor.'}};
+  if(/stimme an|vorlesen an|lies vor/.test(s)&&!/notiz/.test(s))return{ic:'🔊',txt:'Vorlesen an',run:()=>{S.asstVoice=true;save();return 'Ich lese wieder vor.'}};
+  if(/neustart|starte neu|neu starten/.test(s))return{ic:'🔄',txt:'Neustart',opens:true,run:()=>{setTimeout(()=>doAction('restart'),900);return 'GufyUI startet neu …'}};
+  if(/sperr|bildschirm aus|abmelden/.test(s))return{ic:'🔒',txt:'Sperren',opens:true,run:()=>{setTimeout(logout,600);return 'Gesperrt.'}};
+  // Timer-Rest & Wecker
+  if(/wie lange noch|timer.*(übrig|noch|läuft)|restzeit/.test(s))return{ic:'⏱️',txt:'Timer',run:()=>{if(!S.atimers.length)return 'Es läuft kein Timer.';const n=S.atimers.slice().sort((a,b)=>a.end-b.end)[0];return `Noch ${fmtLen(Math.ceil((n.end-Date.now())/1000)*1000)}.`}};
+  if((m=s.match(/(?:wecker|weck\w* mich|alarm)\D*?(?:um|für)?\s*(\d{1,2})(?:[:.](\d{2})|\s*uhr\s*(\d{1,2})?)?/))&&!/minute|stunde|sekunde/.test(s)){
+    const h=+m[1],mi=+(m[2]||m[3]||0);if(h>23||mi>59)return{ic:'⏰',err:'Diese Uhrzeit gibt es nicht.'};
+    const t=new Date();t.setHours(h,mi,0,0);if(t<=new Date())t.setDate(t.getDate()+1);const lbl=`Wecker ${pad(h)}:${pad(mi)}`;
+    return{ic:'⏰',txt:lbl,run:()=>{addTimer(t-Date.now(),lbl);return `Wecker auf ${pad(h)}:${pad(mi)} Uhr gestellt (in ${fmtLen(Math.round((t-Date.now())/60000)*60000)}).`}};
+  }
   if(/\b(warte|warten|pause)\b/.test(s)){const d=parseDur(s)||3000;return{ic:'⏳',txt:`${fmtLen(d)} warten`,wait:d}}
   if(/timer|wecke mich|erinnere mich|countdown/.test(s)||(/\bstell\w*\b/.test(s)&&parseDur(s))){
     if(off&&!parseDur(s))return{ic:'⏱️',txt:'Timer gestoppt',run:()=>{const n=S.atimers.length;S.atimers=[];save();timerTick();return n?'Alle Timer gestoppt.':'Es läuft kein Timer.'}};
@@ -4141,7 +4163,7 @@ function planCmd(raw){
   if(/dunkelmodus|dark ?mode|hellmodus|light ?mode/.test(s)){const d=/hell|light/.test(s)?off:!off;
     return{ic:'🌙',txt:d?'Dunkelmodus an':'Hellmodus an',run:()=>{S.theme=d?'dark':'light';applyLook();save();return d?'Dunkelmodus an.':'Hellmodus an.'}}}
   if(/nicht stören|nichtstören|ruhemodus/.test(s))return{ic:'🔕',txt:off?'Nicht stören aus':'Nicht stören an',run:()=>{S.dnd=!off;save();updateCC();return off?'Nicht stören aus.':'Nicht stören an.'}};
-  if(/wetter|regnet|regen|wind|temperatur|wie warm|wie kalt/.test(s))return{ic:'🌦️',txt:'Wetter',async:true,run:async()=>{
+  if(/wetter|regnet|regen|wind|temperatur|wie warm|wie kalt|regenschirm|jacke/.test(s)&&!/öffne|starte|zeig/.test(s))return{ic:'🌦️',txt:'Wetter',async:true,run:async()=>{
     await wxLoad(false);if(!S.wx)return 'Ich konnte das Wetter gerade nicht laden.';
     const c=S.wx.d.current,b=beaufort(c.wind_speed_10m),r=rainSummary(S.wx.d);
     return `${wxCode(c.weather_code,c.is_day).t}, ${Math.round(c.temperature_2m)}°. Wind Stärke ${b.n} (${Math.round(c.wind_speed_10m)} km/h, ${b.t}). ${r.text}.`}};
@@ -4151,9 +4173,21 @@ function planCmd(raw){
   if(/coins|münzen|geld/.test(s)&&!/floni/.test(s))return{ic:'🪙',txt:'Coins',run:()=>`Du hast ${fmtNum(S.coins)} Coins.`};
   if(/floni/.test(s))return{ic:'🟣',txt:'Floni Coins',run:()=>`Du hast ${fmtNum((S.vsf||{}).floni||0)} Floni Coins.`};
   if(/\bleben\b|herzen/.test(s)){const h=(S.vsf||{half:6}).half;return{ic:'❤️',txt:'VSF Leben',run:()=>`VSF hat ${h/2} von 3 Herzen.`}}
-  if(/quest/.test(s)&&!/öffne|zeig|starte/.test(s))return{ic:'⚔️',txt:'Quests',run:()=>{ensureQuests();const L=S.daily.list;const o=L.filter(q=>!q.done);return o.length?`Noch ${o.length} offen: ${o.map(q=>q.title).join(' · ')}`:'Alle Quests für heute geschafft! 🎉'}};
+  if(/quest/.test(s)&&!/öffne|zeig|starte|gib mir|vorschlag|soll ich/.test(s))return{ic:'⚔️',txt:'Quests',run:()=>{ensureQuests();const L=S.daily.list;const o=L.filter(q=>!q.done);return o.length?`Noch ${o.length} offen: ${o.map(q=>q.title).join(' · ')}`:'Alle Quests für heute geschafft! 🎉'}};
   if((m=s.match(/(?:notiere|notiz|merk dir|schreib\w*(?: eine)? notiz)\s*:?\s*(.*)/))){const tx=raw.replace(/^.*?(notiere|notiz|merk dir|schreib\w*( eine)? notiz)\s*:?\s*/i,'').trim();
     if(!tx)return{ic:'📝',err:'Was soll ich notieren?'};return{ic:'📝',txt:'Notiz: '+tx,run:()=>{S.notes.push({id:Date.now(),text:tx,t:Date.now()});save();return 'Notiz gespeichert.'}}}
+  if(/spiel\w*\b.*\bspiel|zufällig\w* spiel|mir ist langweilig|langweilig/.test(s)){const G=Object.keys(APPS).filter(id=>APPS[id].cat==='Spiele'&&appAvail(id));
+    if(!G.length)return{ic:'🎮',err:'Du hast noch keine Spiele – lade welche im Gufy Store.'};const g=G[Math.floor(Math.random()*G.length)];
+    return{ic:APPS[g].icon,txt:APPS[g].name,opens:true,run:()=>{openApp(g);return `Los geht's mit ${APPS[g].name}!`}}}
+  if(/gib mir eine quest|was soll ich (machen|tun)|welche quest soll|quest vorschlag/.test(s))return{ic:'⚔️',txt:'Quest-Vorschlag',run:()=>{ensureQuests();const o=S.daily.list.filter(q=>!q.done);if(!o.length)return 'Alle Quests sind geschafft – stark! 🎉';const q=o[Math.floor(Math.random()*o.length)];return `${q.i} ${q.title} – ${q.coins} Coins.`}};
+  if(/bin (zu hause|daheim|zuhause)|bin unterwegs|bin draußen/.test(s)){const h=/hause|daheim|zuhause/.test(s);return{ic:h?'🏠':'🚶',txt:h?'Zu Hause':'Unterwegs',opens:true,run:()=>{setTimeout(()=>askHome(h),300);return 'Gib den Code ein, um den Status zu ändern.'}}}
+  if(/powerbank/.test(s)){const k=['travel','pb60','pb30'].find(x=>(S.inv[x]||0)>0);if(!k)return{ic:'🔋',err:'Du hast keine Powerbank – im Gufy Store gibt es welche.'};
+    return{ic:ITEMS[k].icon,txt:ITEMS[k].name,run:()=>{const b=S.battery.level;useItem(k);return S.battery.level>b?`Powerbank benutzt – jetzt ${dispPct()} %.`:'Der Akku ist schon voll.'}}}
+  if(/letzte notiz|meine notiz|notizen vor/.test(s))return{ic:'📝',txt:'Letzte Notiz',run:()=>{const n=[...(S.notes||[])].sort((a,b)=>b.t-a.t)[0];return n&&n.text.trim()?'Letzte Notiz: '+n.text:'Du hast noch keine Notizen.'}};
+  if(/mitternacht|neue quests|wann kommen/.test(s))return{ic:'🌙',txt:'Bis Mitternacht',run:()=>{const n=new Date(),m2=new Date(n);m2.setHours(24,0,0,0);return `Neue Quests in ${fmtLen(Math.round((m2-n)/60000)*60000)}.`}};
+  if(/schulden/.test(s)&&!/öffne|zeig|starte/.test(s))return{ic:'💸',txt:'Schulden',run:()=>{const o=(S.debts||[]).filter(d=>d.status==='open');return o.length?`${o.length} offene Schuld${o.length>1?'en':''}: ${o.map(d=>d.title).join(' · ')}`:'Du hast keine offenen Schulden.'}};
+  if((m=s.match(/zufallszahl(?:\s+(?:zwischen|von)\s+(\S+)\s+bis\s+(\S+))?/))){const lo=m[1]?wordNum(m[1])??1:1,hi=m[2]?wordNum(m[2])??100:100;return{ic:'🔢',txt:'Zufallszahl',run:()=>`Zufallszahl: ${Math.floor(lo+Math.random()*(hi-lo+1))}`}}
+  if(/stoppuhr/.test(s)){if(!appAvail('clock'))return{ic:'⏱️',err:'Die Uhr-App ist nicht installiert.'};return{ic:'⏱️',txt:'Stoppuhr',opens:true,run:()=>{openApp('clock');setTimeout(()=>{const b=$('[data-c="sw"]');if(b)b.click()},300);return 'Stoppuhr geöffnet.'}}}
   if(/witz/.test(s))return{ic:'😂',txt:'Witz',run:()=>JOKES[Math.floor(Math.random()*JOKES.length)]};
   if(/würfel/.test(s))return{ic:'🎲',txt:'Würfeln',run:()=>`Gewürfelt: ${1+Math.floor(Math.random()*6)} 🎲`};
   if(/münze|kopf oder zahl/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
@@ -4176,7 +4210,8 @@ async function runAssistant(text){
   const box=$('#asLog');if(!box)return;
   const parts=splitCmd(text);if(!parts.length)return;
   const plans=parts.map(planCmd);
-  box.innerHTML=`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join('');
+  const ch=$('.as-chips',box);if(ch)ch.style.display='none';box.querySelectorAll('.as-me,.as-step').forEach(x=>x.remove());
+  box.insertAdjacentHTML('beforeend',`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join(''));
   const said=[];
   for(let i=0;i<plans.length;i++){
     const p=plans[i],row=$(`.as-step[data-k="${i}"]`,box);
@@ -4192,30 +4227,50 @@ async function runAssistant(text){
   if(!$('#asst').classList.contains('open')&&all)notify('✨','Gufy Assistent',all,'#7c5cff');
   speak(all);
 }
+let asRec=null;
+function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen')}
+function asListen(){
+  const a=$('#asst');if(!a)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
+  try{if(asRec)asRec.abort()}catch(e){}
+  let r;try{r=new SR()}catch(e){asStatus('Spracheingabe nicht verfügbar – schreib einfach.','warn');return}
+  asRec=r;r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  let txt='',done=false;const inp=$('#asTxt',a);
+  r.onstart=()=>{asStatus('Ich höre zu …','listen');haptic('select')};
+  r.onresult=e=>{txt=[...e.results].map(x=>x[0].transcript).join('');inp.value=txt;
+    if(e.results[e.results.length-1].isFinal&&!done){done=true;asStatus('');inp.value='';runAssistant(txt)}};
+  r.onerror=e=>{asRec=null;
+    asStatus(e.error==='not-allowed'||e.error==='service-not-allowed'?'Das iPhone erlaubt hier kein Mikrofon – tippe ins Feld und nutze das 🎤 der Tastatur.':e.error==='no-speech'?'Nichts gehört – tippe auf 🎤 und sprich nochmal.':'Spracheingabe hat nicht geklappt – tippe auf 🎤.','warn')};
+  r.onend=()=>{if(asRec===r)asRec=null;if(!done){if(txt.trim()){done=true;asStatus('');inp.value='';runAssistant(txt)}else if($('#asSt')&&$('#asSt').classList.contains('listen'))asStatus('Nichts gehört – tippe auf 🎤 oder schreib.','warn')}};
+  try{r.start()}catch(e){asStatus('Tippe auf 🎤, um zu sprechen.','warn')}
+}
+function asStop(){try{if(asRec)asRec.abort()}catch(e){}asRec=null}
 function openAssistant(){
   if(current!=='desktop')return;
   let a=$('#asst');
   if(!a){a=document.createElement('div');a.id='asst';document.body.append(a);
-    a.innerHTML=`<div class="as-sheet"><div class="as-orb"></div><b class="as-title">Was kann ich für dich tun?</b>
-      <div class="as-log" id="asLog"><div class="as-chips">${['Stell einen Timer auf 3 Minuten und schalte die Taschenlampe an','Wie ist das Wetter?','Wie viel Akku habe ich?','Öffne Snake','Notiere Pizza kaufen'].map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
-      <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sag oder schreib etwas … 🎤" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form>
-      <small class="as-hint">Tipp: Tippe ins Feld und dann unten auf der Tastatur auf 🎤 zum Diktieren.</small></div>`;
+    a.innerHTML=`<div class="as-sheet"><div class="as-head"><div class="as-orb"></div><div><b class="as-title">Gufy Assistent</b><small class="as-st" id="asSt"></small></div></div>
+      <div class="as-log" id="asLog"><div class="as-chips">${['Timer 3 Minuten und Taschenlampe an','Wie ist das Wetter?','Wie lange hält mein Akku?','Spiel ein Spiel','Gib mir eine Quest','Wecker um 7 Uhr'].map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
+      <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sprich oder schreib …" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form></div>`;
     a.addEventListener('pointerdown',e=>{if(e.target===a)closeAssistant()});
-    $('#asForm',a).onsubmit=e=>{e.preventDefault();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();runAssistant(t)};
-    $$('[data-ex]',a).forEach(b=>b.onclick=()=>{$('#asTxt',a).value=b.dataset.ex});
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition,mic=$('#asMic',a);
-    if(!SR)mic.style.display='none';
-    else mic.onclick=()=>{try{const r=new SR();r.lang='de-DE';r.interimResults=true;mic.classList.add('rec');
-      r.onresult=e=>{const t=[...e.results].map(x=>x[0].transcript).join('');$('#asTxt',a).value=t;if(e.results[e.results.length-1].isFinal){mic.classList.remove('rec');$('#asForm',a).requestSubmit()}};
-      r.onerror=r.onend=()=>mic.classList.remove('rec');r.start()}catch(e){mic.classList.remove('rec')}};
+    $('#asForm',a).onsubmit=e=>{e.preventDefault();asStop();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();asStatus('');runAssistant(t)};
+    $('#asTxt',a).addEventListener('focus',()=>{asStop();asStatus('')});
+    $('#asMic',a).onclick=()=>{$('#asTxt',a).blur();asListen()};
+    $$('[data-ex]',a).forEach(b=>b.onclick=()=>{asStop();runAssistant(b.dataset.ex)});
+    // Tastatur: Fenster bleibt sichtbar über der Tastatur
+    if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('.as-sheet',a);if(!sh)return;const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);sh.style.transform=kb>40?`translateY(${-kb+20}px)`:''};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
   }
+  if(a.classList.contains('open'))return;
   a.classList.add('open');haptic('heavy');
-  const inp=$('#asTxt',a);inp.focus();
-  $('.as-sheet',a).animate([{transform:'translateY(40px)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
+  $('#asLog',a).querySelectorAll('.as-me,.as-step').forEach(x=>x.remove());
+  $('.as-chips',a).style.display='';
+  $('.as-sheet',a).animate([{transform:'translateY(60px) scale(.96)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
+  asListen();
 }
-function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;const i=$('#asTxt',a);if(i)i.blur();
+function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
   if(quick){a.classList.remove('open');return}
-  $('.as-sheet',a).animate([{transform:'none',opacity:1},{transform:'translateY(40px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
+  $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(60px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
 /* =========================================================
    START
