@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.9","quick":true,"notes":["Quick-Update: Öfis sucht Busse jetzt auch an allen Haltestellen im Umkreis (z. B. Kampen Mitte)","Radar zeigt Busse und Bahnen als 🚌/🚆-Symbole mit Liniennummer","Mehr Infos in Einstellungen → Logs"]};
+window.GUFY={"v":"9.0","notes":["Wetter: Gezeiten – Wasserstand jetzt, steigt/fällt, nächstes Hoch- und Niedrigwasser mit Kurve, Wassertemperatur & Wellen","Wetter: Höhe des Ortes","Geschwindigkeit: aktuelle Höhe und Anstieg in Metern"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1137,6 +1137,18 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .o-veh{position:relative;width:34px;height:34px;border-radius:50%;background:var(--c);border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.45);display:grid;place-items:center;font-size:17px}
 .o-veh b{position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:6px;white-space:nowrap;border:1px solid rgba(255,255,255,.4)}
 .o-src{text-align:center;font-size:11.5px}.o-src a{color:var(--accent)}
+.wx-tide{padding:14px 16px;border-radius:22px;background:var(--panel-solid);border:1px solid var(--border)}
+.wt-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wt-lv{display:block;font-size:34px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.wt-trend{padding:7px 12px;border-radius:999px;font-weight:800;font-size:13.5px;white-space:nowrap}
+.wt-trend.up{background:rgba(10,132,255,.18);color:#0a84ff}.wt-trend.down{background:rgba(255,159,10,.18);color:#ff9f0a}
+.wt-next{margin:8px 0 10px;font-size:14.5px}
+.wt-c{display:block;width:100%;height:120px;margin-bottom:10px}
+.wt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wt-list div{background:var(--hover);border-radius:14px;padding:8px 11px;display:flex;flex-direction:column;gap:1px}
+.wt-list span{font-size:12px;font-weight:700;color:var(--muted)}.wt-list b{font-size:19px}.wt-list small{font-size:11.5px;color:var(--muted)}
+.wt-more{display:flex;gap:14px;margin-top:10px;font-size:13.5px;font-weight:600}
+.wt-more:empty{display:none}
 </style>
 </head>
 <body class="dark">
@@ -4175,7 +4187,7 @@ render(body,ctx){
     if(!w||!w.d){body.innerHTML=`<div class="wx"><div class="wx-empty"><div class="gm-big">🌦️</div><b>${busy?'Wetter wird geladen …':'Noch keine Wetterdaten'}</b><p class="muted">${esc(wxErr||'')}</p>${busy?'':'<button class="btn primary" id="wR">Laden</button>'}</div>${cityHTML()}</div>`;bind();return}
     const c=w.d.current,H=wxHours(w.d,12),bf=beaufort(c.wind_speed_10m),cd=wxCode(c.weather_code,c.is_day),rs=rainSummary(w.d);
     body.innerHTML=`<div class="wx">
-      <div class="wx-hero" style="background:${cd.bg}"><small>📍 ${esc(w.place||'Mein Standort')}</small><div class="wx-now"><span>${cd.i}</span><b>${Math.round(c.temperature_2m)}°</b></div><div>${cd.t}</div>
+      <div class="wx-hero" style="background:${cd.bg}"><small>📍 ${esc(w.place||'Mein Standort')}${w.d.elevation!=null?` · ⛰️ ${Math.round(w.d.elevation)} m ü. NN`:''}</small><div class="wx-now"><span>${cd.i}</span><b>${Math.round(c.temperature_2m)}°</b></div><div>${cd.t}</div>
         <div class="wx-rain ${rs.now?'yes':''}">${rs.now?'🌧️':'☂️'} ${rs.text}</div></div>
       <div class="wx-wind"><div class="wx-comp"><i style="transform:rotate(${c.wind_direction_10m+90}deg)">➤</i><small>${dirName(c.wind_direction_10m)}</small></div>
         <div style="flex:1"><small class="muted">WINDSTÄRKE</small><div class="wx-bf"><b>${bf.n}</b> <span>${bf.t}</span></div>
@@ -4184,9 +4196,39 @@ render(body,ctx){
       <div class="slabel">Nächste Stunden</div>
       <div class="wx-hours">${H.map(h=>{const b=beaufort(h.w),k=wxCode(h.code,h.day);return `<div class="wx-h ${h.rain?'rain':''}"><small>${h.label}</small><span class="i">${k.i}</span><b>${Math.round(h.temp)}°</b>
         <span class="r">${h.rain?'🌧️ ':'💧 '}${h.prob}%</span><span class="w">💨 ${Math.round(h.w)}</span><span class="bf" style="background:${b.c}">Bft ${b.n}</span></div>`}).join('')}</div>
+      <div class="slabel">🌊 Gezeiten</div>
+      ${tideHTML(w)}
       <div class="wx-foot"><small class="muted">Stand ${new Date(w.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · Daten: Open-Meteo</small><button class="btn" id="wR">${busy?'…':'↻ Aktualisieren'}</button></div>
       ${cityHTML()}</div>`;
-    bind();
+    bind();requestAnimationFrame(tideChart);
+  }
+  const hmT=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const mT=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(2).replace('.',',')+' m';
+  function tideHTML(w){
+    const ti=tideInfo(w.tide);
+    if(!ti)return `<div class="wx-tide"><p class="muted" style="margin:0">Hier gibt es keine Gezeiten – der Ort liegt nicht am Meer.</p></div>`;
+    const n=ti.next[0],rest=ti.next.slice(0,4);
+    const left=n?fmtLen(Math.max(60000,Math.round((n.t-Date.now())/60000)*60000)):'';
+    return `<div class="wx-tide">
+      <div class="wt-top"><div><small class="muted">WASSERSTAND JETZT</small><b class="wt-lv">${mT(ti.cur)}</b></div>
+        <span class="wt-trend ${ti.rising?'up':'down'}">${ti.rising?'↑ Steigt · Flut':'↓ Fällt · Ebbe'}</span></div>
+      ${n?`<p class="wt-next">${n.high?'🌊 Hochwasser':'🏖️ Niedrigwasser'} in <b>${left}</b> · ${hmT(n.t)} Uhr</p>`:''}
+      <canvas id="wtC" class="wt-c"></canvas>
+      <div class="wt-list">${rest.map(e=>`<div><span>${e.high?'🌊 Hochwasser':'🏖️ Niedrigwasser'}</span><b>${hmT(e.t)}</b><small>${new Date(e.t).toDateString()===new Date().toDateString()?'heute':new Date(e.t).toLocaleDateString('de-DE',{weekday:'short'})} · ${mT(e.h)}</small></div>`).join('')}</div>
+      <div class="wt-more">${ti.sst!=null?`<span>🌡️ Wasser ${Math.round(ti.sst)}°</span>`:''}${ti.wave!=null?`<span>〰️ Wellen ${ti.wave.toFixed(1).replace('.',',')} m</span>`:''}</div>
+    </div>`;
+  }
+  function tideChart(){
+    const cv=$('#wtC',body);if(!cv||!S.wx)return;const ti=tideInfo(S.wx.tide);if(!ti)return;
+    const W=cv.clientWidth,H=cv.clientHeight,dpr=Math.min(3,devicePixelRatio||1);cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+    const P=ti.pts,t0=P[0].t,t1=P[P.length-1].t,lo=Math.min(...P.map(p=>p.h)),hi=Math.max(...P.map(p=>p.h)),X=t=>(t-t0)/(t1-t0)*W,Y=h=>H-10-(h-lo)/Math.max(.1,hi-lo)*(H-26);
+    const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(10,132,255,.55)');gr.addColorStop(1,'rgba(10,132,255,.05)');
+    g.beginPath();g.moveTo(X(P[0].t),H);P.forEach(p=>g.lineTo(X(p.t),Y(p.h)));g.lineTo(X(t1),H);g.closePath();g.fillStyle=gr;g.fill();
+    g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p.t),Y(p.h)):g.moveTo(X(p.t),Y(p.h)));g.strokeStyle='#0a84ff';g.lineWidth=2.5;g.stroke();
+    const now=Date.now(),nx=X(now);g.strokeStyle='#ff453a';g.lineWidth=2;g.beginPath();g.moveTo(nx,4);g.lineTo(nx,H);g.stroke();
+    g.fillStyle='#ff453a';g.beginPath();g.arc(nx,Y(ti.cur),5,0,7);g.fill();
+    g.fillStyle='rgba(127,127,127,.8)';g.font='600 10px system-ui';g.textAlign='center';
+    [...ti.next,ti.prev].filter(e=>e&&e.t>=t0&&e.t<=t1).forEach(e=>{g.fillText(hmT(e.t),Math.max(16,Math.min(W-16,X(e.t))),e.high?Y(e.h)-6:Math.min(H-2,Y(e.h)+14))});
   }
   function cityHTML(){return `<div class="sgroup" style="padding:12px;margin-top:14px"><div style="display:flex;gap:8px"><input class="input" id="wC" placeholder="Ort suchen (z. B. Berlin)" value="${esc(S.wxCity||'')}"><button class="btn primary" id="wCs">🔍</button></div>
     ${S.wxCity?'<button class="btn" id="wGps" style="width:100%;margin-top:8px">📍 Meinen Standort benutzen</button>':''}</div>`}
@@ -4210,7 +4252,7 @@ speed:{name:'Geschwindigkeit',cat:'Werkzeuge',full:true,store:true,icon:'🏎️
 render(body,ctx){
   const U={kmh:['km/h',3.6,'km',1/1000],mph:['mph',2.236936,'mi',1/1609.344],kn:['kn',1.943844,'sm',1/1852],ms:['m/s',1,'m',1]};
   S.spdUnit??='kmh';
-  const SP=window.__SPD??=(window.__SPD={start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,acc:null,moving:0,lastT:Date.now()});
+  const SP=window.__SPD??=(window.__SPD={start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,acc:null,moving:0,lastT:Date.now(),alt:null,altRef:null,up:0});
   let watch=null,raf=0,err='';
   const u=()=>U[S.spdUnit]||U.kmh;
   const fmtT=ms=>{const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+pad(m):m)+':'+pad(s%60)};
@@ -4224,7 +4266,8 @@ render(body,ctx){
       <div class="spd-num"><b id="spV">0</b><small id="spU"></small></div><div class="spd-st" id="spSt">GPS wird gesucht …</div></div>
     <div class="spd-grid">
       <div><small>Strecke</small><b id="spD">0</b></div><div><small>Zeit</small><b id="spT">0:00</b></div>
-      <div><small>Ø Tempo</small><b id="spA">0</b></div><div><small>Max.</small><b id="spM">0</b></div></div>
+      <div><small>Ø Tempo</small><b id="spA">0</b></div><div><small>Max.</small><b id="spM">0</b></div>
+      <div><small>⛰️ Höhe</small><b id="spH">–</b></div><div><small>Anstieg</small><b id="spUp">0 m</b></div></div>
     <div class="spd-chart"><div class="spd-ch-h"><small>Tempo-Verlauf</small><small id="spCmax"></small></div><canvas id="spC"></canvas></div>
     <button class="btn" id="spR" style="width:100%">↺ Neu starten</button>
   </div>`;
@@ -4243,6 +4286,8 @@ render(body,ctx){
     $('#spT',body).textContent=fmtT(el);
     const avg=SP.moving>0?SP.dist/(SP.moving/1000):0;$('#spA',body).textContent=fmtN(v(avg))+' '+u()[0];
     $('#spM',body).textContent=fmtN(v(SP.max))+' '+u()[0];
+    const ft=S.spdUnit==='mph';$('#spH',body).textContent=SP.alt==null?'–':Math.round(ft?SP.alt*3.28084:SP.alt)+(ft?' ft':' m');
+    $('#spUp',body).textContent=Math.round(ft?SP.up*3.28084:SP.up)+(ft?' ft':' m');
     chart();
   }
   const fmtN=x=>(x<10?x.toFixed(1):Math.round(x)+'').replace('.',',');
@@ -4260,6 +4305,8 @@ render(body,ctx){
   }
   function onPos(p){
     const c=p.coords,t=p.timestamp||Date.now(),acc=c.accuracy;SP.acc=acc;err='';
+    if(c.altitude!=null&&!isNaN(c.altitude)&&(c.altitudeAccuracy==null||c.altitudeAccuracy<40)){SP.alt=c.altitude;
+      if(SP.altRef==null)SP.altRef=c.altitude;else if(c.altitude-SP.altRef>=3){SP.up+=c.altitude-SP.altRef;SP.altRef=c.altitude}else if(SP.altRef-c.altitude>=3)SP.altRef=c.altitude}
     const pt={lat:c.latitude,lon:c.longitude,t};let sp=c.speed!=null&&c.speed>=0&&!isNaN(c.speed)?c.speed:null;
     if(SP.last){const dt=(t-SP.last.t)/1000;const d=distM(SP.last,pt);
       if(dt>0){if(sp===null)sp=d/dt;
@@ -4274,7 +4321,7 @@ render(body,ctx){
   function onErr(e){err=e.code===1?'Standort nicht erlaubt':'GPS nicht verfügbar';draw()}
   function start(){if(!navigator.geolocation){err='Kein GPS';return}watch=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000})}
   $$('[data-u]',body).forEach(b=>b.onclick=()=>{S.spdUnit=b.dataset.u;save();haptic('select');$$('[data-u]',body).forEach(x=>x.classList.toggle('on',x===b));gMax=0;draw()});
-  $('#spR',body).onclick=()=>{haptic();Object.assign(SP,{start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,moving:0});gMax=0;draw()};
+  $('#spR',body).onclick=()=>{haptic();Object.assign(SP,{start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,moving:0,altRef:SP.alt,up:0});gMax=0;draw()};
   start();draw();
   const iv=setInterval(()=>{if(SP.pts.length&&Date.now()-SP.pts[SP.pts.length-1].t>5000){SP.cur=0;SP.pts.push({t:Date.now(),s:0})}draw()},1000);
   ctx.cleanup.push(()=>{clearInterval(iv);if(watch!==null)navigator.geolocation.clearWatch(watch)});
@@ -4496,6 +4543,19 @@ function wxPos(){
     navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),()=>res(S.loc&&S.loc.home||null),{timeout:9000,maximumAge:600000});
   });
 }
+/* Gezeiten aus dem Meeresspiegel (Open-Meteo Marine) */
+function tideInfo(T){
+  if(!T||!T.hourly||!T.hourly.sea_level_height_msl)return null;
+  const H=T.hourly,P=[];H.time.forEach((t,i)=>{const h=H.sea_level_height_msl[i];if(h!=null&&!isNaN(h))P.push({t:+new Date(t),h,sst:H.sea_surface_temperature?H.sea_surface_temperature[i]:null,wave:H.wave_height?H.wave_height[i]:null})});
+  if(P.length<12)return null;
+  const now=Date.now();let k=P.findIndex(p=>p.t>now);if(k<=0)return null;
+  const a=P[k-1],b=P[k],f=(now-a.t)/(b.t-a.t),cur=a.h+(b.h-a.h)*f,rising=b.h>a.h;
+  const ev=[];for(let i=1;i<P.length-1;i++){const y0=P[i-1].h,y1=P[i].h,y2=P[i+1].h;
+    if((y1>y0&&y1>=y2)||(y1<y0&&y1<=y2)){const den=y0-2*y1+y2,off=den?(y0-y2)/(2*den):0,o=Math.max(-.5,Math.min(.5,off));
+      ev.push({t:P[i].t+o*3600000,h:y1-(y0-y2)*o/4,high:y1>y0})}}
+  const next=ev.filter(e=>e.t>now),prev=ev.filter(e=>e.t<=now).pop();
+  return{cur,rising,next,prev,pts:P.filter(p=>Math.abs(p.t-now)<=13*3600000),sst:a.sst,wave:a.wave,min:Math.min(...P.map(p=>p.h)),max:Math.max(...P.map(p=>p.h))};
+}
 function wxLoad(force){
   if(!force&&S.wx&&Date.now()-S.wx.t<10*60000)return Promise.resolve(S.wx);
   if(wxP)return wxP;
@@ -4504,7 +4564,9 @@ function wxLoad(force){
       const p=await wxPos();if(!p)throw new Error('Kein Standort – such oben einen Ort.');
       const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat.toFixed(3)}&longitude=${p.lon.toFixed(3)}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day&forecast_days=2&timezone=auto&wind_speed_unit=kmh`;
       const d=await fetch(u).then(r=>{if(!r.ok)throw new Error('Wetterdienst nicht erreichbar');return r.json()});
-      S.wx={t:Date.now(),d,place:S.wxCity||'Mein Standort'};wxErr='';save();
+      let tide=null;
+      try{tide=await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${p.lat.toFixed(3)}&longitude=${p.lon.toFixed(3)}&hourly=sea_level_height_msl,sea_surface_temperature,wave_height&past_days=1&forecast_days=3&timezone=auto`).then(r=>r.ok?r.json():null)}catch(e){glog('Wetter','Gezeiten: '+e.message)}
+      S.wx={t:Date.now(),d,place:S.wxCity||'Mein Standort',tide};wxErr='';save();
       if(typeof updateWidgets==='function'&&current==='desktop')updateWidgets($('#track'));
     }catch(e){wxErr=e.message&&!/fetch/i.test(e.message)?e.message:'Keine Verbindung zum Wetterdienst'}
     wxP=null;return S.wx;
