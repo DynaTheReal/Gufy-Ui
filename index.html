@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.7","notes":["Gufy Assistent + Gemini ✨: Was der Assistent nicht versteht, beantwortet jetzt Gemini","Einrichtung: neuer Schritt für deinen Gemini-Schlüssel (mit Link zu Google) – oder „Vielleicht später“","Schon eingerichtet? Sag dem Assistenten einfach „API-Key“, dann kannst du den Schlüssel eingeben"]};
+window.GUFY={"v":"9.8","notes":["Gemini-Fenster sitzt jetzt oben – die Tastatur ist nicht mehr im Weg","Jeder API-Schlüssel wird angenommen (muss nicht mehr mit AIza anfangen)","Gufy Assistent + Gemini ✨: Was der Assistent nicht versteht, beantwortet jetzt Gemini","Einrichtung: neuer Schritt für deinen Gemini-Schlüssel (mit Link zu Google) – oder „Vielleicht später“","Schon eingerichtet? Sag dem Assistenten einfach „API-Key“, dann kannst du den Schlüssel eingeben"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1204,10 +1204,11 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .gem-get{display:block;width:100%;text-align:center;text-decoration:none;margin-bottom:10px}
 .gem-steps{margin:0 0 12px;padding-left:20px;font-size:13.5px;color:var(--muted);text-align:left;line-height:1.6}
 .gem-note{display:block;margin-top:8px;font-size:12px;text-align:center}
-.gem-dlg{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.gem-dlg{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 14px) 14px 20px;overflow-y:auto;opacity:0;transition:opacity .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .gem-dlg.open{opacity:1}
-.gem-card{width:min(380px,100%);background:var(--panel-solid);color:var(--text);border-radius:24px;padding:22px 20px;text-align:center;border:1px solid var(--border);transform:scale(.94);transition:transform .3s cubic-bezier(.2,.9,.22,1)}
+.gem-card{width:min(380px,100%);background:var(--panel-solid);color:var(--text);border-radius:24px;padding:16px 18px;text-align:center;border:1px solid var(--border);transform:translateY(-20px);transition:transform .3s cubic-bezier(.2,.9,.22,1)}
 .gem-dlg.open .gem-card{transform:none}
+.gem-card .s-ico{display:none}.gem-card h2{font-size:20px}.gem-card .gem-steps{margin-bottom:10px;font-size:13px;line-height:1.45}
 .gem-card h2{margin:4px 0 6px}
 .gem-btns{display:flex;gap:10px;margin-top:14px}.gem-btns .btn{flex:1}
 .as-step.gem{align-items:flex-start;background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(66,133,244,.18))}
@@ -2110,11 +2111,11 @@ function boot(){
 const GEM_LINK='https://aistudio.google.com/apikey';
 const gemGet=()=>{try{return localStorage.getItem('gufyui_gem')||''}catch(e){return''}};
 const gemSet=k=>{try{k?localStorage.setItem('gufyui_gem',k):localStorage.removeItem('gufyui_gem')}catch(e){}};
-const gemOkFormat=k=>/^AIza[0-9A-Za-z_\-]{25,}$/.test(k);
+const gemOkFormat=k=>k.length>=10&&!/\s/.test(k);   // jedes Schlüssel-Format erlaubt
 function gemFormHTML(val){
   return `<a class="btn primary gem-get" href="${GEM_LINK}" target="_blank" rel="noopener">🔑 Schlüssel bei Google holen</a>
     <ol class="gem-steps"><li>Mit Google anmelden</li><li>„API-Schlüssel erstellen“ tippen</li><li>Schlüssel kopieren und hier einfügen</li></ol>
-    <div class="pwwrap"><input class="input" id="gemIn" type="password" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(val||'')}"><button id="gemEye" type="button">👁️</button></div>
+    <div class="pwwrap"><input class="input" id="gemIn" type="password" placeholder="API-Schlüssel einfügen" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(val||'')}"><button id="gemEye" type="button">👁️</button></div>
     <div class="s-err" id="sErr"></div>
     <small class="muted gem-note">Der Schlüssel bleibt nur auf diesem Gerät. Frag Gemini nichts Privates.</small>`;
 }
@@ -2150,7 +2151,7 @@ function gemDialog(){
   const no=$('#gemNo',d);if(no)no.onclick=close;
   const del=$('#gemDel',d);if(del)del.onclick=()=>{gemSet('');haptic();notify('✨','Gemini','Schlüssel gelöscht.','#7c5cff');close()};
   $('#gemOk',d).onclick=()=>{const v=$('#gemIn',d).value.trim(),er=$('#sErr',d);
-    if(!gemOkFormat(v)){er.textContent='Der Schlüssel sieht nicht richtig aus – er fängt mit „AIza“ an.';haptic('error');return}
+    if(!gemOkFormat(v)){er.textContent='Bitte füg den ganzen Schlüssel ein (ohne Leerzeichen).';haptic('error');return}
     gemSet(v);haptic('success');notify('✨','Gemini eingerichtet','Der Assistent fragt jetzt Gemini, wenn er etwas nicht weiß.','#7c5cff');glog('Gemini','Schlüssel gespeichert');close()};
 }
 
@@ -2249,7 +2250,7 @@ function nextStep(){
     if(a.length<4)return setErr('Das Passwort braucht mindestens 4 Zeichen.');
     if(a!==b)return setErr('Die Passwörter stimmen nicht überein.');
     tmp.pw=a}
-  if(step===6){const v=($('#gemIn')||{}).value?.trim()||'';if(v&&!gemOkFormat(v))return setErr('Der Schlüssel sieht nicht richtig aus – er fängt mit „AIza“ an.');tmp.gem=v}
+  if(step===6){const v=($('#gemIn')||{}).value?.trim()||'';if(v&&!gemOkFormat(v))return setErr('Bitte füg den ganzen Schlüssel ein (ohne Leerzeichen).');tmp.gem=v}
   step++;renderSetup();
 }
 $('#setupCard').addEventListener('keydown',e=>{if(e.key==='Enter'&&step>0&&step<7)nextStep()});
