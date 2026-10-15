@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.0","notes":["Wetter: Gezeiten – Wasserstand jetzt, steigt/fällt, nächstes Hoch- und Niedrigwasser mit Kurve, Wassertemperatur & Wellen","Wetter: Höhe des Ortes","Geschwindigkeit: aktuelle Höhe und Anstieg in Metern"]};
+window.GUFY={"v":"9.1","notes":["Akku hält jetzt unterwegs 8 Std. (vorher 5 Std.)","Wenn du GufyUI benutzt: 4 Std.","Manuell ausgeschaltet (⏻): 100 % halten 24 Std. – GufyUI bleibt aus, bis du es wieder einschaltest","Kontrollzentrum zeigt alle drei Zeiten"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1697,14 +1697,16 @@ setInterval(tick,1000);
 
 /* =========================================================
    AKKU – läuft in Echtzeit, auch wenn GufyUI geschlossen ist
-   Unterwegs:            100 % in 5 Std.   → −20 %/h
+   Unterwegs:            100 % in 8 Std. (GufyUI offen/benutzt: 4 Std.)
+   Ausgeschaltet:        100 % in 24 Std.
    Zu Hause:             0 → 100 % in ca. 8 Std. – wie ein echtes Handy
                          bis 80 % schneller (≈16 %/h), danach langsamer (≈6,5 %/h)
    ========================================================= */
 let adminOK=false;const ADMIN='hyjfacf';
-const AWAY_HOURS=5;  // so viele Stunden hält ein voller Akku unterwegs
+const AWAY_HOURS=8;  // so viele Stunden hält ein voller Akku unterwegs (benutzt: die Hälfte = 4 Std.)
+const OFF_HOURS=24;  // manuell ausgeschaltet: so lange hält ein voller Akku
 const CHARGE_HOURS=8; // so lange dauert 0 → 100 % zu Hause
-const R_AWAY=-100/AWAY_HOURS, R_FAST=130/CHARGE_HOURS, R_SLOW=R_FAST/2.5; // 80/R_FAST + 20/R_SLOW = 8 Std.
+const R_AWAY=-100/AWAY_HOURS, R_OFF=-100/OFF_HOURS, R_FAST=130/CHARGE_HOURS, R_SLOW=R_FAST/2.5; // 80/R_FAST + 20/R_SLOW = 8 Std.
 const toMin=s=>{const[a,b]=s.split(':').map(Number);return a*60+b};
 function isSleepTime(d){
   const m=d.getHours()*60+d.getMinutes(),f=toMin(S.sleep.from),t=toMin(S.sleep.to);
@@ -1712,7 +1714,7 @@ function isSleepTime(d){
   return f<t?(m>=f&&m<t):(m>=f||m<t);
 }
 const hasStation=()=>(S.inv&&S.inv.station>0);
-function rate(d,lv){if(!S.loc.isHome)return R_AWAY;if(S.vacation&&!hasStation())return R_AWAY;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
+function rate(d,lv){const dr=S.poweredOff?R_OFF:R_AWAY;if(!S.loc.isHome)return dr;if(S.vacation&&!hasStation())return dr;const l=lv??S.battery.level;return l<80?R_FAST:R_SLOW}
 let realBatt=null;
 if(navigator.getBattery)navigator.getBattery().then(b=>{realBatt=b;['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,()=>{if(S.betaBatt)batteryTick()}));if(S.betaBatt)batteryTick()}).catch(()=>{});
 const realOn=()=>!!(S.betaBatt&&realBatt);
@@ -1724,7 +1726,7 @@ function advance(mult=1){
   if(realOn()){S.battery.level=Math.max(0,Math.min(100,realBatt.level*100));S.battery.last=now;return}
   let t=S.battery.last||now;
   if(now-t>60*864e5)t=now-60*864e5;          // max. 60 Tage nachrechnen
-  let lv=S.battery.level;
+  let lv=S.battery.level;if(S.poweredOff)mult=1;
   if(lv<=0&&S.setupDone)S.wasDead=true;   // war leer → erst ~1 Min laden
   while(t<now){
     const st=Math.min(now-t,60000-(t%60000)); // minutengenau
@@ -1849,7 +1851,7 @@ function renderBattery(){
   const rem=remainText();
   $$('.js-bremain').forEach(e=>e.textContent=rem);
   const ccr=$('.js-ccrem');if(ccr){const lvv=S.battery.level;
-    ccr.innerHTML=!realOn()&&rate(new Date())<0?`<span>📱 An: <b>${approxDur(lvv/(-R_AWAY*USE_MULT))}</b></span><span>💤 Aus: <b>${approxDur(lvv/(-R_AWAY))}</b></span>`:`<span>${rem}</span>`}
+    ccr.innerHTML=!realOn()&&rate(new Date())<0?`<span>📱 Benutzt: <b>${approxDur(lvv/(-R_AWAY*USE_MULT))}</b></span><span>💤 Zu: <b>${approxDur(lvv/(-R_AWAY))}</b></span><span>⏻ Aus: <b>${approxDur(lvv/(-R_OFF))}</b></span>`:`<span>${rem}</span>`}
   $$('.js-locicon').forEach(e=>e.textContent=st.ic);
   const col=chg?'#34c759':lv<=20?'#ff3b30':'var(--accent)';
   $$('.js-ring').forEach(r=>r.style.background=`radial-gradient(rgba(12,12,16,.82) 58%,transparent 59%),conic-gradient(${col} ${lv*3.6}deg,rgba(255,255,255,.14) 0)`);
@@ -1907,7 +1909,7 @@ function setHome(v,quiet){
   const askAfter=!quiet&&S.loc.mode==='gps'&&Date.now()-resumeAt<180000&&resumeGap>10*60000;
   advance();bsnap(true);S.loc.isHome=v;bsnap(true);save();haptic();
   if(askAfter){resumeAt=0;S.locAsk={from:Date.now()-resumeGap,at:Date.now(),home:v};save();renderHome();notify('📍',v?'Seit wann bist du zu Hause?':'Seit wann bist du weg?',`GufyUI war ${fmtLen(Math.round(resumeGap/60000)*60000)} zu – tippe hier und trag es in der Standort-App ein.`,'#ff2a68',openCorr)}
-  else if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 5 Std.).',v?'#34c759':'#ff9500');
+  else if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 8 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
 }
@@ -2857,9 +2859,9 @@ function doAction(a){
   if(a==='settings')openApp('settings');
   if(a==='logout')logout();
   if(a==='restart'){closeAppNow();advance();save();show('off');$('#off .center').style.opacity=0;setTimeout(()=>location.reload(),450)}
-  if(a==='off'){closeAppNow();save();show('off')}
+  if(a==='off'){closeAppNow();advance(inUse()?USE_MULT:1);S.poweredOff=true;save();show('off');glog('Akku','Manuell ausgeschaltet bei '+S.battery.level.toFixed(1)+' %')}
 }
-$('#powerBtn').onclick=()=>{haptic('heavy');advance();save();location.reload()};
+$('#powerBtn').onclick=()=>{haptic('heavy');advance();if(S.poweredOff)glog('Akku','Eingeschaltet bei '+S.battery.level.toFixed(1)+' %');S.poweredOff=false;save();location.reload()};
 function updateCC(){
   const set=(k,on,txt,ic)=>{const t=$(`.cc-tile[data-t="${k}"]`);if(!t)return;t.classList.toggle('on',on);$('small',t).textContent=txt;if(ic)$('span',t).textContent=ic};
   set('loc',S.loc.isHome,(S.loc.isHome?'Zu Hause':'Unterwegs')+(S.loc.mode==='gps'?' · GPS':''),S.loc.isHome?'🏠':'🚶');
@@ -3032,7 +3034,7 @@ const ITEMS={
   station:{name:'Ladestation',icon:'🔌',price:500,vac:true,perm:true,bg:'linear-gradient(135deg,#30b0c7,#0a84ff)'}
 };
 const shopItems=()=>Object.entries(ITEMS).filter(([k,it])=>!it.vac||S.vacation);
-const pctOf=it=>it.min/(AWAY_HOURS*60)*100;   // 5 Std. = 100 % → 60 Min. = 20 %
+const pctOf=it=>it.min/(AWAY_HOURS*60)*100;   // 8 Std. = 100 % → 60 Min. = 12,5 %
 function useItem(k){
   if(!(S.inv[k]>0)||ITEMS[k].perm)return;
   advance();
@@ -4809,7 +4811,7 @@ if(S.setupDone){ensureQuests();checkDebts()}
 if(S.loc.mode==='gps'&&S.setupDone)startGeo();
 addEventListener('beforeunload',()=>{advance();save()});
 addEventListener('pagehide',()=>{advance();bsnap(true);save()});
-boot();
+if(S.poweredOff&&S.setupDone)show('off');else{S.poweredOff=false;boot()}
 </script>
 </body>
 </html>
