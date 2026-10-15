@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.2","notes":["Anmelden: kurzer Lade-Kreis um dein Profilbild, dann geht GufyUI auf","Ausschalten: neue Animation – der Bildschirm zieht sich wie ein alter Fernseher zu einem leuchtenden Strich zusammen","Neuer Aus-Bildschirm: leuchtender Einschaltknopf, Akkustand und wie lange er ausgeschaltet noch hält"]};
+window.GUFY={"v":"9.3","notes":["Anmelden: kurzer Lade-Kreis um dein Profilbild, dann geht GufyUI auf","Ausschalten: alles wird kurz schwarz, „Shutdown“ mit weißem Lade-Kreis, dann geht GufyUI aus","Neuer Aus-Bildschirm: leuchtender Einschaltknopf, Akkustand und wie lange er ausgeschaltet noch hält"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1169,8 +1169,10 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .off-bat:empty{display:none}
 .off-bat .batt{opacity:.75}
 /* Ausschalt-Animation */
-.pwr-fx{position:fixed;inset:0;pointer-events:none;z-index:99999;display:grid;place-items:center}
-.pwr-fx i{display:block;width:100vw;height:3px;border-radius:3px;background:#fff;box-shadow:0 0 18px 6px rgba(170,150,255,.9),0 0 60px 20px rgba(110,90,255,.5);opacity:0}
+.pwr-fx{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:#000;opacity:0}
+.sd-box{display:flex;flex-direction:column;align-items:center;gap:22px}
+.sd-t{color:#fff;font-size:17px;font-weight:600;letter-spacing:.5px}
+.sd-spin{width:44px;height:44px;border-radius:50%;border:3.5px solid rgba(255,255,255,.18);border-top-color:#fff;animation:pwSpin .75s linear infinite}
 /* Anmelde-Animation */
 .lk-login .avatar{position:relative}
 .lk-spin{position:absolute;inset:-9px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#fff;border-right-color:rgba(255,255,255,.7);opacity:0;transition:opacity .2s}
@@ -2907,15 +2909,15 @@ function offInfo(){const e=$('#offBat');if(!e)return;if(!S.poweredOff||!S.setupD
   e.innerHTML=`<span class="batt${lv<=20?' low':''}${r>0?' chg':''}"><span class="bfill" style="width:${dispPct()}%"></span></span><b>${dispPct()} %</b> · ${r>0?(lv>=99.95?'Voll geladen':'⚡ Lädt ausgeschaltet'):lv<=0?'Leer':'hält aus noch '+approxDur(lv/(-r))}`}
 setInterval(()=>{if(current==='off')offInfo()},30000);
 function powerOffFx(){
-  const sc=$('.screen.active'),fx=h('<div class="pwr-fx"><i></i></div>');document.body.appendChild(fx);haptic('heavy');
-  const under=h('<div style="position:fixed;inset:0;background:#000;z-index:-1"></div>');document.body.appendChild(under);
-  const D=760;
-  if(sc&&sc.id!=='off')sc.animate([{transform:'none',filter:'brightness(1)',opacity:1},{transform:'scale(1.02,.004)',filter:'brightness(3)',opacity:1,offset:.42},{transform:'scale(0,.004)',filter:'brightness(4)',opacity:.6,offset:.62},{transform:'scale(0,0)',opacity:0}],{duration:D,easing:'cubic-bezier(.6,0,.4,1)',fill:'forwards'});
-  $('i',fx).animate([{opacity:0,transform:'scaleX(1)'},{opacity:0,transform:'scaleX(1)',offset:.36},{opacity:1,transform:'scaleX(1)',offset:.44},{opacity:1,transform:'scaleX(.008)',offset:.66},{opacity:1,transform:'scaleX(.008) scaleY(1.6)',offset:.74},{opacity:0,transform:'scaleX(.002) scaleY(.4)'}],{duration:D+240,easing:'cubic-bezier(.5,0,.3,1)',fill:'forwards'});
-  setTimeout(()=>{if(sc)sc.getAnimations().forEach(a=>a.cancel());show('off');offInfo();
-    const c=$('#off .center');c.style.opacity='';c.animate([{opacity:0,transform:'scale(.94)'},{opacity:1,transform:'none'}],{duration:700,delay:250,easing:'cubic-bezier(.2,.9,.22,1)',fill:'backwards'});
-    $('#offBat').animate([{opacity:0},{opacity:1}],{duration:600,delay:500,fill:'backwards'})},D+60);
-  setTimeout(()=>{fx.remove();under.remove()},D+400);
+  haptic('heavy');
+  const fx=h('<div class="pwr-fx"><div class="sd-box"><div class="sd-t">Shutdown</div><div class="sd-spin"></div></div></div>');document.body.appendChild(fx);
+  fx.animate([{opacity:0},{opacity:1}],{duration:280,easing:'ease-out',fill:'forwards'});      // sanft schwarz
+  const box=$('.sd-box',fx);box.animate([{opacity:0,transform:'scale(.9)'},{opacity:1,transform:'none'}],{duration:300,delay:220,easing:'cubic-bezier(.2,.9,.22,1)',fill:'backwards'});
+  setTimeout(()=>{box.animate([{opacity:1},{opacity:0,transform:'scale(.92)'}],{duration:260,easing:'ease-in',fill:'forwards'})},1250);
+  setTimeout(()=>{show('off');offInfo();
+    const c=$('#off .center');c.style.opacity='';c.animate([{opacity:0,transform:'scale(.96)'},{opacity:1,transform:'none'}],{duration:700,delay:200,easing:'cubic-bezier(.2,.9,.22,1)',fill:'backwards'});
+    $('#offBat').animate([{opacity:0},{opacity:1}],{duration:600,delay:400,fill:'backwards'});
+    fx.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>fx.remove()},1550);
 }
 $('#powerBtn').onclick=()=>{if($('#powerBtn').classList.contains('go'))return;$('#powerBtn').classList.add('go');haptic('heavy');
   $('#off .center').animate([{opacity:1},{opacity:1,offset:.5},{opacity:0,transform:'scale(1.06)'}],{duration:650,easing:'ease-in',fill:'forwards'});setTimeout(()=>{advance();if(S.poweredOff)glog('Akku','Eingeschaltet bei '+S.battery.level.toFixed(1)+' %');S.poweredOff=false;save();location.reload()},600)};
