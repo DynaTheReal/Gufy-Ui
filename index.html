@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.4","notes":["Standort-App: neuer Bereich „Busse“ ganz oben","Nächste Haltestelle bei dir mit Entfernung und dem nächsten Bus","Daneben: der schnellste Bus nach Hause – wann er fährt, wann du zu Hause bist und wann du los musst"]};
+window.GUFY={"v":"9.5","notes":["Öfis: „Bei dir“ und „Schnellster heim“ jetzt ganz oben in der Öfis-App (statt in Standort)","Öfis: Abfahrten von allen Steigen einer Haltestelle (z. B. Westerland Alte Post)","Öfis: in Deutschland zusätzlich der DB-Fahrplan – Takt-Busse (alle 5 Min.) fehlen nicht mehr"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -3289,95 +3289,11 @@ render(body,ctx){
       <div class="sgroup" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>Umkreis</b><b id="lRadV" style="color:var(--accent)">${S.loc.radius} m</b></div>
         <input type="range" id="lRad" min="50" max="1000" step="25" value="${S.loc.radius}" class="slider"></div>`;
   }
-  /* ---------- Busse: nächste Haltestelle + schnellster Bus nach Hause ---------- */
-  const TT='https://api.transitous.org/api',DBR='https://v6.db.transport.rest';
-  const B=window.__LBUS??=(window.__LBUS={at:0,near:null,home:null,busy:false,err:''});
-  const jj=async u=>{const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
-  const hhmm=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  const inMin=t=>{const m=Math.round((new Date(t)-Date.now())/60000);return m<=0?'jetzt':m<60?'in '+m+' Min.':'um '+hhmm(t)};
-  const walkMin=d=>Math.max(1,Math.round(d/75));   // ca. 4,5 km/h
-  async function nearStop(pos){
-    for(const rad of[400,900]){
-      try{
-        const r=await jj(`${TT}/v6/stoptimes?center=${pos.lat},${pos.lon}&radius=${rad}&time=${new Date().toISOString()}&n=60&mode=BUS,COACH`);
-        const L=(r.stopTimes||[]).map(x=>({stop:x.place.name,lat:x.place.lat,lon:x.place.lon,t:x.place.departure||x.place.scheduledDeparture,p:x.place.scheduledDeparture,line:x.displayName||x.routeShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',cancel:!!(x.cancelled||x.tripCancelled)})).filter(x=>x.t&&!x.cancel&&new Date(x.t)>Date.now()-30000);
-        if(L.length){
-          L.forEach(x=>x.d=distM(pos,x));const best=L.reduce((a,b)=>b.d<a.d?b:a);
-          const at=L.filter(x=>x.stop===best.stop&&Math.abs(x.d-best.d)<60).sort((a,b)=>new Date(a.t)-new Date(b.t));
-          return{stop:best.stop,d:best.d,deps:at.slice(0,3)};
-        }
-      }catch(e){glog('Standort','Bus Haltestelle (Transitous): '+e.message);break}
-    }
-    try{ // Ersatz: DB
-      const n=(await jj(`${DBR}/locations/nearby?latitude=${pos.lat}&longitude=${pos.lon}&results=3&distance=1000`)).filter(x=>x.type==='stop'||x.type==='station');
-      if(!n.length)return null;const st=n[0];
-      const r=await jj(`${DBR}/stops/${encodeURIComponent(st.id)}/departures?duration=120&results=10&remarks=false&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false`);
-      const deps=(r.departures||r).filter(x=>!x.cancelled).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||''}));
-      return{stop:st.name,d:st.distance??distM(pos,{lat:st.location.latitude,lon:st.location.longitude}),deps:deps.slice(0,3)};
-    }catch(e){glog('Standort','Bus Haltestelle (DB): '+e.message);return null}
-  }
-  async function homeBus(pos,home){
-    const now=new Date().toISOString();
-    try{
-      let r;const q=`fromPlace=${pos.lat},${pos.lon}&toPlace=${home.lat},${home.lon}&time=${now}&transitModes=BUS,COACH&numItineraries=6&maxPreTransitTime=1200&maxPostTransitTime=1200`;
-      try{r=await jj(`${TT}/v6/plan?${q}`)}catch(e){if(/404/.test(e.message))r=await jj(`${TT}/v5/plan?${q}`);else throw e}
-      const its=(r.itineraries||[]).filter(it=>it.legs.some(l=>l.mode!=='WALK'));
-      if(its.length){
-        const it=its.reduce((a,b)=>new Date(b.endTime)<new Date(a.endTime)?b:a);
-        const bus=it.legs.find(l=>l.mode!=='WALK'),walk=it.legs[0].mode==='WALK'?it.legs[0]:null;
-        const walkEnd=it.legs.length&&it.legs[it.legs.length-1].mode==='WALK';
-        return{line:bus.displayName||bus.routeShortName||'?',dir:bus.headsign||(bus.tripTo&&bus.tripTo.name)||'',from:bus.from.name,dep:bus.startTime,arr:it.endTime,leave:it.startTime,walk:walk?Math.round(walk.duration/60):0,transfers:it.transfers||0,walkEnd};
-      }
-      if(r.direct&&r.direct.length)return{none:true,walkOnly:Math.round(r.direct[0].duration/60)};
-      return{none:true};
-    }catch(e){glog('Standort','Bus nach Hause (Transitous): '+e.message)}
-    try{ // Ersatz: DB
-      const r=await jj(`${DBR}/journeys?from.latitude=${pos.lat}&from.longitude=${pos.lon}&from.address=${encodeURIComponent('Hier')}&to.latitude=${home.lat}&to.longitude=${home.lon}&to.address=${encodeURIComponent('Zuhause')}&results=5&remarks=false&stopovers=false`);
-      const js=(r.journeys||[]).filter(j=>j.legs.some(l=>l.line));
-      if(!js.length)return{none:true};
-      const jn=js.reduce((a,b)=>new Date(b.legs[b.legs.length-1].arrival)<new Date(a.legs[a.legs.length-1].arrival)?b:a);
-      const bus=jn.legs.find(l=>l.line),w=jn.legs[0].walking?jn.legs[0]:null;
-      return{line:bus.line.name,dir:bus.direction||'',from:bus.origin.name,dep:bus.departure,arr:jn.legs[jn.legs.length-1].arrival,leave:jn.legs[0].departure,walk:w?Math.round((new Date(w.arrival)-new Date(w.departure))/60000):0,transfers:jn.legs.filter(l=>l.line).length-1};
-    }catch(e){glog('Standort','Bus nach Hause (DB): '+e.message);return{err:true}}
-  }
-  async function busLoad(){
-    if(B.busy)return busPaint();
-    if(!geoPos){busPaint();return}
-    B.busy=true;busPaint();const pos={lat:geoPos.lat,lon:geoPos.lon};
-    const atHome=S.loc.home&&distM(pos,S.loc.home)<=Math.max(S.loc.radius,300);
-    const [n,h]=await Promise.all([nearStop(pos).catch(()=>null),S.loc.home&&!atHome?homeBus(pos,S.loc.home).catch(()=>({err:true})):Promise.resolve(null)]);
-    B.near=n;B.home=h;B.atHome=atHome;B.at=Date.now();B.busy=false;
-    glog('Standort',`Busse: ${n?n.stop+' ('+n.deps.length+')':'keine Haltestelle'} · nach Hause: ${h?(h.line||(h.none?'keiner':'Fehler')):'-'}`);
-    busPaint();
-  }
-  function busHTML(){
-    if(!geoPos)return `<div class="lb-card lb-wide"><small class="muted">${S.loc.mode==='gps'?'📡 Standort wird gesucht …':'Schalte unten <b>GPS & Karte</b> ein, dann siehst du hier Busse in deiner Nähe.'}</small></div>`;
-    if(!B.at)return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div><div class="lb-load"></div></div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div><div class="lb-load"></div></div>`;
-    const n=B.near,h=B.home;let a,b;
-    if(!n)a=`<small class="muted">Keine Haltestelle in der Nähe gefunden.</small>`;
-    else{const d0=n.deps[0];
-      a=`<div class="lb-stop">${esc(n.stop)}</div><small class="muted">🚶 ${Math.round(n.d)} m · ${walkMin(n.d)} Min.</small>
-        ${d0?`<div class="lb-bus"><span class="lb-line">${esc(d0.line)}</span><b>${inMin(d0.t)}</b></div><small class="lb-dir">→ ${esc(d0.dir)}</small>
-        ${n.deps.slice(1,3).map(x=>`<div class="lb-more"><span>${esc(x.line)}</span> ${hhmm(x.t)} <i>${esc(x.dir)}</i></div>`).join('')}`:`<small class="muted" style="display:block;margin-top:8px">Gerade keine Busse.</small>`}`}
-    if(!S.loc.home)b=`<small class="muted">Erst unten „Hier ist mein Zuhause“ festlegen.</small>`;
-    else if(B.atHome)b=`<div class="lb-stop">Du bist schon zu Hause 🏠</div>`;
-    else if(!h||h.err)b=`<small class="muted">Gerade nicht ladbar.</small>`;
-    else if(h.none)b=`<small class="muted">${h.walkOnly?`Kein Bus nötig – zu Fuß ca. ${h.walkOnly} Min.`:'Gerade kein Bus nach Hause.'}</small>`;
-    else{const go=Math.round((new Date(h.leave)-Date.now())/60000);
-      b=`<div class="lb-bus" style="margin-top:2px"><span class="lb-line">${esc(h.line)}</span><b>${inMin(h.dep)}</b></div><small class="lb-dir">→ ${esc(h.dir)}</small><small class="lb-dir">ab ${esc(h.from)}${h.transfers?` · ${h.transfers}× umsteigen`:''}</small>
-        <div class="lb-arr">🏠 Zu Hause <b>${hhmm(h.arr)}</b></div>
-        <div class="lb-go ${go<=2?'now':''}">${go<=0?'🏃 Jetzt los!':`🚶 Los in ${go} Min.`}${h.walk?` · ${h.walk} Min. laufen`:''}</div>`}
-    return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div>${a}</div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div>${b}</div>
-      <button class="lb-ref" id="lbRef">${B.busy?'Lädt …':'↻ '+(B.at?'vor '+Math.max(0,Math.round((Date.now()-B.at)/60000))+' Min.':'')}</button>`;
-  }
-  function busPaint(){const e=$('#lBus',body);if(!e)return;e.innerHTML=busHTML();const r=$('#lbRef',e);if(r)r.onclick=()=>{haptic('select');B.at=Date.now();busLoad()}}
   function sleepHours(){let d=toMin(S.sleep.to)-toMin(S.sleep.from);if(d<=0)d+=1440;return d/60}
   function draw(){
     destroyMap();
     body.innerHTML=`<div id="lStat">${statusHTML()}</div>
       <div id="lAskW"></div>
-      <div class="slabel">🚌 Busse</div>
-      <div class="lbus" id="lBus">${busHTML()}</div>
       <div class="slabel">Nachtragen</div>
       <div class="sgroup lcorr" id="lAdd"></div>
       <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
@@ -3399,7 +3315,7 @@ render(body,ctx){
     const upd=(k,v)=>askCode('Schlafenszeit ändern',()=>{advance();S.sleep[k]=v;save();renderBattery();updateCC();draw()},draw);
     $('#sF',body).onchange=e=>e.target.value&&upd('from',e.target.value);
     $('#sT',body).onchange=e=>e.target.value&&upd('to',e.target.value);
-    bindGps();corrDraw();addDraw();busLoad();
+    bindGps();corrDraw();addDraw();
     if(S.loc.mode==='gps')initMap();
   }
   const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())};
@@ -3539,8 +3455,7 @@ render(body,ctx){
   if(S.loc.mode==='gps')startGeo();
   draw();
   const iv=setInterval(()=>{const s=$('#lStat',body);if(s)s.innerHTML=statusHTML()},15000);
-  const ivB=setInterval(()=>{if(!B.at&&geoPos)busLoad();else if(B.at&&Date.now()-B.at>60000)busLoad();else busPaint()},5000);
-  ctx.cleanup.push(()=>{clearInterval(iv);clearInterval(ivB);destroyMap()});
+  ctx.cleanup.push(()=>{clearInterval(iv);destroyMap()});
 }},
 
 /* ---------- Einstellungen ---------- */
@@ -4509,7 +4424,25 @@ render(body,ctx){
       const r=await j(`${DB}/locations?query=${encodeURIComponent(q)}&results=12&addresses=false&poi=false&stops=true`);
       return r.filter(x=>x.type==='stop'||x.type==='station').map(x=>({id:x.id,name:x.name,lat:x.location.latitude,lon:x.location.longitude,area:'',modes:[],prov:'db'}))}
   }
+  const normL=l=>String(l||'').replace(/^(bus|str|tram)\s*/i,'').trim().toLowerCase();
+  const dKey=x=>{const d=new Date(x.p||x.t);return d.getHours()+':'+d.getMinutes()+'|'+normL(x.line)+'|'+String(x.dir||'').toLowerCase().replace(/[^a-zäöüß0-9]/g,'').slice(0,4)};
+  function merge(a,b){const seen=new Set(a.map(dKey)),out=a.slice();b.forEach(x=>{const k=dKey(x);if(!seen.has(k)){seen.add(k);out.push(x)}});return out}
+  const baseName=n=>String(n||'').toLowerCase().replace(/\(.*?\)|,|bussteig.*|steig.*|gleis.*|\bbstg\b.*/g,' ').replace(/\s+/g,' ').trim();
   async function departures(st,mode){
+    let r=await departuresOld(st,mode);
+    const inDE=st.lat>47&&st.lat<55.2&&st.lon>5.5&&st.lon<15.5;
+    if(st.prov!=='db'){ // alle Steige derselben Haltestelle (bis 200 m) dazunehmen
+      try{const a=(await departures0(st,mode,false,true)).filter(x=>!x.stop||baseName(x.stop)===baseName(st.name)||x.sd<=80);const n0=r.length;r=merge(r,a);glog('Öfis',`Steige im Umkreis: +${r.length-n0}`)}catch(e){glog('Öfis','Umkreis: '+e.message)}
+    }
+    if(inDE&&st.prov!=='db'){ // Deutschland: zusätzlich DB-Fahrplan (hat oft Takt-Busse, die sonst fehlen)
+      try{const n=(await j(`${DB}/locations/nearby?latitude=${st.lat}&longitude=${st.lon}&results=6&distance=350`)).filter(x=>x.type==='stop'||x.type==='station');
+        const bn=baseName(st.name),pick=n.find(x=>baseName(x.name).includes(bn.split(' ').pop())||bn.includes(baseName(x.name).split(' ').pop()))||n[0];
+        if(pick){const d=await departures0({...st,id:pick.id,prov:'db'},mode);const n0=r.length;r=merge(r,d);glog('Öfis',`DB ${pick.name}: ${d.length}, neu +${r.length-n0}`)}}
+      catch(e){glog('Öfis','DB dazu: '+e.message)}
+    }
+    return r;
+  }
+  async function departuresOld(st,mode){
     let r=await departures0(st,mode);
     if(st.prov!=='db'&&!r.length){ // 1) alle Haltestellen im Umkreis von 250 m (Busse stehen oft in einem anderen Datensatz)
       glog('Öfis',`0 Abfahrten (${mode}) bei ${st.name} → Umkreis 250 m`);
@@ -4534,14 +4467,14 @@ render(body,ctx){
     if(st.prov==='db'){
       const prod=mode==='bus'?'&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false':'&bus=false&ferry=false&taxi=false';
       const r=await j(`${DB}/stops/${encodeURIComponent(st.id)}/departures?when=${d0.toISOString()}&duration=1440&results=600&remarks=false${prod}`);
-      return (r.departures||r).map(x=>({mode:x.line&&x.line.product,t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||'',ic:x.line&&x.line.product==='bus'?'🚌':'🚆',track:x.platform||'',cancel:!!x.cancelled}));
+      return (r.departures||r).map(x=>({mode:x.line&&x.line.product,t:x.when||x.plannedWhen,p:x.plannedWhen,line:(x.line&&x.line.name||'?').replace(/^Bus\s*/i,''),dir:x.direction||'',ic:x.line&&x.line.product==='bus'?'🚌':'🚆',track:x.platform||'',cancel:!!x.cancelled}));
     }
     const out=[];let cur=null;
     for(let pg=0;pg<10;pg++){
       const u=`${TT}/v6/stoptimes?${area?`center=${st.lat},${st.lon}&radius=250`:'stopId='+encodeURIComponent(st.id)}&time=${d0.toISOString()}&n=150${noFilter?'':'&mode='+MODES[mode].join(',')}${cur?'&pageCursor='+encodeURIComponent(cur):''}`;
       let r;try{r=await j(u)}catch(e){if(pg===0&&/404/.test(e.message))r=await j(u.replace('/v6/','/v5/'));else throw e}
       (r.stopTimes||[]).forEach(x=>{const t=x.place.departure||x.place.scheduledDeparture;if(!t)return;
-        out.push({mode:x.mode,t,p:x.place.scheduledDeparture||t,line:x.displayName||x.routeShortName||x.tripShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',ic:ICON[x.mode]||'🚏',track:x.place.track||x.place.scheduledTrack||'',cancel:!!(x.cancelled||x.tripCancelled),col:x.routeColor})});
+        out.push({mode:x.mode,t,p:x.place.scheduledDeparture||t,stop:x.place.name,sd:x.place.lat!=null?distM(st,{lat:x.place.lat,lon:x.place.lon}):0,line:x.displayName||x.routeShortName||x.tripShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',ic:ICON[x.mode]||'🚏',track:x.place.track||x.place.scheduledTrack||'',cancel:!!(x.cancelled||x.tripCancelled),col:x.routeColor})});
       if(pg===0)glog('Öfis',`${st.name}: ${(r.stopTimes||[]).length} Einträge${noFilter?' (ohne Filter)':''}${area?' (Umkreis)':''}`);
       const last=out[out.length-1];cur=r.nextPageCursor;
       if(!cur||!last||new Date(last.t)>=d1||!(r.stopTimes||[]).length)break;
@@ -4607,6 +4540,7 @@ render(body,ctx){
     const st=cur();
     body.innerHTML=`<div class="oefi">
       <div class="seg"><button data-om="bus" class="${O.mode==='bus'?'on':''}">🚌 Bus</button><button data-om="bahn" class="${O.mode==='bahn'?'on':''}">🚆 Bahn</button></div>
+      ${O.mode==='bus'?'<div class="lbus" id="lBus"></div>':''}
       <div class="o-search"><input class="input" id="oQ" placeholder="${O.mode==='bus'?'Bushaltestelle suchen …':'Bahnhof suchen …'}" autocomplete="off" enterkeyhint="search"><div id="oRes" class="o-res"></div></div>
       ${st?`<div class="o-stop"><div><b>${O.mode==='bus'?'🚏':'🚉'} ${esc(st.name)}</b><small>${esc(st.area||'')}</small></div>
         <div class="o-day"><button data-dd="-1" ${dayOff<=0?'disabled':''}>‹</button><span>${dayOff===0?'Heute':dayOff===1?'Morgen':new Date(Date.now()+dayOff*864e5).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'})}</span><button data-dd="1" ${dayOff>=6?'disabled':''}>›</button></div></div>
@@ -4626,8 +4560,10 @@ render(body,ctx){
         $$('[data-i]',res).forEach(b=>b.onclick=()=>{O[O.mode]=L2[+b.dataset.i];save();haptic('success');dayOff=0;draw();load()});
       }catch(e){res.innerHTML='<div class="o-hit muted">⚠️ Fahrplandienst nicht erreichbar</div>'}},350)};
     if(st)renderDeps();
+    if(busStop)busStop();busStop=O.mode==='bus'?busNearWidget(body):null;
     initMap();
   }
+  let busStop=null;
   function renderDeps(){
     const el=$('#oList',body);if(!el)return;
     if(loading||!deps.length){el.innerHTML=`<div class="emptyinv">${loading?'⏳ Fahrplan wird geladen …':esc(errMsg||'Keine Abfahrten an diesem Tag')}</div>`;return}
@@ -4649,10 +4585,105 @@ render(body,ctx){
   draw();load();
   radarIv=setInterval(()=>{if(body.isConnected)radarLoad()},45000);
   animIv=setInterval(()=>{if(body.isConnected)drawDots()},2000);
-  ctx.cleanup.push(()=>{clearInterval(radarIv);clearInterval(animIv);if(map){map.remove();map=null}});
+  ctx.cleanup.push(()=>{clearInterval(radarIv);clearInterval(animIv);if(busStop)busStop();if(map){map.remove();map=null}});
 }}
 };
 
+/* ---------- Busse bei dir: nächste Haltestelle + schnellster Bus nach Hause (Öfis) ---------- */
+function busNearWidget(body){
+  const TT='https://api.transitous.org/api',DBR='https://v6.db.transport.rest';
+  const B=window.__LBUS??=(window.__LBUS={at:0,near:null,home:null,busy:false,err:''});
+  const jj=async u=>{const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
+  const hhmm=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const inMin=t=>{const m=Math.round((new Date(t)-Date.now())/60000);return m<=0?'jetzt':m<60?'in '+m+' Min.':'um '+hhmm(t)};
+  const walkMin=d=>Math.max(1,Math.round(d/75));   // ca. 4,5 km/h
+  async function nearStop(pos){
+    for(const rad of[400,900]){
+      try{
+        const r=await jj(`${TT}/v6/stoptimes?center=${pos.lat},${pos.lon}&radius=${rad}&time=${new Date().toISOString()}&n=60&mode=BUS,COACH`);
+        const L=(r.stopTimes||[]).map(x=>({stop:x.place.name,lat:x.place.lat,lon:x.place.lon,t:x.place.departure||x.place.scheduledDeparture,p:x.place.scheduledDeparture,line:x.displayName||x.routeShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',cancel:!!(x.cancelled||x.tripCancelled)})).filter(x=>x.t&&!x.cancel&&new Date(x.t)>Date.now()-30000);
+        if(L.length){
+          L.forEach(x=>x.d=distM(pos,x));const best=L.reduce((a,b)=>b.d<a.d?b:a);
+          const at=L.filter(x=>x.stop===best.stop&&Math.abs(x.d-best.d)<60).sort((a,b)=>new Date(a.t)-new Date(b.t));
+          let deps=at;
+          if(best.lat>47&&best.lat<55.2&&best.lon>5.5&&best.lon<15.5)try{ // Deutschland: Takt-Busse aus dem DB-Fahrplan ergänzen
+            const n=(await jj(`${DBR}/locations/nearby?latitude=${best.lat}&longitude=${best.lon}&results=1&distance=150`)).filter(x=>x.type==='stop'||x.type==='station')[0];
+            if(n){const r2=await jj(`${DBR}/stops/${encodeURIComponent(n.id)}/departures?duration=90&results=12&remarks=false&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false`);
+              const k=x=>{const d=new Date(x.p||x.t);return d.getHours()+':'+d.getMinutes()+'|'+String(x.line).replace(/^bus\s*/i,'')};const seen=new Set(deps.map(k));
+              (r2.departures||r2).filter(x=>!x.cancelled).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name?x.line.name.replace(/^Bus\s*/i,''):'?',dir:x.direction||''})).forEach(x=>{if(!seen.has(k(x))&&new Date(x.t)>Date.now()-30000){seen.add(k(x));deps.push(x)}});
+              deps.sort((a,b)=>new Date(a.t)-new Date(b.t))}}catch(e){glog('Öfis','Bei dir DB: '+e.message)}
+          return{stop:best.stop,d:best.d,deps:deps.slice(0,3)};
+        }
+      }catch(e){glog('Öfis','Bus Haltestelle (Transitous): '+e.message);break}
+    }
+    try{ // Ersatz: DB
+      const n=(await jj(`${DBR}/locations/nearby?latitude=${pos.lat}&longitude=${pos.lon}&results=3&distance=1000`)).filter(x=>x.type==='stop'||x.type==='station');
+      if(!n.length)return null;const st=n[0];
+      const r=await jj(`${DBR}/stops/${encodeURIComponent(st.id)}/departures?duration=120&results=10&remarks=false&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false`);
+      const deps=(r.departures||r).filter(x=>!x.cancelled).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||''}));
+      return{stop:st.name,d:st.distance??distM(pos,{lat:st.location.latitude,lon:st.location.longitude}),deps:deps.slice(0,3)};
+    }catch(e){glog('Öfis','Bus Haltestelle (DB): '+e.message);return null}
+  }
+  async function homeBus(pos,home){
+    const now=new Date().toISOString();
+    try{
+      let r;const q=`fromPlace=${pos.lat},${pos.lon}&toPlace=${home.lat},${home.lon}&time=${now}&transitModes=BUS,COACH&numItineraries=6&maxPreTransitTime=1200&maxPostTransitTime=1200`;
+      try{r=await jj(`${TT}/v6/plan?${q}`)}catch(e){if(/404/.test(e.message))r=await jj(`${TT}/v5/plan?${q}`);else throw e}
+      const its=(r.itineraries||[]).filter(it=>it.legs.some(l=>l.mode!=='WALK'));
+      if(its.length){
+        const it=its.reduce((a,b)=>new Date(b.endTime)<new Date(a.endTime)?b:a);
+        const bus=it.legs.find(l=>l.mode!=='WALK'),walk=it.legs[0].mode==='WALK'?it.legs[0]:null;
+        const walkEnd=it.legs.length&&it.legs[it.legs.length-1].mode==='WALK';
+        return{line:bus.displayName||bus.routeShortName||'?',dir:bus.headsign||(bus.tripTo&&bus.tripTo.name)||'',from:bus.from.name,dep:bus.startTime,arr:it.endTime,leave:it.startTime,walk:walk?Math.round(walk.duration/60):0,transfers:it.transfers||0,walkEnd};
+      }
+      if(r.direct&&r.direct.length)return{none:true,walkOnly:Math.round(r.direct[0].duration/60)};
+      return{none:true};
+    }catch(e){glog('Öfis','Bus nach Hause (Transitous): '+e.message)}
+    try{ // Ersatz: DB
+      const r=await jj(`${DBR}/journeys?from.latitude=${pos.lat}&from.longitude=${pos.lon}&from.address=${encodeURIComponent('Hier')}&to.latitude=${home.lat}&to.longitude=${home.lon}&to.address=${encodeURIComponent('Zuhause')}&results=5&remarks=false&stopovers=false`);
+      const js=(r.journeys||[]).filter(j=>j.legs.some(l=>l.line));
+      if(!js.length)return{none:true};
+      const jn=js.reduce((a,b)=>new Date(b.legs[b.legs.length-1].arrival)<new Date(a.legs[a.legs.length-1].arrival)?b:a);
+      const bus=jn.legs.find(l=>l.line),w=jn.legs[0].walking?jn.legs[0]:null;
+      return{line:bus.line.name,dir:bus.direction||'',from:bus.origin.name,dep:bus.departure,arr:jn.legs[jn.legs.length-1].arrival,leave:jn.legs[0].departure,walk:w?Math.round((new Date(w.arrival)-new Date(w.departure))/60000):0,transfers:jn.legs.filter(l=>l.line).length-1};
+    }catch(e){glog('Öfis','Bus nach Hause (DB): '+e.message);return{err:true}}
+  }
+  async function busLoad(){
+    if(B.busy)return busPaint();
+    if(!geoPos){busPaint();return}
+    B.busy=true;busPaint();const pos={lat:geoPos.lat,lon:geoPos.lon};
+    const atHome=S.loc.home&&distM(pos,S.loc.home)<=Math.max(S.loc.radius,300);
+    const [n,h]=await Promise.all([nearStop(pos).catch(()=>null),S.loc.home&&!atHome?homeBus(pos,S.loc.home).catch(()=>({err:true})):Promise.resolve(null)]);
+    B.near=n;B.home=h;B.atHome=atHome;B.at=Date.now();B.busy=false;
+    glog('Öfis',`Busse: ${n?n.stop+' ('+n.deps.length+')':'keine Haltestelle'} · nach Hause: ${h?(h.line||(h.none?'keiner':'Fehler')):'-'}`);
+    busPaint();
+  }
+  function busHTML(){
+    if(!geoPos)return `<div class="lb-card lb-wide"><small class="muted">${geoErr?'⚠️ '+esc(geoErr):'📡 Standort wird gesucht …'}</small></div>`;
+    if(!B.at)return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div><div class="lb-load"></div></div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div><div class="lb-load"></div></div>`;
+    const n=B.near,h=B.home;let a,b;
+    if(!n)a=`<small class="muted">Keine Haltestelle in der Nähe gefunden.</small>`;
+    else{const d0=n.deps[0];
+      a=`<div class="lb-stop">${esc(n.stop)}</div><small class="muted">🚶 ${Math.round(n.d)} m · ${walkMin(n.d)} Min.</small>
+        ${d0?`<div class="lb-bus"><span class="lb-line">${esc(d0.line)}</span><b>${inMin(d0.t)}</b></div><small class="lb-dir">→ ${esc(d0.dir)}</small>
+        ${n.deps.slice(1,3).map(x=>`<div class="lb-more"><span>${esc(x.line)}</span> ${hhmm(x.t)} <i>${esc(x.dir)}</i></div>`).join('')}`:`<small class="muted" style="display:block;margin-top:8px">Gerade keine Busse.</small>`}`}
+    if(!S.loc.home)b=`<small class="muted">Leg in der Standort-App dein Zuhause fest.</small>`;
+    else if(B.atHome)b=`<div class="lb-stop">Du bist schon zu Hause 🏠</div>`;
+    else if(!h||h.err)b=`<small class="muted">Gerade nicht ladbar.</small>`;
+    else if(h.none)b=`<small class="muted">${h.walkOnly?`Kein Bus nötig – zu Fuß ca. ${h.walkOnly} Min.`:'Gerade kein Bus nach Hause.'}</small>`;
+    else{const go=Math.round((new Date(h.leave)-Date.now())/60000);
+      b=`<div class="lb-bus" style="margin-top:2px"><span class="lb-line">${esc(h.line)}</span><b>${inMin(h.dep)}</b></div><small class="lb-dir">→ ${esc(h.dir)}</small><small class="lb-dir">ab ${esc(h.from)}${h.transfers?` · ${h.transfers}× umsteigen`:''}</small>
+        <div class="lb-arr">🏠 Zu Hause <b>${hhmm(h.arr)}</b></div>
+        <div class="lb-go ${go<=2?'now':''}">${go<=0?'🏃 Jetzt los!':`🚶 Los in ${go} Min.`}${h.walk?` · ${h.walk} Min. laufen`:''}</div>`}
+    return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div>${a}</div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div>${b}</div>
+      <button class="lb-ref" id="lbRef">${B.busy?'Lädt …':'↻ '+(B.at?'vor '+Math.max(0,Math.round((Date.now()-B.at)/60000))+' Min.':'')}</button>`;
+  }
+  function busPaint(){const e=$('#lBus',body);if(!e)return;e.innerHTML=busHTML();const r=$('#lbRef',e);if(r)r.onclick=()=>{haptic('select');B.at=Date.now();busLoad()}}
+  if(!geoPos&&navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{geoPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};busLoad()},e=>{geoErr=e.code===1?'Standort nicht erlaubt':'Kein GPS';busPaint()},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+  busLoad();
+  const iv=setInterval(()=>{if(!body.isConnected)return clearInterval(iv);if(!B.at&&geoPos)busLoad();else if(B.at&&Date.now()-B.at>60000)busLoad();else busPaint()},5000);
+  return()=>clearInterval(iv);
+}
 /* =========================================================
    LOGS – Einstellungen → Logs
    ========================================================= */
