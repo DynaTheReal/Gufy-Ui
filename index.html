@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.3","notes":["Anmelden: kurzer Lade-Kreis um dein Profilbild, dann geht GufyUI auf","Ausschalten: alles wird kurz schwarz, „Shutdown“ mit weißem Lade-Kreis, dann geht GufyUI aus","Neuer Aus-Bildschirm: leuchtender Einschaltknopf, Akkustand und wie lange er ausgeschaltet noch hält"]};
+window.GUFY={"v":"9.4","notes":["Standort-App: neuer Bereich „Busse“ ganz oben","Nächste Haltestelle bei dir mit Entfernung und dem nächsten Bus","Daneben: der schnellste Bus nach Hause – wann er fährt, wann du zu Hause bist und wann du los musst"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1183,6 +1183,23 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .lk-login.busy .lk-busy{opacity:.9}
 .lk-login.busy .avatar{animation:lkPulse 1s ease-in-out}
 @keyframes lkPulse{50%{transform:scale(1.06)}}
+.lbus{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;position:relative}
+.lb-card{background:var(--panel-solid);border:1px solid var(--border);border-radius:16px;padding:12px 13px;min-height:132px;min-width:0}
+.lb-wide{grid-column:1/-1;min-height:0}
+.lb-h{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:6px}
+.lb-stop{font-weight:700;font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lb-bus{display:flex;align-items:center;gap:7px;margin-top:9px}
+.lb-bus b{font-size:15px}
+.lb-line{background:#ff7a00;color:#fff;font-weight:800;font-size:13px;padding:2px 8px;border-radius:7px;min-width:26px;text-align:center}
+.lb-dir{display:block;color:var(--muted);font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-more{font-size:12px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-more span{font-weight:700;color:var(--text);margin-right:3px}.lb-more i{font-style:normal}
+.lb-arr{margin-top:8px;font-size:13px}
+.lb-go{margin-top:7px;font-size:12px;font-weight:650;padding:5px 8px;border-radius:9px;background:rgba(52,199,89,.15);color:#34c759;display:inline-block}
+.lb-go.now{background:rgba(255,59,48,.15);color:#ff3b30}
+.lb-load{height:60px;border-radius:10px;background:linear-gradient(90deg,var(--hover),rgba(127,127,127,.18),var(--hover));background-size:200% 100%;animation:lbSh 1.2s linear infinite}
+@keyframes lbSh{to{background-position:-200% 0}}
+.lb-ref{grid-column:1/-1;justify-self:end;font-size:12px;color:var(--muted);background:none;border:none;padding:2px 4px}
 </style>
 </head>
 <body class="dark">
@@ -3272,11 +3289,95 @@ render(body,ctx){
       <div class="sgroup" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>Umkreis</b><b id="lRadV" style="color:var(--accent)">${S.loc.radius} m</b></div>
         <input type="range" id="lRad" min="50" max="1000" step="25" value="${S.loc.radius}" class="slider"></div>`;
   }
+  /* ---------- Busse: nächste Haltestelle + schnellster Bus nach Hause ---------- */
+  const TT='https://api.transitous.org/api',DBR='https://v6.db.transport.rest';
+  const B=window.__LBUS??=(window.__LBUS={at:0,near:null,home:null,busy:false,err:''});
+  const jj=async u=>{const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
+  const hhmm=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const inMin=t=>{const m=Math.round((new Date(t)-Date.now())/60000);return m<=0?'jetzt':m<60?'in '+m+' Min.':'um '+hhmm(t)};
+  const walkMin=d=>Math.max(1,Math.round(d/75));   // ca. 4,5 km/h
+  async function nearStop(pos){
+    for(const rad of[400,900]){
+      try{
+        const r=await jj(`${TT}/v6/stoptimes?center=${pos.lat},${pos.lon}&radius=${rad}&time=${new Date().toISOString()}&n=60&mode=BUS,COACH`);
+        const L=(r.stopTimes||[]).map(x=>({stop:x.place.name,lat:x.place.lat,lon:x.place.lon,t:x.place.departure||x.place.scheduledDeparture,p:x.place.scheduledDeparture,line:x.displayName||x.routeShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',cancel:!!(x.cancelled||x.tripCancelled)})).filter(x=>x.t&&!x.cancel&&new Date(x.t)>Date.now()-30000);
+        if(L.length){
+          L.forEach(x=>x.d=distM(pos,x));const best=L.reduce((a,b)=>b.d<a.d?b:a);
+          const at=L.filter(x=>x.stop===best.stop&&Math.abs(x.d-best.d)<60).sort((a,b)=>new Date(a.t)-new Date(b.t));
+          return{stop:best.stop,d:best.d,deps:at.slice(0,3)};
+        }
+      }catch(e){glog('Standort','Bus Haltestelle (Transitous): '+e.message);break}
+    }
+    try{ // Ersatz: DB
+      const n=(await jj(`${DBR}/locations/nearby?latitude=${pos.lat}&longitude=${pos.lon}&results=3&distance=1000`)).filter(x=>x.type==='stop'||x.type==='station');
+      if(!n.length)return null;const st=n[0];
+      const r=await jj(`${DBR}/stops/${encodeURIComponent(st.id)}/departures?duration=120&results=10&remarks=false&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false`);
+      const deps=(r.departures||r).filter(x=>!x.cancelled).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:x.line&&x.line.name||'?',dir:x.direction||''}));
+      return{stop:st.name,d:st.distance??distM(pos,{lat:st.location.latitude,lon:st.location.longitude}),deps:deps.slice(0,3)};
+    }catch(e){glog('Standort','Bus Haltestelle (DB): '+e.message);return null}
+  }
+  async function homeBus(pos,home){
+    const now=new Date().toISOString();
+    try{
+      let r;const q=`fromPlace=${pos.lat},${pos.lon}&toPlace=${home.lat},${home.lon}&time=${now}&transitModes=BUS,COACH&numItineraries=6&maxPreTransitTime=1200&maxPostTransitTime=1200`;
+      try{r=await jj(`${TT}/v6/plan?${q}`)}catch(e){if(/404/.test(e.message))r=await jj(`${TT}/v5/plan?${q}`);else throw e}
+      const its=(r.itineraries||[]).filter(it=>it.legs.some(l=>l.mode!=='WALK'));
+      if(its.length){
+        const it=its.reduce((a,b)=>new Date(b.endTime)<new Date(a.endTime)?b:a);
+        const bus=it.legs.find(l=>l.mode!=='WALK'),walk=it.legs[0].mode==='WALK'?it.legs[0]:null;
+        const walkEnd=it.legs.length&&it.legs[it.legs.length-1].mode==='WALK';
+        return{line:bus.displayName||bus.routeShortName||'?',dir:bus.headsign||(bus.tripTo&&bus.tripTo.name)||'',from:bus.from.name,dep:bus.startTime,arr:it.endTime,leave:it.startTime,walk:walk?Math.round(walk.duration/60):0,transfers:it.transfers||0,walkEnd};
+      }
+      if(r.direct&&r.direct.length)return{none:true,walkOnly:Math.round(r.direct[0].duration/60)};
+      return{none:true};
+    }catch(e){glog('Standort','Bus nach Hause (Transitous): '+e.message)}
+    try{ // Ersatz: DB
+      const r=await jj(`${DBR}/journeys?from.latitude=${pos.lat}&from.longitude=${pos.lon}&from.address=${encodeURIComponent('Hier')}&to.latitude=${home.lat}&to.longitude=${home.lon}&to.address=${encodeURIComponent('Zuhause')}&results=5&remarks=false&stopovers=false`);
+      const js=(r.journeys||[]).filter(j=>j.legs.some(l=>l.line));
+      if(!js.length)return{none:true};
+      const jn=js.reduce((a,b)=>new Date(b.legs[b.legs.length-1].arrival)<new Date(a.legs[a.legs.length-1].arrival)?b:a);
+      const bus=jn.legs.find(l=>l.line),w=jn.legs[0].walking?jn.legs[0]:null;
+      return{line:bus.line.name,dir:bus.direction||'',from:bus.origin.name,dep:bus.departure,arr:jn.legs[jn.legs.length-1].arrival,leave:jn.legs[0].departure,walk:w?Math.round((new Date(w.arrival)-new Date(w.departure))/60000):0,transfers:jn.legs.filter(l=>l.line).length-1};
+    }catch(e){glog('Standort','Bus nach Hause (DB): '+e.message);return{err:true}}
+  }
+  async function busLoad(){
+    if(B.busy)return busPaint();
+    if(!geoPos){busPaint();return}
+    B.busy=true;busPaint();const pos={lat:geoPos.lat,lon:geoPos.lon};
+    const atHome=S.loc.home&&distM(pos,S.loc.home)<=Math.max(S.loc.radius,300);
+    const [n,h]=await Promise.all([nearStop(pos).catch(()=>null),S.loc.home&&!atHome?homeBus(pos,S.loc.home).catch(()=>({err:true})):Promise.resolve(null)]);
+    B.near=n;B.home=h;B.atHome=atHome;B.at=Date.now();B.busy=false;
+    glog('Standort',`Busse: ${n?n.stop+' ('+n.deps.length+')':'keine Haltestelle'} · nach Hause: ${h?(h.line||(h.none?'keiner':'Fehler')):'-'}`);
+    busPaint();
+  }
+  function busHTML(){
+    if(!geoPos)return `<div class="lb-card lb-wide"><small class="muted">${S.loc.mode==='gps'?'📡 Standort wird gesucht …':'Schalte unten <b>GPS & Karte</b> ein, dann siehst du hier Busse in deiner Nähe.'}</small></div>`;
+    if(!B.at)return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div><div class="lb-load"></div></div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div><div class="lb-load"></div></div>`;
+    const n=B.near,h=B.home;let a,b;
+    if(!n)a=`<small class="muted">Keine Haltestelle in der Nähe gefunden.</small>`;
+    else{const d0=n.deps[0];
+      a=`<div class="lb-stop">${esc(n.stop)}</div><small class="muted">🚶 ${Math.round(n.d)} m · ${walkMin(n.d)} Min.</small>
+        ${d0?`<div class="lb-bus"><span class="lb-line">${esc(d0.line)}</span><b>${inMin(d0.t)}</b></div><small class="lb-dir">→ ${esc(d0.dir)}</small>
+        ${n.deps.slice(1,3).map(x=>`<div class="lb-more"><span>${esc(x.line)}</span> ${hhmm(x.t)} <i>${esc(x.dir)}</i></div>`).join('')}`:`<small class="muted" style="display:block;margin-top:8px">Gerade keine Busse.</small>`}`}
+    if(!S.loc.home)b=`<small class="muted">Erst unten „Hier ist mein Zuhause“ festlegen.</small>`;
+    else if(B.atHome)b=`<div class="lb-stop">Du bist schon zu Hause 🏠</div>`;
+    else if(!h||h.err)b=`<small class="muted">Gerade nicht ladbar.</small>`;
+    else if(h.none)b=`<small class="muted">${h.walkOnly?`Kein Bus nötig – zu Fuß ca. ${h.walkOnly} Min.`:'Gerade kein Bus nach Hause.'}</small>`;
+    else{const go=Math.round((new Date(h.leave)-Date.now())/60000);
+      b=`<div class="lb-bus" style="margin-top:2px"><span class="lb-line">${esc(h.line)}</span><b>${inMin(h.dep)}</b></div><small class="lb-dir">→ ${esc(h.dir)}</small><small class="lb-dir">ab ${esc(h.from)}${h.transfers?` · ${h.transfers}× umsteigen`:''}</small>
+        <div class="lb-arr">🏠 Zu Hause <b>${hhmm(h.arr)}</b></div>
+        <div class="lb-go ${go<=2?'now':''}">${go<=0?'🏃 Jetzt los!':`🚶 Los in ${go} Min.`}${h.walk?` · ${h.walk} Min. laufen`:''}</div>`}
+    return `<div class="lb-card"><div class="lb-h">🚏 Bei dir</div>${a}</div><div class="lb-card"><div class="lb-h">⚡ Schnellster heim</div>${b}</div>
+      <button class="lb-ref" id="lbRef">${B.busy?'Lädt …':'↻ '+(B.at?'vor '+Math.max(0,Math.round((Date.now()-B.at)/60000))+' Min.':'')}</button>`;
+  }
+  function busPaint(){const e=$('#lBus',body);if(!e)return;e.innerHTML=busHTML();const r=$('#lbRef',e);if(r)r.onclick=()=>{haptic('select');B.at=Date.now();busLoad()}}
   function sleepHours(){let d=toMin(S.sleep.to)-toMin(S.sleep.from);if(d<=0)d+=1440;return d/60}
   function draw(){
     destroyMap();
     body.innerHTML=`<div id="lStat">${statusHTML()}</div>
       <div id="lAskW"></div>
+      <div class="slabel">🚌 Busse</div>
+      <div class="lbus" id="lBus">${busHTML()}</div>
       <div class="slabel">Nachtragen</div>
       <div class="sgroup lcorr" id="lAdd"></div>
       <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
@@ -3298,7 +3399,7 @@ render(body,ctx){
     const upd=(k,v)=>askCode('Schlafenszeit ändern',()=>{advance();S.sleep[k]=v;save();renderBattery();updateCC();draw()},draw);
     $('#sF',body).onchange=e=>e.target.value&&upd('from',e.target.value);
     $('#sT',body).onchange=e=>e.target.value&&upd('to',e.target.value);
-    bindGps();corrDraw();addDraw();
+    bindGps();corrDraw();addDraw();busLoad();
     if(S.loc.mode==='gps')initMap();
   }
   const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())};
@@ -3438,7 +3539,8 @@ render(body,ctx){
   if(S.loc.mode==='gps')startGeo();
   draw();
   const iv=setInterval(()=>{const s=$('#lStat',body);if(s)s.innerHTML=statusHTML()},15000);
-  ctx.cleanup.push(()=>{clearInterval(iv);destroyMap()});
+  const ivB=setInterval(()=>{if(!B.at&&geoPos)busLoad();else if(B.at&&Date.now()-B.at>60000)busLoad();else busPaint()},5000);
+  ctx.cleanup.push(()=>{clearInterval(iv);clearInterval(ivB);destroyMap()});
 }},
 
 /* ---------- Einstellungen ---------- */
