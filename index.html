@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.7","notes":["Spracheingabe: jedes Mal ein frisches Mikrofon – das zweite, dritte … Mal hört es jetzt richtig zu","Hört das Mikro 5 Sek. gar nichts, startet es automatisch neu","Logs unter Einstellungen → Logs"]};
+window.GUFY={"v":"7.8","notes":["Spracheingabe: Vorlesen ist aus – es hat auf dem iPhone das Mikro blockiert","Antworten stehen weiter als Text im Fenster","Jedes Mal ein frisches Mikrofon"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -4100,7 +4100,7 @@ function wxLoad(force){
    ========================================================= */
 S.atimers??=[];
 let audioCtx=null;
-function beep(n=3){try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();const t0=audioCtx.currentTime;
+function beep(n=3){try{if(asRun){glog('Ton','übersprungen (Mikro läuft)');return}audioCtx??=new (window.AudioContext||window.webkitAudioContext)();const t0=audioCtx.currentTime;setTimeout(()=>{try{audioCtx&&audioCtx.close();audioCtx=null;glog('Ton','Audio wieder frei')}catch(e){}},n*600+400);
   for(let i=0;i<n;i++)for(let j=0;j<2;j++){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=j?1320:880;o.connect(g);g.connect(audioCtx.destination);
     const s=t0+i*.6+j*.16;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.25,s+.01);g.gain.exponentialRampToValueAtTime(.001,s+.14);o.start(s);o.stop(s+.15)}}catch(e){}}
 function addTimer(ms,label){const t={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),end:Date.now()+ms,label:label||fmtLen(ms)};S.atimers.push(t);save();timerTick();return t}
@@ -4158,7 +4158,7 @@ function planCmd(raw){
   if(/wer bist du|wie heißt du/.test(s))return{ic:'✨',txt:'Über mich',run:()=>'Ich bin der Gufy Assistent. Halte die Home-Taste 1 Sekunde und sag mir, was ich tun soll.'};
   if(/was kannst du|hilfe|befehle/.test(s))return{ic:'💡',txt:'Hilfe',run:()=>'Timer, Wecker, Taschenlampe, Apps öffnen, Wetter, Akku, Coins, Quests, Notizen, Rechnen, Helligkeit, Dunkelmodus, Hintergrund, Powerbank, Würfeln, Witze und mehr – auch mehrere Sachen auf einmal.'};
   if(/stimme aus|nicht vorlesen|vorlesen aus|sei leise/.test(s))return{ic:'🔇',txt:'Vorlesen aus',run:()=>{S.asstVoice=false;save();return 'Ich lese nicht mehr vor.'}};
-  if(/stimme an|vorlesen an|lies vor/.test(s)&&!/notiz/.test(s))return{ic:'🔊',txt:'Vorlesen an',run:()=>{S.asstVoice=true;save();return 'Ich lese wieder vor.'}};
+  if(/stimme an|vorlesen an|lies vor/.test(s)&&!/notiz/.test(s))return{ic:'🔊',txt:'Vorlesen an',run:()=>{S.asstVoice=true;save();glog('Vorlesen','eingeschaltet');return 'Ich lese wieder vor. Achtung: Auf dem iPhone kann das Mikro danach nichts mehr hören, bis du GufyUI neu startest.'}};
   if(/neustart|starte neu|neu starten/.test(s))return{ic:'🔄',txt:'Neustart',opens:true,run:()=>{setTimeout(()=>doAction('restart'),900);return 'GufyUI startet neu …'}};
   if(/sperr|bildschirm aus|abmelden/.test(s))return{ic:'🔒',txt:'Sperren',opens:true,run:()=>{setTimeout(logout,600);return 'Gesperrt.'}};
   // Timer-Rest & Wecker
@@ -4229,7 +4229,7 @@ function planCmd(raw){
   }
   return{ic:'🤔',err:`„${raw}“ habe ich nicht verstanden.`};
 }
-function speak(t,n=0){try{if(!window.speechSynthesis||S.asstVoice===false)return;if(asRun){if(n<8)setTimeout(()=>speak(t,n+1),250);else glog('Vorlesen','übersprungen (Mikro läuft)');return}glog('Vorlesen',t.slice(0,60));const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function speak(t,n=0){try{if(!window.speechSynthesis||S.asstVoice!==true)return;if(asRun){if(n<8)setTimeout(()=>speak(t,n+1),250);else glog('Vorlesen','übersprungen (Mikro läuft)');return}glog('Vorlesen',t.slice(0,60));const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 async function runAssistant(text){
   glog('Assistent','Befehl: „'+text+'“');
   const box=$('#asLog');if(!box)return;
