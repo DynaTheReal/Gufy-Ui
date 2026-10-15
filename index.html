@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.8","notes":["AI-Quest steht immer ganz unten","AI-Quests finden jetzt draußen statt (Straße, Supermarkt, Strand …) statt zu Hause","Beta: AI-Quests ✨ – jeden Tag leichter Sport (Klimmzüge, Rad oder Joggen), eine andere Quest und eine verrückte, schwere AI-Quest von Gufy AI für 50 Coins","Einschalten: Einstellungen › Beta › AI-Quests","Assistent: Tastatur klappt beim Öffnen sofort aus","Gufy AI startet bei langen Fragen nur noch einmal"]};
+window.GUFY={"v":"10.9","notes":["🤖 AI-Hintergründe: Einstellungen › Hintergrund › AI – beschreib deinen Wunsch-Hintergrund und Gufy AI erstellt ihn nur für dich, auch als Live-Hintergrund","7 neue Hintergründe: Leuchtturm, Nebula, Neon-Stadt, Pastell-Wellen, Glas-Kugeln und Live: Schneefall & Blubberblasen","Einrichtung: Hintergründe jetzt nach Kategorien sortiert"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -180,6 +180,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .colors button{width:34px;height:34px;border-radius:50%;outline:2px solid transparent;outline-offset:3px;transition:.2s}
 .colors button.sel{outline-color:var(--text);transform:scale(1.1)}
 .walls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.s-wcats{margin:0 0 12px;padding:2px 0}.s-wcats button{padding:7px 12px;font-size:13px}
 .walls button{aspect-ratio:3/4;border-radius:14px;border:3px solid transparent;transition:.2s}
 .walls button.sel{border-color:var(--accent);transform:scale(1.04)}
 .summary{text-align:left;margin:4px 0 22px}
@@ -968,6 +969,12 @@ body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
 .wcats button{flex:none;padding:9px 14px;border-radius:999px;background:var(--panel-solid);border:1px solid var(--border);font-weight:650;font-size:14px;white-space:nowrap;transition:background .2s,color .2s}
 .wcats button small{opacity:.55;margin-left:3px;font-weight:600}
 .wcats button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.aiw-box{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(66,133,244,.12));border:1px solid rgba(124,92,255,.35);margin-bottom:16px}
+.aiw-box textarea{resize:none;min-height:76px;font:inherit}
+.aiw-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.aiw-chk{display:flex;align-items:center;gap:8px;font-weight:650}.aiw-chk input{width:20px;height:20px;accent-color:var(--accent)}
+.aiw-msg{font-size:13px;color:var(--muted);text-align:center;min-height:1em}
+.wai{position:absolute;left:6px;top:6px;font-style:normal;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6);color:#fff}
 .wprev{position:relative;overflow:hidden}
 .wprev .wclock{position:relative;z-index:2}
 .wlive{position:absolute;top:8px;right:8px;z-index:2;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.08em;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px}
@@ -1014,6 +1021,17 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .lw-gal{left:50%;top:50%;width:240%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:cover!important;animation:gal 240s linear infinite}
 @keyframes gal{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.livew *{animation-duration:0s!important}}
+.lw-snow{top:-3%;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.8);animation:lwSnow 12s linear infinite}
+@keyframes lwSnow{from{transform:translate3d(0,0,0)}50%{transform:translate3d(30px,55vh,0)}to{transform:translate3d(-10px,108vh,0)}}
+.lw-bub{bottom:-8%;border-radius:50%;border:2px solid rgba(255,255,255,.55);background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.55),rgba(255,255,255,.05) 60%);animation:lwBub 12s ease-in infinite}
+@keyframes lwBub{from{transform:translate3d(0,0,0);opacity:0}10%{opacity:1}to{transform:translate3d(20px,-115vh,0);opacity:.2}}
+.lw-ray{inset:-20%;background:repeating-linear-gradient(100deg,rgba(255,255,255,.07) 0 40px,transparent 40px 140px);animation:lwRay 9s ease-in-out infinite alternate}
+@keyframes lwRay{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
+.lw-kb{inset:-6%;background-size:cover!important;background-position:center!important;animation:lwKb 26s ease-in-out infinite alternate}
+@keyframes lwKb{from{transform:scale(1) translate3d(0,0,0)}to{transform:scale(1.12) translate3d(-2.5%,-2%,0)}}
+.lw-glimmer{inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.18),transparent 40%),radial-gradient(circle at 75% 70%,rgba(255,255,255,.12),transparent 45%);animation:lwGlim 7s ease-in-out infinite alternate;mix-blend-mode:screen}
+@keyframes lwGlim{from{opacity:.2;transform:translate3d(-3%,0,0)}to{opacity:.9;transform:translate3d(3%,-2%,0)}}
+.lw-svg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 /* 7.1: Wetter */
 .wx{padding:14px 14px 20px}
 .wx-empty{text-align:center;padding:40px 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -1741,6 +1759,51 @@ const LIVE={};   // Index → HTML der bewegten Ebenen
     dots(r,22,'',i=>`<i class="lw-ff" style="left:${(r()*95).toFixed(1)}%;top:${(30+r()*65).toFixed(1)}%;animation-duration:${(6+r()*8).toFixed(1)}s,${(1.5+r()*2.5).toFixed(1)}s;animation-delay:-${(r()*8).toFixed(1)}s,-${(r()*3).toFixed(1)}s"></i>`))}
   {const gi=WALLNAMES.indexOf('Galaxie');if(gi>=0)live('Galaxie Live','#03020b',`<i class="lw-gal" style="background:${WALLS[gi].replace(', #000','')}"></i>`)}
 })();
+/* ---------- Hintergrund-Update 4: neue Szenen ---------- */
+(()=>{
+  const R=seed=>()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
+  const svg=(inner,defs='')=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice"><defs>${defs}</defs>${inner}</svg>`;
+  const url=x=>`url('data:image/svg+xml,${encodeURIComponent(x).replace(/'/g,'%27')}') center/cover no-repeat, #000`;
+  const stops=a=>a.map(([o,c,op])=>`<stop offset="${o}" stop-color="${c}"${op!==undefined?` stop-opacity="${op}"`:''}/>`).join('');
+  const lg=(id,a,x2=0,y2=1)=>`<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops(a)}</linearGradient>`;
+  const rg=(id,a,cx=.5,cy=.5,r=.5)=>`<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}">${stops(a)}</radialGradient>`;
+  const blur=(id,d)=>`<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${d}"/></filter>`;
+  const stars=(r,n,maxY=1920,big=2)=>{let o='';for(let i=0;i<n;i++)o+=`<circle cx="${(r()*1080)|0}" cy="${(r()*maxY)|0}" r="${(.4+r()*big).toFixed(1)}" fill="#fff" opacity="${(.2+r()*.8).toFixed(2)}"/>`;return o};
+  const add=(n,cat,x)=>{WALLS.push(typeof x==='string'&&x.startsWith('<svg')?url(x):x);WALLNAMES.push(n);WCAT[n]=cat;return WALLS.length-1};
+  const live=(n,bg,layers)=>{const i=add(n,'Live',bg);LIVE[i]=layers;return i};
+
+  // Leuchtturm im Abendrot (Sylt-Gefühl)
+  {const r=R(201);add('Leuchtturm','Natur',svg(
+    `<rect width="1080" height="1920" fill="url(#s)"/>${stars(r,90,700,1.3)}<circle cx="300" cy="1060" r="150" fill="url(#sun)"/>
+     <path d="M-20 1320 Q200 1180 420 1250 T820 1210 T1120 1260 V1920 H-20Z" fill="#c9a26b"/>
+     <path d="M-20 1380 Q260 1290 520 1340 T1120 1320 V1920 H-20Z" fill="#a8824f"/>
+     <g transform="translate(760 760)"><path d="M-46 520 L-30 0 H30 L46 520Z" fill="#f4efe6"/><path d="M-41 380 H41 L44 450 H-44Z M-36 210 H36 L39 280 H-39Z M-32 60 H32 L34 120 H-34Z" fill="#d9312b"/>
+      <rect x="-40" y="-60" width="80" height="60" rx="6" fill="#1b2433"/><circle cy="-30" r="18" fill="#fff6c8" filter="url(#gl)"/><path d="M-50 -60 L0 -110 L50 -60Z" fill="#d9312b"/></g>
+     <path d="M760 730 L-200 560 L-200 900Z" fill="url(#beam)" opacity=".5"/>
+     <rect y="1500" width="1080" height="420" fill="url(#sea)"/>`,
+    lg('s',[[0,'#1b1446'],[.5,'#c2477d'],[.75,'#ff9a5a'],[1,'#ffd08a']])+rg('sun',[[0,'#fff3c4'],[.6,'#ffc06a',.9],[1,'#ff8a5a',0]])+lg('sea',[[0,'#3b3a7a'],[1,'#0c1236']])+lg('beam',[[0,'#fff6c8',.9],[1,'#fff6c8',0]],1,0)+blur('gl',10)))}
+  // Nebula
+  {const r=R(202);add('Nebula','Weltraum',svg(
+    `<rect width="1080" height="1920" fill="#03020a"/><g filter="url(#nb)"><ellipse cx="380" cy="700" rx="420" ry="260" fill="#ff2fa0" opacity=".55"/><ellipse cx="700" cy="1000" rx="460" ry="300" fill="#4f6bff" opacity=".55"/><ellipse cx="520" cy="1300" rx="360" ry="240" fill="#2cf0d0" opacity=".35"/></g>${stars(r,420,1920,1.8)}`,
+    blur('nb',110)))}
+  // Neon-Stadt
+  {const r=R(203);let b='';for(let x=-20;x<1100;){const w=80+r()*140,h=500+r()*900;b+=`<rect x="${x|0}" y="${(1650-h)|0}" width="${w|0}" height="${h|0}" fill="#0a0618"/><rect x="${x|0}" y="${(1650-h)|0}" width="${w|0}" height="4" fill="${r()<.5?'#ff2fd8':'#22e3ff'}"/>`;x+=w+6}
+   add('Neon-Stadt','Stadt & Neon',svg(`<rect width="1080" height="1920" fill="url(#s)"/><circle cx="540" cy="760" r="260" fill="url(#m)"/>${b}<rect y="1650" width="1080" height="270" fill="url(#g)"/>`,
+    lg('s',[[0,'#07021a'],[.6,'#2a0a4a'],[1,'#5a0f5e']])+rg('m',[[0,'#ff7ae0'],[1,'#ff2fd8',0]])+lg('g',[[0,'#ff2fd8',.35],[1,'#07021a']])))}
+  // Pastell-Wellen
+  {let w='';const C=['#ffd1e8','#c8b6ff','#b8e0ff','#c2f5e9','#fff1b8'];C.forEach((c,k)=>{const y=380+k*300;w+=`<path d="M-20 ${y} C 300 ${y-160}, 700 ${y+160}, 1100 ${y-40} V1920 H-20Z" fill="${c}"/>`});
+   add('Pastell-Wellen','Abstrakt',svg(`<rect width="1080" height="1920" fill="#fff6fb"/>${w}`))}
+  // Mitternachts-Glas
+  add('Glas-Kugeln','Abstrakt',svg(`<rect width="1080" height="1920" fill="#0b0d1a"/><g filter="url(#gb)"><circle cx="300" cy="600" r="260" fill="#7c5cff"/><circle cx="820" cy="1100" r="300" fill="#ff5fa2"/><circle cx="420" cy="1500" r="220" fill="#22d3ee"/></g><rect width="1080" height="1920" fill="url(#gl)"/>`,
+    blur('gb',60)+lg('gl',[[0,'#fff',.08],[1,'#fff',0]],1,1)));
+  // Live: Schneefall
+  live('Schneefall',url(svg(`<rect width="1080" height="1920" fill="url(#s)"/><path d="M-20 1500 Q300 1380 600 1460 T1120 1420 V1920 H-20Z" fill="#e8f1ff"/><path d="M-20 1620 Q400 1540 760 1600 T1120 1580 V1920 H-20Z" fill="#cfe0f7"/>`,
+    lg('s',[[0,'#0b1430'],[.7,'#24406e'],[1,'#5a7fb0']]))),
+    (()=>{const r=R(204);let o='';for(let k=0;k<26;k++)o+=`<i class="lw-snow" style="left:${(r()*100).toFixed(1)}%;width:${(3+r()*6).toFixed(1)}px;height:${(3+r()*6).toFixed(1)}px;animation-duration:${(8+r()*10).toFixed(1)}s;animation-delay:-${(r()*18).toFixed(1)}s;opacity:${(.5+r()*.5).toFixed(2)}"></i>`;return o})());
+  // Live: Blubberblasen
+  live('Blubberblasen','linear-gradient(180deg,#012a4a,#014f86 55%,#2a6f97)',
+    (()=>{const r=R(205);let o='';for(let k=0;k<18;k++){const z=(10+r()*34).toFixed(0);o+=`<i class="lw-bub" style="left:${(r()*95).toFixed(1)}%;width:${z}px;height:${z}px;animation-duration:${(9+r()*10).toFixed(1)}s;animation-delay:-${(r()*18).toFixed(1)}s"></i>`}return o})()+`<i class="lw-ray"></i>`);
+})();
 /* Kategorien der älteren Hintergründe */
 ['Mondnacht','Planet','Galaxie','Mars'].forEach(n=>WCAT[n]??='Weltraum');
 ['Bergsonne','Polarlicht','Wellen','Dünen','Nebelwald','Unterwasser','Gewitter','Eisberg','Meeresmorgen','Wolken'].forEach(n=>WCAT[n]??='Natur');
@@ -1748,9 +1811,23 @@ const LIVE={};   // Index → HTML der bewegten Ebenen
 const WCATS=['Live','Weltraum','Natur','Stadt & Neon','Abstrakt','Verläufe'];
 const wallCat=i=>i<SCENE0?'Verläufe':(WCAT[WALLNAMES[i]]||'Abstrakt');
 function liveLayer(i){return LIVE[i]?`<div class="livew">${LIVE[i]}</div>`:''}
+/* ---------- AI-Hintergründe (nur auf diesem Gerät, IndexedDB) ---------- */
+let AIW=[];
+const aiwDB=()=>new Promise((res,rej)=>{try{const q=indexedDB.open('gufyui_aiw',1);q.onupgradeneeded=()=>q.result.createObjectStore('w',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}catch(e){rej(e)}});
+async function aiwAll(){try{const db=await aiwDB();return await new Promise(r=>{const t=db.transaction('w').objectStore('w').getAll();t.onsuccess=()=>r(t.result||[]);t.onerror=()=>r([])})}catch(e){return[]}}
+async function aiwPut(o){const db=await aiwDB();await new Promise((r,j)=>{const t=db.transaction('w','readwrite');t.objectStore('w').put(o);t.oncomplete=r;t.onerror=()=>j(t.error)})}
+async function aiwDel(id){const db=await aiwDB();await new Promise(r=>{const t=db.transaction('w','readwrite');t.objectStore('w').delete(id);t.oncomplete=r;t.onerror=r})}
+const aiwUrl=w=>w.type==='svg'?'data:image/svg+xml,'+encodeURIComponent(w.data).replace(/'/g,'%27'):w.data;
+const aiwCur=()=>S.aiWall&&AIW.find(x=>x.id===S.aiWall);
+const curWallCss=()=>{const aw=aiwCur();return aw?aiwBg(aw):(WALLS[S.wall]||WALLS[0])};
+const curWallKey=()=>S.aiWall&&aiwCur()?S.aiWall:S.wall;
+function aiwBg(w){return `url('${aiwUrl(w)}') center/cover no-repeat, #000`}
+function aiwLive(w){if(!w||!w.live)return '';const u=aiwUrl(w);
+  return w.type==='svg'?`<div class="livew"><img class="lw-svg" src="${u}" alt=""></div>`:`<div class="livew"><i class="lw-kb" style="background:url('${u}')"></i><i class="lw-glimmer"></i></div>`}
+aiwAll().then(L=>{AIW=L.sort((a,b)=>b.t-a.t);if(S.aiWall){if(aiwCur())applyLook();else{S.aiWall=null;save()}}});
 function applyLive(){
   $$('#desktop>.livew,#lock>.livew').forEach(e=>e.remove());
-  const h=liveLayer(S.wall);document.body.classList.toggle('livebg',!!h);if(!h)return;
+  const aw=aiwCur(),h=aw?aiwLive(aw):liveLayer(S.wall);document.body.classList.toggle('livebg',!!h);if(!h)return;
   $$('#desktop>.wall,#lock>.wall').forEach(w=>w.insertAdjacentHTML('afterend',h));
 }
 
@@ -1760,7 +1837,7 @@ const ACCENTS=['#4f8cff','#a855f7','#ec4899','#f97316','#22c55e','#14b8a6','#eab
 function applyLook(){
   document.body.classList.toggle('dark',S.theme==='dark');
   document.documentElement.style.setProperty('--accent',S.accent);
-  $$('.wall').forEach(w=>w.style.background=WALLS[S.wall]||WALLS[0]);
+  {const css=curWallCss();$$('.wall').forEach(w=>w.style.background=css)}
   applyLive();
   $('#dim').style.opacity=(1-S.brightness/100)*0.75;
   const ini=(S.name||'?').trim().charAt(0).toUpperCase()||'?';
@@ -2174,9 +2251,9 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
   for(const [m,think,wait] of ML){
     if(wait)await new Promise(r=>setTimeout(r,wait));
     if(busy&&onRetry)onRetry(busy);
-    const gc={maxOutputTokens:800,temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
+    const gc={maxOutputTokens:opt.maxTok||800,temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
     const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};
-    const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);   // hängt? nach 20 Sek. abbrechen
+    const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),opt.timeout||20000);   // hängt? nach 20 Sek. abbrechen
       try{return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal})}
       finally{clearTimeout(to)}};
     let r;
@@ -2192,8 +2269,8 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
     const c=d.candidates&&d.candidates[0]||{};
     let t=(c.content&&c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
     glog('Gemini',`${m} ok (${t.length} Zeichen, ${c.finishReason||'?'})`);
-    t=t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ').replace(/[*_#]{1,3}/g,'');
-    if(c.finishReason==='MAX_TOKENS')t+=' …';
+    if(!opt.raw){t=t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ').replace(/[*_#]{1,3}/g,'');
+    if(c.finishReason==='MAX_TOKENS')t+=' …'}
     if(!t)return 'Gufy AI hat keine Antwort gegeben.';
     const ms=Date.now()-t0;S.gemAvg=Math.round(S.gemAvg?S.gemAvg*.6+ms*.4:ms);   // für den Fortschrittsbalken
     if(m!==(S.gemModel&&S.gemModel.day===dayKey(new Date())?S.gemModel.m:'gemini-flash-latest')){S.gemModel={day:dayKey(new Date()),m};glog('Gemini','Heute weiter mit '+m)}
@@ -2203,6 +2280,48 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
   }
   if(busy)throw new Error(last==='Tageslimit'?'Dein kostenloses Gufy AI-Limit für heute ist aufgebraucht. Morgen geht es wieder.':'Gufy AI ist gerade überlastet. Versuch es in ein paar Minuten nochmal.');
   throw new Error('Gufy AI nicht erreichbar ('+last+')');
+}
+/* Hintergrund mit Gufy AI: zuerst Bild-KI, sonst gezeichnet (SVG) */
+function aiSvgClean(t){let x=(t.match(/<svg[\s\S]*<\/svg>/i)||[''])[0];if(!x)return '';
+  x=x.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi,'').replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi,'').replace(/(href\s*=\s*["'])(?!#|data:)[^"']*/gi,'$1#');
+  if(!/xmlns=/.test(x))x=x.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+  return x.length>120000?'':x}
+function aiJpeg(b64,mime){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{const W=1080,H=1920,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const k=Math.max(W/im.width,H/im.height),w=im.width*k,h=im.height*k;g.drawImage(im,(W-w)/2,(H-h)/2,w,h);res(c.toDataURL('image/jpeg',.86))};im.onerror=()=>rej(new Error('Bild kaputt'));im.src=`data:${mime||'image/png'};base64,${b64}`})}
+async function aiWallImage(prompt,onStep){
+  const key=gemGet();
+  for(const m of['gemini-2.5-flash-image','gemini-2.5-flash-image-preview','gemini-2.0-flash-preview-image-generation']){
+    onStep&&onStep('Bild-KI ('+m.replace('gemini-','')+') …');
+    const body={contents:[{role:'user',parts:[{text:`Erzeuge ein wunderschönes Handy-Hintergrundbild im Hochformat (9:16), randlos, ohne Text, ohne Buchstaben, ohne Logos, ohne Rahmen. Motiv: ${prompt}`}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}};
+    if(/2\.5/.test(m))body.generationConfig.imageConfig={aspectRatio:'9:16'};
+    let r,d;
+    try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),60000);
+      r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal});clearTimeout(to);
+      d=await r.json().catch(()=>({}))}catch(e){glog('AI-Hintergrund',m+': '+e.message);continue}
+    if(r.status===400&&body.generationConfig.imageConfig){/* ältere API ohne imageConfig */}
+    if(!r.ok){glog('AI-Hintergrund',m+': '+(d.error&&d.error.message||r.status));if(r.status===400&&/api key/i.test(d.error&&d.error.message||''))throw new Error('Der Schlüssel funktioniert nicht.');continue}
+    const part=((d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts)||[]).find(p=>p.inlineData||p.inline_data);
+    if(!part){glog('AI-Hintergrund',m+': kein Bild in der Antwort');continue}
+    const id=part.inlineData||part.inline_data;glog('AI-Hintergrund',m+' ok');
+    return await aiJpeg(id.data,id.mimeType||id.mime_type);
+  }
+  return null;
+}
+async function aiWallSvg(prompt,live,onStep){
+  onStep&&onStep('Gufy AI zeichnet …');
+  const sys=`Du bist ein Grafikdesigner. Antworte NUR mit einem einzigen, gültigen SVG-Code (kein Text davor oder danach, kein Markdown). Format: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">. Es ist ein schöner, detailreicher Handy-Hintergrund: Verläufe, Formen, Tiefe, harmonische Farben, KEIN Text, keine Buchstaben, keine Bilder von außen, kein <script>. Halte den Code unter 25000 Zeichen.${live?' LIVE: Füge sanfte, endlos wiederholende Animationen mit <animate> oder <animateTransform> (repeatCount="indefinite", langsam, 4–20 s) hinzu, z. B. schwebende Lichter, ziehende Wolken, funkelnde Sterne, Wellen.':' Keine Animationen.'}`;
+  const t=await gemAsk(`Hintergrund-Motiv: ${prompt}`,null,{sys,temp:.9,raw:true,maxTok:12000,timeout:90000});
+  const x=aiSvgClean(t);if(!x)throw new Error('Gufy AI hat kein gültiges Bild gezeichnet – versuch es nochmal.');
+  return x;
+}
+async function aiWallMake(prompt,live,mode,onStep){
+  if(!gemGet())throw new Error('Du brauchst zuerst Gufy AI – sag dem Assistenten „API-Key“.');
+  let w=null;
+  if(mode!=='svg'){const img=await aiWallImage(prompt,onStep);if(img)w={type:'img',data:img}}
+  if(!w){if(mode==='img')onStep&&onStep('Bild-KI geht mit deinem Schlüssel nicht – Gufy AI zeichnet stattdessen …');w={type:'svg',data:await aiWallSvg(prompt,live,onStep)}}
+  w.id='aw'+Date.now().toString(36);w.prompt=prompt;w.live=!!live;w.t=Date.now();
+  await aiwPut(w);AIW.unshift(w);glog('AI-Hintergrund',`${w.type} gespeichert (${Math.round(w.data.length/1024)} KB)`);
+  return w;
 }
 function gemDialog(){
   let d=$('#gemDlg');if(d)d.remove();
@@ -2259,7 +2378,8 @@ function renderSetup(){
   }else if(step===4){
     html=`<div class="s-ico">🖼️</div><h1>Hintergrundbild</h1>
       <p class="s-sub">Such dir einen Look für Home- und Sperrbildschirm aus.</p>
-      <div class="walls">${WALLS.map((w,i)=>[w,i]).sort((a,b)=>(b[1]>=SCENE0)-(a[1]>=SCENE0)).map(([w,i])=>`<button data-wall="${i}" class="${i===tmp.wall?'sel':''}" style="background:${w}"></button>`).join('')}</div>`;
+      <div class="wcats s-wcats">${WCATS.map(k=>`<button data-swc="${k}" class="${k===(tmp.wcat||wallCat(tmp.wall))?'on':''}">${k}</button>`).join('')}</div>
+      <div class="walls">${WALLS.map((w,i)=>[w,i]).filter(([w,i])=>wallCat(i)===(tmp.wcat||wallCat(tmp.wall))).map(([w,i])=>`<button data-wall="${i}" class="${i===tmp.wall?'sel':''}" style="background:${w}"></button>`).join('')}</div>`;
   }else if(step===5){
     html=`<div class="s-ico">📍</div><h1>Wo bist du gerade?</h1>
       <p class="s-sub">Unterwegs verbraucht GufyUI Akku – 100 % halten 8 Stunden. Zu Hause lädt er in ca. 8 Stunden wieder voll.</p>
@@ -2303,6 +2423,7 @@ function renderSetup(){
   if(step===6){gemFormBind(c);$('#sGemLater').onclick=()=>{tmp.gem='';step++;renderSetup()}}
   $$('[data-theme]',c).forEach(b=>b.onclick=()=>{tmp.theme=b.dataset.theme;S.theme=tmp.theme;applyLook();renderSetup()});
   $$('[data-acc]',c).forEach(b=>b.onclick=()=>{tmp.accent=b.dataset.acc;S.accent=tmp.accent;applyLook();renderSetup()});
+  $$('[data-swc]',c).forEach(b=>b.onclick=()=>{tmp.wcat=b.dataset.swc;renderSetup()});
   $$('[data-wall]',c).forEach(b=>b.onclick=()=>{tmp.wall=+b.dataset.wall;$$('[data-wall]',c).forEach(x=>x.classList.toggle('sel',x===b))});
   $$('[data-home]',c).forEach(b=>b.onclick=()=>{tmp.isHome=b.dataset.home==='1';renderSetup()});
   $$('[data-next]',c).forEach(b=>b.onclick=nextStep);
@@ -2379,7 +2500,7 @@ function detectPhone(){
 /* Farbe für den Bereich neben der Dynamic Island / hinter der Systemleiste:
    iOS & Android färben ihn mit theme-color – deshalb immer passend zum Bildschirm statt Schwarz */
 function wallTopColor(){
-  const w=WALLS[S.wall]||'';let src=w;
+  const w=curWallCss()||'';let src=w;
   try{const m=w.match(/data:image\/svg\+xml,([^')]+)/);if(m)src=decodeURIComponent(m[1])}catch(e){}
   const c=src.match(/#[0-9a-fA-F]{6}\b/);return c?c[0]:'#1c1430';
 }
@@ -2388,8 +2509,8 @@ function wallTopColor(){
 const bottomCache={};
 function wallBottomColor(i){
   if(bottomCache[i])return bottomCache[i];
-  const w=WALLS[i]||'';
-  const m=w.match(/url\('(data:image\/svg\+xml,[^']+)'\)/);
+  const w=typeof i==='string'?curWallCss():(WALLS[i]||'');
+  const m=w.match(/url\('(data:image\/[^']+)'\)/);
   if(m){
     bottomCache[i]='#000';
     const img=new Image();
@@ -2406,10 +2527,10 @@ function syncEdge(){
   // Handy: Hintergrundbild auf die Seitenfläche legen (reicht bis ganz unten, auch unter den Streifen)
   const wallOnPage=B.contains('phone')&&(current==='lock'||(current==='desktop'&&!B.contains('appfull')));
   H.classList.toggle('wallbg',B.contains('phone'));
-  H.style.background=wallOnPage?(WALLS[S.wall]||WALLS[0]):'';
+  H.style.background=wallOnPage?curWallCss():'';
   if(wallOnPage){const full=Math.max(innerHeight,(innerWidth<innerHeight?screen.height:screen.width))+40;
     H.style.backgroundSize=`100% ${full}px`;H.style.backgroundPosition='center top';H.style.backgroundRepeat='no-repeat';
-    const bc=wallBottomColor(S.wall),sc=current==='lock'?darken(bc,.45):bc;H.style.backgroundColor=sc;H.style.setProperty('--strip',sc)}
+    const bc=wallBottomColor(curWallKey()),sc=current==='lock'?darken(bc,.45):bc;H.style.backgroundColor=sc;H.style.setProperty('--strip',sc)}
   if(current==='desktop'&&B.contains('appfull')){c=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0a0a0d';H.style.backgroundColor=c}
   else if(current==='desktop'&&B.contains('inapp'))c=wallTopColor();
   else if(current==='desktop'||current==='lock')c=wallTopColor();
@@ -3217,7 +3338,7 @@ async function aiQuestFill(){
   const old=(S.aiQOld||[]).slice(-12).join(' | ');
   const sys=`Du erfindest für GufyUI genau EINE witzige, total zufällige und SCHWERE Tagesquest auf Deutsch für einen Jugendlichen (er macht Quests oft mit seinem besten Freund). Stil: absurd, peinlich-lustig, kreativ, sehr konkret – z. B. „Sing auf der Straße so laut du kannst ‚Alle meine Entchen‘ im Würstchen-Style und wünsch danach deinem Würstchen-Freund einen guten Donut-Geburtstag“. WICHTIG: Die Quest muss DRAUSSEN in der Öffentlichkeit stattfinden – z. B. auf der Straße, im Supermarkt, beim Bäcker, am Strand, im Bus, auf dem Spielplatz oder in der Fußgängerzone, wo andere Leute es sehen können. KEINE Quests zu Hause oder nur mit den Eltern – zu Hause ist es zu leicht. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, nichts mit Fremden anfassen, heute machbar. Höchstens 2 Sätze. Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>"}`;
   try{
-    const t=await gemAsk(`Erfinde die AI-Quest für heute (${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}). Nicht wiederholen: ${old||'–'}`,null,{sys,temp:1.1});
+    const t=await gemAsk(`Erfinde die AI-Quest für heute (${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}). Nicht wiederholen: ${old||'–'}`,null,{sys,temp:1.1,raw:true});
     let o=null;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
     const txt=(o&&o.quest||t).replace(/^["„]|["“]$/g,'').trim().slice(0,260);
     if(S.daily.list.includes(q)&&!q.done){q.title=txt;q.i=(o&&o.emoji||'✨').slice(0,4);q.pending=false;S.aiQOld=(S.aiQOld||[]).concat(txt).slice(-20);glog('AI-Quest',txt)}
@@ -3777,14 +3898,38 @@ render(body,ctx){
     }
     if(tab==='wall'){
       const tile=i=>`<button class="wtile ${i===S.wall?'sel':''}" data-w="${i}"><div class="wprev" style="background:${WALLS[i]}">${liveLayer(i)}<span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span>${LIVE[i]?'<em class="wlive">LIVE</em>':''}</div><small>${WALLNAMES[i]}</small></button>`;
-      const CI={'Live':'✨','Weltraum':'🪐','Natur':'🏔️','Stadt & Neon':'🌃','Abstrakt':'🔷','Verläufe':'🎨'};
-      let wc=wallCat(S.wall);
+      const CI={'AI':'🤖','Live':'✨','Weltraum':'🪐','Natur':'🏔️','Stadt & Neon':'🌃','Abstrakt':'🔷','Verläufe':'🎨'};
+      let wc=S.aiWall?'AI':wallCat(S.wall),aiLive=false,aiMode='auto',aiBusy=false,aiMsg='';
+      const atile=w=>`<button class="wtile ${S.aiWall===w.id?'sel':''}" data-aw="${w.id}"><div class="wprev" style="background:${aiwBg(w)}">${w.live?aiwLive(w):''}<span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span>${w.live?'<em class="wlive">LIVE</em>':''}<em class="wai">✨ AI</em></div><small>${esc(w.prompt.slice(0,22))}</small></button>`;
       const drawW=()=>{
         const list=WALLS.map((_,i)=>i).filter(i=>wallCat(i)===wc);
-        c.innerHTML=`<div class="wcats">${WCATS.map(k=>`<button data-wc="${k}" class="${k===wc?'on':''}">${CI[k]} ${k} <small>${WALLS.filter((_,i)=>wallCat(i)===k).length}</small></button>`).join('')}</div>
-          <div class="wgrid">${list.map(tile).join('')}</div>`;
-        $$('[data-wc]',c).forEach(b=>b.onclick=()=>{if(wc===b.dataset.wc)return;wc=b.dataset.wc;haptic('select');drawW();fadeIn($('.wgrid',c))});
-        $$('[data-w]',c).forEach(b=>b.onclick=()=>{S.wall=+b.dataset.w;save();applyLook();$$('[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))});
+        const aiHTML=`<div class="aiw-box"><b>🤖 Eigenen Hintergrund erstellen</b><small class="muted">Beschreib, was du sehen willst – Gufy AI erstellt ihn nur für dich.</small>
+            <textarea class="input" id="awP" rows="3" placeholder="z. B. Sylt bei Sonnenuntergang mit Leuchtturm, Neon-Stil" ${aiBusy?'disabled':''}></textarea>
+            <div class="aiw-row"><label class="aiw-chk"><input type="checkbox" id="awL" ${aiLive?'checked':''}> ✨ Live (bewegt)</label>
+              <select class="input" id="awM" style="width:auto;padding:8px 10px"><option value="auto" ${aiMode==='auto'?'selected':''}>Automatisch</option><option value="img" ${aiMode==='img'?'selected':''}>Foto-Stil (Bild-KI)</option><option value="svg" ${aiMode==='svg'?'selected':''}>Gezeichnet</option></select></div>
+            <button class="btn primary" id="awGo" style="width:100%" ${aiBusy?'disabled':''}>${aiBusy?'⏳ Wird erstellt …':'✨ Hintergrund generieren'}</button>
+            <div class="aiw-msg" id="awMsg">${esc(aiMsg)}</div></div>
+          ${AIW.length?`<div class="slabel">Deine AI-Hintergründe</div><div class="wgrid">${AIW.map(atile).join('')}</div>`:''}`;
+        c.innerHTML=`<div class="wcats">${['AI',...WCATS].map(k=>`<button data-wc="${k}" class="${k===wc?'on':''}">${CI[k]} ${k} <small>${k==='AI'?AIW.length:WALLS.filter((_,i)=>wallCat(i)===k).length}</small></button>`).join('')}</div>
+          ${wc==='AI'?aiHTML:`<div class="wgrid">${list.map(tile).join('')}</div>`}`;
+        if(wc==='AI'){
+          const P=$('#awP',c);if(P)P.value=drawW.p||'';if(P)P.oninput=()=>drawW.p=P.value;
+          $('#awL',c).onchange=e=>aiLive=e.target.checked;$('#awM',c).onchange=e=>aiMode=e.target.value;
+          $('#awGo',c).onclick=async()=>{const pr=(P.value||'').trim();if(!pr){aiMsg='Schreib erst, was du sehen willst.';drawW();return}
+            if(!gemGet()){gemDialog();return}
+            aiBusy=true;aiMsg='Gufy AI legt los …';drawW();const t0=Date.now();
+            const step=t=>{aiMsg=t;const m=$('#awMsg',c);if(m)m.textContent=t};
+            try{const w=await aiWallMake(pr,aiLive,aiMode,step);S.aiWall=w.id;save();applyLook();drawW.p='';haptic('success');
+              aiMsg=`Fertig in ${Math.round((Date.now()-t0)/1000)} Sek. – ${w.type==='img'?'mit Bild-KI':'von Gufy AI gezeichnet'}${w.live?' · Live':''} ✨`;
+              notify('🤖','AI-Hintergrund fertig',pr.slice(0,60),'#7c5cff')}
+            catch(e){aiMsg='⚠️ '+e.message;haptic('error')}
+            aiBusy=false;if(tab==='wall'&&c.isConnected)drawW()};
+          $$('[data-aw]',c).forEach(b=>{b.onclick=()=>{S.aiWall=b.dataset.aw;save();applyLook();haptic('select');$$('[data-aw],[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))};
+            let lt=0;b.addEventListener('pointerdown',()=>{lt=setTimeout(()=>{askCode('AI-Hintergrund löschen',async()=>{await aiwDel(b.dataset.aw);AIW=AIW.filter(x=>x.id!==b.dataset.aw);if(S.aiWall===b.dataset.aw){S.aiWall=null;save();applyLook()}drawW()})},700)});
+            ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(lt)))});
+        }
+        $$('[data-wc]',c).forEach(b=>b.onclick=()=>{if(wc===b.dataset.wc)return;wc=b.dataset.wc;haptic('select');drawW();const g=$('.wgrid',c)||$('.aiw-box',c);if(g)fadeIn(g)});
+        $$('[data-w]',c).forEach(b=>b.onclick=()=>{S.wall=+b.dataset.w;S.aiWall=null;save();applyLook();$$('[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))});
         const on=$('.wcats .on',c);if(on)on.scrollIntoView({inline:'center',block:'nearest'});
       };
       drawW();
@@ -5125,7 +5270,7 @@ function planCmd(raw){
   if(/würfel/.test(s))return{ic:'🎲',txt:'Würfeln',run:()=>`Gewürfelt: ${1+Math.floor(Math.random()*6)} 🎲`};
   if(/münze|kopf oder zahl/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
   if(/hintergrund/.test(s)){const i=WALLNAMES.findIndex(n=>s.includes(n.toLowerCase()));const k=i>=0?i:Math.floor(Math.random()*WALLS.length);
-    return{ic:'🖼️',txt:'Hintergrund: '+WALLNAMES[k],run:()=>{S.wall=k;applyLook();save();return `Hintergrund: ${WALLNAMES[k]}.`}}}
+    return{ic:'🖼️',txt:'Hintergrund: '+WALLNAMES[k],run:()=>{S.wall=k;S.aiWall=null;applyLook();save();return `Hintergrund: ${WALLNAMES[k]}.`}}}
   if(/home|startbildschirm|schließ|schliess|zurück/.test(s))return{ic:'🏠',txt:'Home',run:()=>{goHome();return 'Zurück zum Home-Bildschirm.'}};
   if((m=s.match(/(?:was ist|rechne|wie viel ist|wieviel ist)\s+(.+)/))){
     const ex=m[1].replace(/plus/g,'+').replace(/minus/g,'-').replace(/mal|x|×/g,'*').replace(/geteilt durch|durch|÷/g,'/').replace(/,/g,'.').replace(/\b([a-zäöüß]+)\b/g,w=>{const n=wordNum(w);return n===null?'':n});
