@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.1","notes":["Assistent: Wenn die Tastatur aufgeht, rutscht das Fenster nach oben – beim direkten Zuhören bleibt es unten","Audiospur zeigt, ob das Mikro deine Stimme hört","Ab dem 2. Mal pro App-Start: Diktieren über die Tastatur"]};
+window.GUFY={"v":"8.2","notes":["Assistent: Fenster immer oben, Eingabe über die Tastatur (Tippen oder 🎤 der Tastatur)","Neu: Erinnerungen mit Text, Tage bis Weihnachten, Umrechnen, Entscheidungen, Schere-Stein-Papier, Orakel, Guten Morgen/Gute Nacht, Statistik, Powerbank kaufen u. v. m.","Verlauf bleibt im Fenster sichtbar"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1057,7 +1057,8 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .as-st.listen{color:#c4b5fd;font-weight:650}.as-st.warn{color:#ffb35c}
 .as-orb.listen{animation:orbL .5s ease-in-out infinite alternate;box-shadow:0 0 40px 6px rgba(167,139,250,.9)}
 @keyframes orbL{from{transform:scale(.9)}to{transform:scale(1.25)}}
-#asMic{background:rgba(167,139,250,.25)}
+.as-x{width:34px;height:34px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:15px}
+.as-log{max-height:46vh}
 .as-log{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:40px}
 .as-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .as-chips button{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:12.5px}
@@ -2234,7 +2235,7 @@ $('#homebtn').onclick=goHome;
   hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
     if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},1000)}});
   hb.addEventListener('pointerup',e=>{stop();
-    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();if(asKbd){asKbd=false;const i=$('#asTxt');if(i){asKbdMsg=true;asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');i.focus()}}return}
+    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();asFocus();return}
     if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
   hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
@@ -4121,7 +4122,7 @@ const fmtLeft=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m
 function timerTick(){
   const now=Date.now(),done=S.atimers.filter(t=>t.end<=now);
   if(done.length){S.atimers=S.atimers.filter(t=>t.end>now);save();
-    done.forEach(t=>{notify('⏰','Timer abgelaufen',`${t.label} sind um!`,'#ff9f0a');haptic('error');beep()})}
+    done.forEach(t=>{const isDur=/^(\d+ (Std\.|Min\.|Sek\.) ?)+$/.test(t.label);notify(isDur?'⏰':'🔔',isDur?'Timer abgelaufen':/^Wecker/.test(t.label)?'⏰ '+t.label:'Erinnerung',isDur?`${t.label} sind um!`:t.label,'#ff9f0a');haptic('error');beep()})}
   let p=$('#tpill');
   if(!S.atimers.length){if(p)p.remove();return}
   if(!p){p=document.createElement('button');p.id='tpill';document.body.append(p);
@@ -4159,13 +4160,13 @@ function findApp(s){
 }
 const JOKES=['Warum können Geister so schlecht lügen? Weil man durch sie hindurchsieht. 👻','Was macht ein Pirat am Computer? Er drückt die Enter-Taste. 🏴‍☠️','Treffen sich zwei Magnete. Sagt der eine: „Was soll ich heute bloß anziehen?“ 🧲','Was ist grün und klopft an die Tür? Ein Klopfsalat. 🥬','Wie nennt man einen Bumerang, der nicht zurückkommt? Stock. 🪵'];
 /* ein Satz → mehrere Befehle */
-function splitCmd(t){t=t.replace(/zwischen\s+(\S+)\s+und\s+(\S+)/gi,'zwischen $1 bis $2');return t.replace(/[.!?]+/g,',').split(/\s*(?:,|;|\bund\s+dann\b|\bund\s+danach\b|\bdanach\b|\banschließend\b|\bdann\b|\bund\b|\bsowie\b|\bplus\b)\s*/i).map(x=>x.trim()).filter(x=>x.length>1)}
+function splitCmd(t){t=t.replace(/zwischen\s+(\S+)\s+und\s+(\S+)/gi,'zwischen $1 bis $2');return t.replace(/(\d)\.(?=\s*\d)/g,'$1§').replace(/[.!?]+(?=\s|$)/g,',').replace(/§/g,'.').split(/\s*(?:,|;|\bund\s+dann\b|\bund\s+danach\b|\bdanach\b|\banschließend\b|\bdann\b|\bund\b|\bsowie\b|\bplus\b)\s*/i).map(x=>x.trim()).filter(x=>x.length>1)}
 function planCmd(raw){
   const s=raw.toLowerCase().replace(/[„“"]/g,'').trim();
   const on=/\b(an|ein|einschalten|anschalten|anmachen|aktivier\w*)\b/.test(s),off=/\b(aus|ausschalten|ausmachen|deaktivier\w*|stopp\w*|beende\w*)\b/.test(s);
   let m;
   // Smalltalk & Hilfe
-  if(/^(hallo|hi|hey|servus|moin|guten (morgen|tag|abend))\b/.test(s))return{ic:'👋',txt:'Hallo',run:()=>`Hallo ${S.name||''}! Was kann ich für dich tun?`};
+  if(/^(hallo|hi|hey|servus|moin|guten (tag|abend))\b/.test(s))return{ic:'👋',txt:'Hallo',run:()=>`Hallo ${S.name||''}! Was kann ich für dich tun?`};
   if(/^danke|dankeschön/.test(s))return{ic:'😊',txt:'Bitte',run:()=>'Gern geschehen!'};
   if(/wer bist du|wie heißt du/.test(s))return{ic:'✨',txt:'Über mich',run:()=>'Ich bin der Gufy Assistent. Halte die Home-Taste 1 Sekunde und sag mir, was ich tun soll.'};
   if(/was kannst du|hilfe|befehle/.test(s))return{ic:'💡',txt:'Hilfe',run:()=>'Timer, Wecker, Taschenlampe, Apps öffnen, Wetter, Akku, Coins, Quests, Notizen, Rechnen, Helligkeit, Dunkelmodus, Hintergrund, Powerbank, Würfeln, Witze und mehr – auch mehrere Sachen auf einmal.'};
@@ -4181,6 +4182,8 @@ function planCmd(raw){
     return{ic:'⏰',txt:lbl,run:()=>{addTimer(t-Date.now(),lbl);return `Wecker auf ${pad(h)}:${pad(mi)} Uhr gestellt (in ${fmtLen(Math.round((t-Date.now())/60000)*60000)}).`}};
   }
   if(/\b(warte|warten|pause)\b/.test(s)){const d=parseDur(s)||3000;return{ic:'⏳',txt:`${fmtLen(d)} warten`,wait:d}}
+  if((m=raw.match(/erinner\w*\s+mich\s+(?:in|nach)\s+(.+?)\s+(?:an|daran,?(?:\s+dass)?)\s+(.+)/i))){const d=parseDur(m[1]);
+    if(d){const what=m[2].replace(/[.!?]+$/,'');return{ic:'🔔',txt:`Erinnerung in ${fmtLen(d)}: ${what}`,run:()=>{addTimer(d,what);return `Ich erinnere dich in ${fmtLen(d)} an: ${what}.`}}}}
   if(/timer|wecke mich|erinnere mich|countdown/.test(s)||(/\bstell\w*\b/.test(s)&&parseDur(s))){
     if(off&&!parseDur(s))return{ic:'⏱️',txt:'Timer gestoppt',run:()=>{const n=S.atimers.length;S.atimers=[];save();timerTick();return n?'Alle Timer gestoppt.':'Es läuft kein Timer.'}};
     const d=parseDur(s);if(!d)return{ic:'⏱️',err:'Wie lange soll der Timer laufen?'};
@@ -4206,7 +4209,7 @@ function planCmd(raw){
   if(/wie spät|uhrzeit|wie viel uhr/.test(s))return{ic:'🕐',txt:'Uhrzeit',run:()=>`Es ist ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`};
   if(/welcher tag|datum|welches datum|heute ist/.test(s))return{ic:'📅',txt:'Datum',run:()=>`Heute ist ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}.`};
   if(/akku|batterie/.test(s))return{ic:'🔋',txt:'Akku',run:()=>`Akku: ${dispPct()} %. ${remainText().replace(/\.+$/,'')}.`};
-  if(/coins|münzen|geld/.test(s)&&!/floni/.test(s))return{ic:'🪙',txt:'Coins',run:()=>`Du hast ${fmtNum(S.coins)} Coins.`};
+  if(/coins|münzen|geld/.test(s)&&!/floni|brauche|fehlen|kauf/.test(s))return{ic:'🪙',txt:'Coins',run:()=>`Du hast ${fmtNum(S.coins)} Coins.`};
   if(/floni/.test(s))return{ic:'🟣',txt:'Floni Coins',run:()=>`Du hast ${fmtNum((S.vsf||{}).floni||0)} Floni Coins.`};
   if(/\bleben\b|herzen/.test(s)){const h=(S.vsf||{half:6}).half;return{ic:'❤️',txt:'VSF Leben',run:()=>`VSF hat ${h/2} von 3 Herzen.`}}
   if(/quest/.test(s)&&!/öffne|zeig|starte|gib mir|vorschlag|soll ich/.test(s))return{ic:'⚔️',txt:'Quests',run:()=>{ensureQuests();const L=S.daily.list;const o=L.filter(q=>!q.done);return o.length?`Noch ${o.length} offen: ${o.map(q=>q.title).join(' · ')}`:'Alle Quests für heute geschafft! 🎉'}};
@@ -4217,13 +4220,54 @@ function planCmd(raw){
     return{ic:APPS[g].icon,txt:APPS[g].name,opens:true,run:()=>{openApp(g);return `Los geht's mit ${APPS[g].name}!`}}}
   if(/gib mir eine quest|was soll ich (machen|tun)|welche quest soll|quest vorschlag/.test(s))return{ic:'⚔️',txt:'Quest-Vorschlag',run:()=>{ensureQuests();const o=S.daily.list.filter(q=>!q.done);if(!o.length)return 'Alle Quests sind geschafft – stark! 🎉';const q=o[Math.floor(Math.random()*o.length)];return `${q.i} ${q.title} – ${q.coins} Coins.`}};
   if(/bin (zu hause|daheim|zuhause)|bin unterwegs|bin draußen/.test(s)){const h=/hause|daheim|zuhause/.test(s);return{ic:h?'🏠':'🚶',txt:h?'Zu Hause':'Unterwegs',opens:true,run:()=>{setTimeout(()=>askHome(h),300);return 'Gib den Code ein, um den Status zu ändern.'}}}
-  if(/powerbank/.test(s)){const k=['travel','pb60','pb30'].find(x=>(S.inv[x]||0)>0);if(!k)return{ic:'🔋',err:'Du hast keine Powerbank – im Gufy Store gibt es welche.'};
+  if(/powerbank/.test(s)&&!/kauf/.test(s)){const k=['travel','pb60','pb30'].find(x=>(S.inv[x]||0)>0);if(!k)return{ic:'🔋',err:'Du hast keine Powerbank – im Gufy Store gibt es welche.'};
     return{ic:ITEMS[k].icon,txt:ITEMS[k].name,run:()=>{const b=S.battery.level;useItem(k);return S.battery.level>b?`Powerbank benutzt – jetzt ${dispPct()} %.`:'Der Akku ist schon voll.'}}}
   if(/letzte notiz|meine notiz|notizen vor/.test(s))return{ic:'📝',txt:'Letzte Notiz',run:()=>{const n=[...(S.notes||[])].sort((a,b)=>b.t-a.t)[0];return n&&n.text.trim()?'Letzte Notiz: '+n.text:'Du hast noch keine Notizen.'}};
   if(/mitternacht|neue quests|wann kommen/.test(s))return{ic:'🌙',txt:'Bis Mitternacht',run:()=>{const n=new Date(),m2=new Date(n);m2.setHours(24,0,0,0);return `Neue Quests in ${fmtLen(Math.round((m2-n)/60000)*60000)}.`}};
   if(/schulden/.test(s)&&!/öffne|zeig|starte/.test(s))return{ic:'💸',txt:'Schulden',run:()=>{const o=(S.debts||[]).filter(d=>d.status==='open');return o.length?`${o.length} offene Schuld${o.length>1?'en':''}: ${o.map(d=>d.title).join(' · ')}`:'Du hast keine offenen Schulden.'}};
   if((m=s.match(/zufallszahl(?:\s+(?:zwischen|von)\s+(\S+)\s+bis\s+(\S+))?/))){const lo=m[1]?wordNum(m[1])??1:1,hi=m[2]?wordNum(m[2])??100:100;return{ic:'🔢',txt:'Zufallszahl',run:()=>`Zufallszahl: ${Math.floor(lo+Math.random()*(hi-lo+1))}`}}
   if(/stoppuhr/.test(s)){if(!appAvail('clock'))return{ic:'⏱️',err:'Die Uhr-App ist nicht installiert.'};return{ic:'⏱️',txt:'Stoppuhr',opens:true,run:()=>{openApp('clock');setTimeout(()=>{const b=$('[data-c="sw"]');if(b)b.click()},300);return 'Stoppuhr geöffnet.'}}}
+  // ---- 8.2: neue Befehle ----
+  if(/^guten morgen/.test(s))return{ic:'🌅',txt:'Guten Morgen',async:true,run:async()=>{ensureQuests();const o=S.daily.list.filter(q=>!q.done).length;let w='';
+    try{await wxLoad(false);if(S.wx){const c=S.wx.d.current;w=` Draußen: ${Math.round(c.temperature_2m)}°, ${wxCode(c.weather_code,c.is_day).t}, ${rainSummary(S.wx.d).text}.`}}catch(e){}
+    return `Guten Morgen ${S.name||''}! Akku ${dispPct()} %, ${fmtNum(S.coins)} Coins, ${o} Quests offen.${w}`}};
+  if(/gute nacht|ich geh schlafen|schlafen gehen/.test(s))return{ic:'🌙',txt:'Gute Nacht',run:()=>{S.dnd=true;S.brightness=40;applyLook();save();updateCC();return `Gute Nacht ${S.name||''}! Nicht stören ist an, Helligkeit runter. 😴`}};
+  if(/wann (muss|soll) ich (ins bett|schlafen)|schlafenszeit|wann aufstehen/.test(s))return{ic:'😴',txt:'Schlafenszeit',run:()=>`Schlafenszeit: ${S.sleep.from} bis ${S.sleep.to} Uhr.`};
+  if(/was habe ich heute|heute geschafft|meine statistik|statistik/.test(s))return{ic:'📊',txt:'Statistik',run:()=>{const t=dayKey(),h=S.questDone.filter(e=>dayKey(new Date(e.t))===t),all=S.questDone.reduce((a,e)=>a+e.coins,0);
+    return `Heute: ${h.length} Quest${h.length===1?'':'s'} geschafft (+${h.reduce((a,e)=>a+e.coins,0)} Coins). Insgesamt: ${S.questDone.length} Quests, ${fmtNum(all)} Coins verdient.`}};
+  if((m=s.match(/wie viele tage (?:noch )?bis (?:zu |zum |zur )?(.+)/))){const q=m[1].replace(/[?!]/g,'').replace(/\.$/,'').trim(),now=new Date(),y=now.getFullYear();let d=null,name=q;
+    const F={weihnachten:[11,24],heiligabend:[11,24],silvester:[11,31],neujahr:[0,1],halloween:[9,31],valentinstag:[1,14],nikolaus:[11,6]};
+    for(const k in F)if(q.includes(k)){d=new Date(y,F[k][0],F[k][1]);name=k[0].toUpperCase()+k.slice(1)}
+    const dm=q.match(/(\d{1,2})\.\s*(\d{1,2})\.?/);if(!d&&dm)d=new Date(y,+dm[2]-1,+dm[1]);
+    if(!d)return{ic:'📅',err:'Bis wann? Z. B. „Wie viele Tage bis Weihnachten“ oder „bis 24.12.“'};
+    const t0=new Date(y,now.getMonth(),now.getDate());if(d<t0)d.setFullYear(y+1);const n=Math.round((d-t0)/864e5);
+    return{ic:'📅',txt:'Tage bis '+name,run:()=>n===0?`${name} ist heute! 🎉`:`Noch ${n} Tag${n===1?'':'e'} bis ${name}.`}}
+  if((m=s.match(/([\d.,]+)\s*(km|kilometer|meilen|meile|kg|kilo|kilogramm|pfund|cm|zentimeter|zoll|inch|grad|°c|celsius|fahrenheit|°f|m\b|meter|fuß|fuss)\s+(?:in|zu|nach)\s+(\w+)/))){
+    const v=parseFloat(m[1].replace(',','.')),u=m[2],to=m[3];let r=null,unit='';
+    if(/^k(m|ilometer)/.test(u)&&/meil/.test(to)){r=v*.621371;unit='Meilen'}else if(/meil/.test(u)&&/^k/.test(to)){r=v*1.609344;unit='km'}
+    else if(/^k(g|ilo)/.test(u)&&/pfund/.test(to)){r=v*2.20462;unit='Pfund'}else if(/pfund/.test(u)&&/^k/.test(to)){r=v/2.20462;unit='kg'}
+    else if(/^(cm|zent)/.test(u)&&/zoll|inch/.test(to)){r=v/2.54;unit='Zoll'}else if(/zoll|inch/.test(u)&&/^(cm|zent)/.test(to)){r=v*2.54;unit='cm'}
+    else if(/^(m$|meter)/.test(u)&&/fu/.test(to)){r=v*3.28084;unit='Fuß'}else if(/fu/.test(u)&&/meter/.test(to)){r=v/3.28084;unit='m'}
+    else if(/grad|celsius|°c/.test(u)&&/fahren/.test(to)){r=v*9/5+32;unit='°F'}else if(/fahren|°f/.test(u)&&/celsius|grad/.test(to)){r=(v-32)*5/9;unit='°C'}
+    if(r!==null)return{ic:'📏',txt:'Umrechnen',run:()=>`${String(v).replace('.',',')} ${u} = ${String(+r.toFixed(2)).replace('.',',')} ${unit}`}}
+  if((m=raw.match(/^(?:soll ich |was ist besser:?\s*|wähle zwischen\s+)?(.+?)\s+oder\s+(.+?)\??$/i))&&!/kopf oder zahl/.test(s)){const o=[m[1],...m[2].split(/\s+oder\s+/)].map(x=>x.trim()).filter(Boolean);
+    return{ic:'🤔',txt:'Entscheidung',run:()=>`Ich sage: ${o[Math.floor(Math.random()*o.length)]}! 👉`}}
+  if(/^(schere|stein|papier)$/.test(s.replace(/[!.?]/g,'').trim())){const me=s.replace(/[!.?]/g,'').trim(),opts=['schere','stein','papier'],gu=opts[Math.floor(Math.random()*3)],
+    win={schere:'papier',stein:'schere',papier:'stein'},ic={schere:'✂️',stein:'🪨',papier:'📄'};
+    return{ic:ic[gu],txt:'Schere, Stein, Papier',run:()=>`Ich nehme ${ic[gu]} ${gu[0].toUpperCase()+gu.slice(1)} – ${gu===me?'Unentschieden!':win[me]===gu?'Du gewinnst! 🎉':'Ich gewinne! 😎'}`}}
+  if(/^(magische 8|orakel)|^(soll|kann|darf|werde|wird|muss) (ich|er|sie|es|man)\b/.test(s)){const A=['Ja, auf jeden Fall! ✅','Eher nicht. ❌','Frag später nochmal. 🔮','Ganz sicher! 💯','Auf keinen Fall. 🙅','Vielleicht … 🤷','Die Zeichen stehen gut. ✨'];
+    return{ic:'🎱',txt:'Orakel',run:()=>A[Math.floor(Math.random()*A.length)]}}
+  if(/motivier|motivation|spruch/.test(s)){const M=['Du schaffst das – eine Quest nach der anderen! 💪','Peinlich ist nur, wer es nicht versucht. 😎','Heute ist ein perfekter Tag für 500 Coins. 🪙','Klein anfangen, groß gewinnen. 🚀','Wer lacht, gewinnt – auch beim Käse-Vortrag. 🧀'];
+    return{ic:'🔥',txt:'Motivation',run:()=>M[Math.floor(Math.random()*M.length)]}}
+  if(/kauf\w*/.test(s)&&/powerbank|ladestation/.test(s)){const k=/ladestation/.test(s)?'station':/120|reise/.test(s)?'travel':/30/.test(s)?'pb30':'pb60',it=ITEMS[k];
+    if(it.vac&&!S.vacation)return{ic:it.icon,err:`${it.name} gibt es nur im Urlaubsmodus.`};
+    if(it.perm&&S.inv[k]>0)return{ic:it.icon,err:`Du hast schon eine ${it.name}.`};
+    if(S.coins<it.price)return{ic:it.icon,err:`${it.name} kostet ${it.price} Coins – dir fehlen ${it.price-S.coins}.`};
+    return{ic:it.icon,txt:'Kaufen: '+it.name,run:()=>{S.coins-=it.price;S.inv[k]=(S.inv[k]||0)+1;save();updateCoins();coinPop('−'+it.price+' 🪙');return `${it.name} gekauft (−${it.price} Coins). Liegt im Inventar.`}}}
+  if(/wie viele coins (brauche|fehlen)/.test(s)){const k=/ladestation/.test(s)?'station':/30/.test(s)?'pb30':'pb60',it=ITEMS[k],f=it.price-S.coins;
+    return{ic:'🪙',txt:it.name,run:()=>f>0?`Dir fehlen noch ${f} Coins für ${it.name}.`:`Du hast genug Coins für ${it.name}!`}}
+  if(/welcher hintergrund|wie heißt (mein|der) hintergrund/.test(s))return{ic:'🖼️',txt:'Hintergrund',run:()=>`Dein Hintergrund: ${WALLNAMES[S.wall]}${LIVE[S.wall]?' (Live)':''}.`};
+  if(/münz|kopf oder zahl/.test(s)&&!/coins/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
   if(/witz/.test(s))return{ic:'😂',txt:'Witz',run:()=>JOKES[Math.floor(Math.random()*JOKES.length)]};
   if(/würfel/.test(s))return{ic:'🎲',txt:'Würfeln',run:()=>`Gewürfelt: ${1+Math.floor(Math.random()*6)} 🎲`};
   if(/münze|kopf oder zahl/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
@@ -4246,12 +4290,13 @@ async function runAssistant(text){
   glog('Assistent','Befehl: „'+text+'“');
   const box=$('#asLog');if(!box)return;
   const parts=splitCmd(text);if(!parts.length)return;
-  const plans=parts.map(planCmd);
-  const ch=$('.as-chips',box);if(ch)ch.style.display='none';box.querySelectorAll('.as-me,.as-step').forEach(x=>x.remove());
-  box.insertAdjacentHTML('beforeend',`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join(''));
-  const said=[];
+  const plans=parts.map(planCmd),rid=Date.now().toString(36);
+  const ch=$('.as-chips',box);if(ch)ch.style.display='none';
+  const olds=box.querySelectorAll('.as-me');if(olds.length>=6){let n=olds[0];const stop=olds[1];while(n&&n!==stop){const x=n.nextElementSibling;n.remove();n=x}}
+  box.insertAdjacentHTML('beforeend',`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${rid}-${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join(''));
+  const said=[];requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
   for(let i=0;i<plans.length;i++){
-    const p=plans[i],row=$(`.as-step[data-k="${i}"]`,box);
+    const p=plans[i],row=$(`.as-step[data-k="${rid}-${i}"]`,box);
     if(p.err){said.push(p.err);continue}
     if(p.wait){$('.st',row).textContent='⏳';await new Promise(r=>setTimeout(r,p.wait));$('.st',row).textContent='✅';continue}
     if(p.opens){closeAssistant(true);await new Promise(r=>setTimeout(r,280))}
@@ -4264,104 +4309,31 @@ async function runAssistant(text){
   if(!$('#asst').classList.contains('open')&&all)notify('✨','Gufy Assistent',all,'#7c5cff');
   speak(all);
 }
-/* Spracheingabe
-   iPhone-Probleme: (1) Vorlesen/Töne belegen das Audio → Mikro läuft, liefert aber nichts.
-   (2) Erkenner hängt manchmal. Deshalb: vor dem Zuhören Vorlesen stoppen, kurz warten,
-   bei Hängern/leeren Ergebnissen einen frischen Erkenner nehmen. Alles wird geloggt. */
-let asKbd=false,asKbdMsg=false,asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
-function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen');const w=$('#asWave');if(w){w.classList.toggle('on',mode==='listen');if(mode!=='listen')w.classList.remove('talk')}}
-let asTalkT=0;
-function asTalk(){const w=$('#asWave');if(!w)return;w.classList.add('on','talk');clearTimeout(asTalkT);asTalkT=setTimeout(()=>w.classList.remove('talk'),700)}
-/* iPhone-Web-App: Spracherkennung klappt nur EINMAL pro App-Start (auch Neuladen hilft nicht).
-   Danach direkt das Diktieren der Tastatur anbieten. */
-const SR_ONCE=()=>(navigator.standalone===true)&&sessionStorage.getItem('gufySR')==='used';
-function asMake(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){glog('Mikro','SpeechRecognition gibt es hier nicht');return null}
-  if(asRec&&!asFresh)return asRec;
-  if(asRec)asReset();asFresh=false;
-  let r;try{r=new SR()}catch(e){glog('Mikro','new SR() Fehler: '+e.message);return null}
-  const id=++asN;glog('Mikro',`Erkenner #${id} erstellt`);
-  r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
-  r.onstart=()=>{glog('Mikro',`#${id} onstart`);asRun=true;clearTimeout(asWd);if(asSess){asSess.started=true;asStatus('Ich höre zu …','listen')}haptic('select');clearTimeout(asMax);asMax=setTimeout(()=>{glog('Mikro',`#${id} 12 s vorbei → stop`);try{r.stop()}catch(_){}},12000)};
-  r.onaudiostart=()=>{glog('Mikro',`#${id} audiostart`);clearTimeout(asSil);
-    asSil=setTimeout(()=>{const ss=asSess;if(r===asRec&&ss&&!ss.sound&&!ss.done&&!ss.retried){glog('Mikro',`#${id} 5 s kein Ton → frischer Erkenner`);ss.silent=true;try{r.stop()}catch(_){}}},5000)};
-  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);clearTimeout(asSil);if(asSess)asSess.sound=true;asTalk()};
-  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);clearTimeout(asSil);if(asSess)asSess.sound=true;asTalk()};
-  r.onspeechend=()=>glog('Mikro',`#${id} speechend`);
-  r.onnomatch=()=>glog('Mikro',`#${id} nomatch`);
-  r.onresult=e=>{const ss=asSess;const t=[...e.results].map(x=>x[0].transcript).join('');const fin=e.results[e.results.length-1].isFinal;
-    glog('Mikro',`#${id} result${fin?' (final)':''}: „${t}“`);asTalk();try{sessionStorage.setItem('gufySR','used')}catch(_){}if(!ss)return;ss.txt=t;const i=$('#asTxt');if(i)i.value=t;
-    if(fin&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(t);try{r.stop()}catch(_){}}};
-  r.onerror=e=>{glog('Mikro',`#${id} error: ${e.error}${e.message?' – '+e.message:''}`);const ss=asSess;if(ss)ss.err=e.error};
-  r.onend=()=>{glog('Mikro',`#${id} onend`);if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);clearTimeout(asSil);const ss=asSess;asSess=null;
-    asFresh=true; // iPhone: ein Erkenner hört nur EINMAL richtig zu → beim nächsten Mal immer neu
-    if(asQueue){asQueue=false;setTimeout(asListen,250);return}
-    if(!ss||ss.done)return;
-    if(ss.txt&&ss.txt.trim()){ss.done=true;asStatus('');const i=$('#asTxt');if(i)i.value='';runAssistant(ss.txt);return}
-    // nichts erkannt, obwohl das Mikro lief → mit frischem Erkenner nochmal
-    if(!ss.retried&&ss.err!=='not-allowed'&&(ss.silent||(ss.err!=='aborted'&&(ss.err||ss.sound)))){
-      glog('Mikro','kein Ergebnis → frischer Erkenner, 2. Versuch');asFresh=true;asStatus('Nochmal bitte …','listen');setTimeout(()=>asListen(true),300);return}
-    if(!$('#asst')||!$('#asst').classList.contains('open'))return;
-    asStatus(ss.err==='not-allowed'||ss.err==='service-not-allowed'?'Mikrofon nicht erlaubt – tippe ins Feld und nutze das 🎤 der Tastatur.':'Nicht verstanden – tippe auf 🎤 und versuch es nochmal.','warn')};
-  return asRec=r;
-}
-function asReset(){clearTimeout(asWd);clearTimeout(asMax);const r=asRec;asRec=null;asRun=false;asQueue=false;
-  if(r){glog('Mikro','Erkenner verworfen');r.onend=r.onresult=r.onerror=r.onstart=r.onaudiostart=r.onsoundstart=r.onspeechstart=null;try{r.abort()}catch(e){}}}
-function asQuiet(){ // Vorlesen & Töne aus, damit das Mikro frei ist
-  let busy=false;
-  try{if(window.speechSynthesis&&(speechSynthesis.speaking||speechSynthesis.pending)){busy=true;speechSynthesis.cancel();glog('Mikro','Vorlesen gestoppt')}}catch(e){}
-  try{if(audioCtx&&audioCtx.state==='running'){audioCtx.suspend();busy=true;glog('Mikro','Töne pausiert')}}catch(e){}
-  return busy;
-}
-/* Audio-Sitzung (Safari 16.4+): auf „Aufnehmen + Abspielen“ stellen, damit das Mikro nach dem ersten Mal nicht taub bleibt */
-function asSession(mode){try{const a=navigator.audioSession;if(!a){if(mode)glog('Audio','navigator.audioSession gibt es nicht');return}
-  const before=a.type;a.type=mode||'auto';glog('Audio',`Sitzung ${before} → ${a.type} (Zustand: ${a.state||'?'})`)}catch(e){glog('Audio','Fehler: '+e.message)}}
-function asListen(retry){
-  if(!$('#asst'))return;
-  if(!retry)asSession('play-and-record');
-  if(asRun){glog('Mikro','läuft noch → stop, dann neu');asQueue=true;try{asRec.stop()}catch(e){}
-    clearTimeout(asWd);asWd=setTimeout(()=>{if(asRun||asQueue){glog('Mikro','hängt beim Stoppen');asReset();asListen()}},1200);return}
-  if(asQuiet()&&!retry)return void setTimeout(()=>asListen(true),450);
-  if(asFresh&&asRec&&!retry){asReset();return void setTimeout(()=>asListen(true),250)}
-  const r=asMake();
-  if(!r){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
-  asSess={txt:'',done:false,retried:!!retry,started:false,sound:false};
-  asStatus('Mikrofon startet …','listen');
-  try{r.start();glog('Mikro','start()')}catch(e){glog('Mikro','start() Fehler: '+e.message);asReset();if(!retry)return void setTimeout(()=>asListen(true),300);asStatus('Tippe auf 🎤, um nochmal zu sprechen.','warn');return}
-  clearTimeout(asWd);asWd=setTimeout(()=>{if(asSess&&!asSess.started){glog('Mikro','kein onstart nach 2,5 s');asReset();if(!retry)asListen(true);else asStatus('Mikrofon reagiert nicht – tippe auf 🎤.','warn')}},2500);
-}
-function asStop(){asSess=null;asQueue=false;clearTimeout(asWd);setTimeout(()=>{if(!asRun)asSession('auto')},600);if(asRec&&asRun){glog('Mikro','stop (Fenster/Eingabe)');try{asRec.stop()}catch(e){}}}
-document.addEventListener('visibilitychange',()=>{glog('App',document.visibilityState==='hidden'?'im Hintergrund':'wieder sichtbar');if(document.visibilityState==='hidden'){asSess=null;asReset()}});
+/* Assistent-Fenster: immer oben, Eingabe über die Tastatur (Tippen oder 🎤 der Tastatur) */
+let asRun=false;
+function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}}
+document.addEventListener('visibilitychange',()=>glog('App',document.visibilityState==='hidden'?'im Hintergrund':'wieder sichtbar'));
+const AS_CHIPS=['Timer 3 Minuten und Taschenlampe an','Erinnere mich in 10 Minuten an Hausaufgaben','Wie ist das Wetter?','Wie viele Tage bis Weihnachten?','Pizza oder Burger?','Schere','Guten Morgen','Was habe ich heute geschafft?'];
 function openAssistant(){
   if(current!=='desktop')return;
   let a=$('#asst');
-  if(!a){a=document.createElement('div');a.id='asst';document.body.append(a);
-    a.innerHTML=`<div class="as-sheet"><div class="as-head"><div class="as-orb"></div><div style="flex:1;min-width:0"><b class="as-title">Gufy Assistent</b><small class="as-st" id="asSt"></small></div><div class="as-wave" id="asWave">${'<i></i>'.repeat(7)}</div></div>
-      <div class="as-log" id="asLog"><div class="as-chips">${['Timer 3 Minuten und Taschenlampe an','Wie ist das Wetter?','Wie lange hält mein Akku?','Spiel ein Spiel','Gib mir eine Quest','Wecker um 7 Uhr'].map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
-      <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sprich oder schreib …" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form></div>`;
+  if(!a){a=document.createElement('div');a.id='asst';a.className='top';document.body.append(a);
+    a.innerHTML=`<div class="as-sheet"><div class="as-head"><div class="as-orb"></div><div style="flex:1;min-width:0"><b class="as-title">Gufy Assistent</b><small class="as-st" id="asSt">Tippe oder nutze das 🎤 der Tastatur</small></div><button class="as-x" id="asX">✕</button></div>
+      <form class="as-in" id="asForm"><input id="asTxt" placeholder="Was soll ich tun?" autocomplete="off" autocorrect="on" enterkeyhint="send"><button type="submit" class="as-go">↑</button></form>
+      <div class="as-log" id="asLog"><div class="as-chips">${AS_CHIPS.map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div></div>`;
     a.addEventListener('pointerdown',e=>{if(e.target===a)closeAssistant()});
-    $('#asForm',a).onsubmit=e=>{e.preventDefault();asStop();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();asStatus('');runAssistant(t)};
-    // Tastatur offen → Fenster rutscht nach oben, Tastatur zu → wieder unten
-    const toTop=on=>{if(a.classList.contains('top')===on)return;const sh=$('.as-sheet',a),r0=sh.getBoundingClientRect();a.classList.toggle('top',on);sh.style.transform='';
-      const r1=sh.getBoundingClientRect();sh.animate([{transform:`translateY(${r0.top-r1.top}px)`},{transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.9,.22,1)'})};
-    $('#asTxt',a).addEventListener('focus',()=>{asStop();if(!asKbdMsg)asStatus('');asKbdMsg=false;toTop(true)});
-    $('#asTxt',a).addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==$('#asTxt',a))toTop(false)},120));
-    $('#asMic',a).onclick=()=>{if(SR_ONCE()){asKbdMsg=true;asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');$('#asTxt',a).focus();return}$('#asTxt',a).blur();if(asRun&&!(asSess&&asSess.started))asReset();asListen()};
-    $$('[data-ex]',a).forEach(b=>b.onclick=()=>{asStop();runAssistant(b.dataset.ex)});
-    // Tastatur: Fenster bleibt sichtbar über der Tastatur
-    if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('.as-sheet',a);if(!sh)return;if(a.classList.contains('top')){sh.style.transform='';return}const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);sh.style.transform=kb>40?`translateY(${-kb+20}px)`:''};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
+    $('#asX',a).onclick=()=>closeAssistant();
+    $('#asForm',a).onsubmit=e=>{e.preventDefault();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';runAssistant(t)};
+    $$('[data-ex]',a).forEach(b=>b.onclick=()=>runAssistant(b.dataset.ex));
   }
   if(a.classList.contains('open'))return;
   a.classList.add('open');haptic('heavy');
-  $('#asLog',a).querySelectorAll('.as-me,.as-step').forEach(x=>x.remove());
-  $('.as-chips',a).style.display='';
-  $('.as-sheet',a).animate([{transform:'translateY(60px) scale(.96)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
-  if(SR_ONCE()){glog('Mikro','2. Mal in diesem App-Start → Tastatur-Diktieren');asKbd=true;asStatus('Lass los und tippe unten auf der Tastatur auf 🎤','warn');return}
-  asListen();
+  $('.as-sheet',a).animate([{transform:'translateY(-40px) scale(.96)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
 }
-function closeAssistant(quick){asKbd=false;setTimeout(()=>{const a=$('#asst');if(a&&!a.classList.contains('open'))a.classList.remove('top')},260);const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
+function asFocus(){const i=$('#asTxt');if(i&&$('#asst').classList.contains('open'))i.focus()}
+function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;const i=$('#asTxt',a);if(i)i.blur();
   if(quick){a.classList.remove('open');return}
-  $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(60px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
+  $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(-40px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
 /* =========================================================
    START
