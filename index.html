@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.9","notes":["Spracheingabe: Audio wird vor dem Zuhören auf Aufnehmen gestellt (Test gegen das „nur beim ersten Mal“-Problem)","Logs zeigen jetzt auch die Audio-Einstellung","Vorlesen bleibt aus"]};
+window.GUFY={"v":"8.0","notes":["Assistent: Audiospur zeigt, ob das Mikro deine Stimme hört","Ab dem 2. Mal pro App-Start öffnet sich automatisch die Tastatur zum Diktieren (iPhone erlaubt die Spracherkennung nur einmal)","Logs unter Einstellungen → Logs"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1072,6 +1072,16 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 #asMic.rec{background:#ff453a;animation:orb .6s ease-in-out infinite alternate}
 .as-hint{text-align:center;color:rgba(255,255,255,.5);font-size:11.5px}
 .logbox{white-space:pre-wrap;word-break:break-word;font:11.5px/1.5 ui-monospace,Menlo,monospace;background:var(--panel-solid);border:1px solid var(--border);border-radius:14px;padding:12px;max-height:60vh;overflow:auto;user-select:text;-webkit-user-select:text;margin:0}
+.as-wave{display:flex;align-items:center;gap:3px;height:30px;opacity:0;transition:opacity .25s}
+.as-wave.on{opacity:1}
+.as-wave i{width:4px;height:6px;border-radius:2px;background:linear-gradient(#c4b5fd,#ff5fa2);transform-origin:center;transition:height .15s}
+.as-wave.on i{animation:wv 1.2s ease-in-out infinite}
+.as-wave.talk i{animation-duration:.42s}
+.as-wave i:nth-child(2){animation-delay:-.15s}.as-wave i:nth-child(3){animation-delay:-.3s}.as-wave i:nth-child(4){animation-delay:-.45s}.as-wave i:nth-child(5){animation-delay:-.6s}.as-wave i:nth-child(6){animation-delay:-.75s}.as-wave i:nth-child(7){animation-delay:-.9s}
+@keyframes wv{0%,100%{transform:scaleY(.7)}50%{transform:scaleY(1.2)}}
+.as-wave.talk i{height:22px}.as-wave.talk i:nth-child(odd){height:14px}.as-wave.talk i:nth-child(4){height:28px}
+.as-wave.talk i{animation-name:wvt}
+@keyframes wvt{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
 </style>
 </head>
 <body class="dark">
@@ -2222,7 +2232,7 @@ $('#homebtn').onclick=goHome;
   hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
     if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},1000)}});
   hb.addEventListener('pointerup',e=>{stop();
-    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();return}
+    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();if(asKbd){asKbd=false;const i=$('#asTxt');if(i){i.focus();asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','')}}return}
     if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
   hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
@@ -4256,8 +4266,13 @@ async function runAssistant(text){
    iPhone-Probleme: (1) Vorlesen/Töne belegen das Audio → Mikro läuft, liefert aber nichts.
    (2) Erkenner hängt manchmal. Deshalb: vor dem Zuhören Vorlesen stoppen, kurz warten,
    bei Hängern/leeren Ergebnissen einen frischen Erkenner nehmen. Alles wird geloggt. */
-let asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
-function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen')}
+let asKbd=false,asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
+function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen');const w=$('#asWave');if(w){w.classList.toggle('on',mode==='listen');if(mode!=='listen')w.classList.remove('talk')}}
+let asTalkT=0;
+function asTalk(){const w=$('#asWave');if(!w)return;w.classList.add('on','talk');clearTimeout(asTalkT);asTalkT=setTimeout(()=>w.classList.remove('talk'),700)}
+/* iPhone-Web-App: Spracherkennung klappt nur EINMAL pro App-Start (auch Neuladen hilft nicht).
+   Danach direkt das Diktieren der Tastatur anbieten. */
+const SR_ONCE=()=>(navigator.standalone===true)&&sessionStorage.getItem('gufySR')==='used';
 function asMake(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){glog('Mikro','SpeechRecognition gibt es hier nicht');return null}
   if(asRec&&!asFresh)return asRec;
@@ -4268,12 +4283,12 @@ function asMake(){
   r.onstart=()=>{glog('Mikro',`#${id} onstart`);asRun=true;clearTimeout(asWd);if(asSess){asSess.started=true;asStatus('Ich höre zu …','listen')}haptic('select');clearTimeout(asMax);asMax=setTimeout(()=>{glog('Mikro',`#${id} 12 s vorbei → stop`);try{r.stop()}catch(_){}},12000)};
   r.onaudiostart=()=>{glog('Mikro',`#${id} audiostart`);clearTimeout(asSil);
     asSil=setTimeout(()=>{const ss=asSess;if(r===asRec&&ss&&!ss.sound&&!ss.done&&!ss.retried){glog('Mikro',`#${id} 5 s kein Ton → frischer Erkenner`);ss.silent=true;try{r.stop()}catch(_){}}},5000)};
-  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);clearTimeout(asSil);if(asSess)asSess.sound=true};
-  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);clearTimeout(asSil);if(asSess)asSess.sound=true};
+  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);clearTimeout(asSil);if(asSess)asSess.sound=true;asTalk()};
+  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);clearTimeout(asSil);if(asSess)asSess.sound=true;asTalk()};
   r.onspeechend=()=>glog('Mikro',`#${id} speechend`);
   r.onnomatch=()=>glog('Mikro',`#${id} nomatch`);
   r.onresult=e=>{const ss=asSess;const t=[...e.results].map(x=>x[0].transcript).join('');const fin=e.results[e.results.length-1].isFinal;
-    glog('Mikro',`#${id} result${fin?' (final)':''}: „${t}“`);if(!ss)return;ss.txt=t;const i=$('#asTxt');if(i)i.value=t;
+    glog('Mikro',`#${id} result${fin?' (final)':''}: „${t}“`);asTalk();try{sessionStorage.setItem('gufySR','used')}catch(_){}if(!ss)return;ss.txt=t;const i=$('#asTxt');if(i)i.value=t;
     if(fin&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(t);try{r.stop()}catch(_){}}};
   r.onerror=e=>{glog('Mikro',`#${id} error: ${e.error}${e.message?' – '+e.message:''}`);const ss=asSess;if(ss)ss.err=e.error};
   r.onend=()=>{glog('Mikro',`#${id} onend`);if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);clearTimeout(asSil);const ss=asSess;asSess=null;
@@ -4319,13 +4334,13 @@ function openAssistant(){
   if(current!=='desktop')return;
   let a=$('#asst');
   if(!a){a=document.createElement('div');a.id='asst';document.body.append(a);
-    a.innerHTML=`<div class="as-sheet"><div class="as-head"><div class="as-orb"></div><div><b class="as-title">Gufy Assistent</b><small class="as-st" id="asSt"></small></div></div>
+    a.innerHTML=`<div class="as-sheet"><div class="as-head"><div class="as-orb"></div><div style="flex:1;min-width:0"><b class="as-title">Gufy Assistent</b><small class="as-st" id="asSt"></small></div><div class="as-wave" id="asWave">${'<i></i>'.repeat(7)}</div></div>
       <div class="as-log" id="asLog"><div class="as-chips">${['Timer 3 Minuten und Taschenlampe an','Wie ist das Wetter?','Wie lange hält mein Akku?','Spiel ein Spiel','Gib mir eine Quest','Wecker um 7 Uhr'].map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
       <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sprich oder schreib …" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form></div>`;
     a.addEventListener('pointerdown',e=>{if(e.target===a)closeAssistant()});
     $('#asForm',a).onsubmit=e=>{e.preventDefault();asStop();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();asStatus('');runAssistant(t)};
     $('#asTxt',a).addEventListener('focus',()=>{asStop();asStatus('')});
-    $('#asMic',a).onclick=()=>{$('#asTxt',a).blur();if(asRun&&!(asSess&&asSess.started))asReset();asListen()};
+    $('#asMic',a).onclick=()=>{if(SR_ONCE()){$('#asTxt',a).focus();asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');return}$('#asTxt',a).blur();if(asRun&&!(asSess&&asSess.started))asReset();asListen()};
     $$('[data-ex]',a).forEach(b=>b.onclick=()=>{asStop();runAssistant(b.dataset.ex)});
     // Tastatur: Fenster bleibt sichtbar über der Tastatur
     if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('.as-sheet',a);if(!sh)return;const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);sh.style.transform=kb>40?`translateY(${-kb+20}px)`:''};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
@@ -4335,9 +4350,10 @@ function openAssistant(){
   $('#asLog',a).querySelectorAll('.as-me,.as-step').forEach(x=>x.remove());
   $('.as-chips',a).style.display='';
   $('.as-sheet',a).animate([{transform:'translateY(60px) scale(.96)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
+  if(SR_ONCE()){glog('Mikro','2. Mal in diesem App-Start → Tastatur-Diktieren');asKbd=true;asStatus('Lass los und tippe unten auf der Tastatur auf 🎤','warn');return}
   asListen();
 }
-function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
+function closeAssistant(quick){asKbd=false;const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
   if(quick){a.classList.remove('open');return}
   $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(60px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
