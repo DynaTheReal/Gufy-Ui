@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.8","notes":["Spracheingabe: Vorlesen ist aus – es hat auf dem iPhone das Mikro blockiert","Antworten stehen weiter als Text im Fenster","Jedes Mal ein frisches Mikrofon"]};
+window.GUFY={"v":"7.9","notes":["Spracheingabe: Audio wird vor dem Zuhören auf Aufnehmen gestellt (Test gegen das „nur beim ersten Mal“-Problem)","Logs zeigen jetzt auch die Audio-Einstellung","Vorlesen bleibt aus"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -4296,8 +4296,12 @@ function asQuiet(){ // Vorlesen & Töne aus, damit das Mikro frei ist
   try{if(audioCtx&&audioCtx.state==='running'){audioCtx.suspend();busy=true;glog('Mikro','Töne pausiert')}}catch(e){}
   return busy;
 }
+/* Audio-Sitzung (Safari 16.4+): auf „Aufnehmen + Abspielen“ stellen, damit das Mikro nach dem ersten Mal nicht taub bleibt */
+function asSession(mode){try{const a=navigator.audioSession;if(!a){if(mode)glog('Audio','navigator.audioSession gibt es nicht');return}
+  const before=a.type;a.type=mode||'auto';glog('Audio',`Sitzung ${before} → ${a.type} (Zustand: ${a.state||'?'})`)}catch(e){glog('Audio','Fehler: '+e.message)}}
 function asListen(retry){
   if(!$('#asst'))return;
+  if(!retry)asSession('play-and-record');
   if(asRun){glog('Mikro','läuft noch → stop, dann neu');asQueue=true;try{asRec.stop()}catch(e){}
     clearTimeout(asWd);asWd=setTimeout(()=>{if(asRun||asQueue){glog('Mikro','hängt beim Stoppen');asReset();asListen()}},1200);return}
   if(asQuiet()&&!retry)return void setTimeout(()=>asListen(true),450);
@@ -4309,7 +4313,7 @@ function asListen(retry){
   try{r.start();glog('Mikro','start()')}catch(e){glog('Mikro','start() Fehler: '+e.message);asReset();if(!retry)return void setTimeout(()=>asListen(true),300);asStatus('Tippe auf 🎤, um nochmal zu sprechen.','warn');return}
   clearTimeout(asWd);asWd=setTimeout(()=>{if(asSess&&!asSess.started){glog('Mikro','kein onstart nach 2,5 s');asReset();if(!retry)asListen(true);else asStatus('Mikrofon reagiert nicht – tippe auf 🎤.','warn')}},2500);
 }
-function asStop(){asSess=null;asQueue=false;clearTimeout(asWd);if(asRec&&asRun){glog('Mikro','stop (Fenster/Eingabe)');try{asRec.stop()}catch(e){}}}
+function asStop(){asSess=null;asQueue=false;clearTimeout(asWd);setTimeout(()=>{if(!asRun)asSession('auto')},600);if(asRec&&asRun){glog('Mikro','stop (Fenster/Eingabe)');try{asRec.stop()}catch(e){}}}
 document.addEventListener('visibilitychange',()=>{glog('App',document.visibilityState==='hidden'?'im Hintergrund':'wieder sichtbar');if(document.visibilityState==='hidden'){asSess=null;asReset()}});
 function openAssistant(){
   if(current!=='desktop')return;
