@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.8","notes":["Öfis: Busse werden jetzt auch gefunden, wenn der weltweite Fahrplan sie nicht kennt (z. B. Sylt) – dann nimmt Öfis den DB-Fahrplan","Busradar: in Deutschland Ersatz über DB, wenn keine Busse angezeigt werden","Mehr Infos in Einstellungen → Logs"]};
+window.GUFY={"v":"8.9","quick":true,"notes":["Quick-Update: Öfis sucht Busse jetzt auch an allen Haltestellen im Umkreis (z. B. Kampen Mitte)","Radar zeigt Busse und Bahnen als 🚌/🚆-Symbole mit Liniennummer","Mehr Infos in Einstellungen → Logs"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1134,6 +1134,8 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 #oMap{position:absolute;inset:0}
 .o-rinfo{position:absolute;left:10px;bottom:10px;z-index:500;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:650;padding:5px 10px;border-radius:999px;pointer-events:none}
 .o-rinfo:empty{display:none}
+.o-veh{position:relative;width:34px;height:34px;border-radius:50%;background:var(--c);border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.45);display:grid;place-items:center;font-size:17px}
+.o-veh b{position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:6px;white-space:nowrap;border:1px solid rgba(255,255,255,.4)}
 .o-src{text-align:center;font-size:11.5px}.o-src a{color:var(--accent)}
 </style>
 </head>
@@ -4299,7 +4301,12 @@ render(body,ctx){
   }
   async function departures(st,mode){
     let r=await departures0(st,mode);
-    if(st.prov!=='db'&&!r.length){ // 1) ohne Verkehrsmittel-Filter nochmal (manche Busse sind anders eingetragen)
+    if(st.prov!=='db'&&!r.length){ // 1) alle Haltestellen im Umkreis von 250 m (Busse stehen oft in einem anderen Datensatz)
+      glog('Öfis',`0 Abfahrten (${mode}) bei ${st.name} → Umkreis 250 m`);
+      try{r=await departures0(st,mode,false,true)}catch(e){glog('Öfis','Umkreis: '+e.message)}
+      glog('Öfis',`Umkreis: ${r.length}`);
+    }
+    if(st.prov!=='db'&&!r.length){ // 2) ohne Verkehrsmittel-Filter nochmal (manche Busse sind anders eingetragen)
       glog('Öfis',`0 Abfahrten (${mode}) bei ${st.name} → ohne Filter`);
       r=(await departures0(st,mode,true)).filter(x=>mode==='bus'?!MODES.bahn.includes(x.mode):!MODES.bus.includes(x.mode));
       glog('Öfis',`ohne Filter: ${r.length}`);
@@ -4312,7 +4319,7 @@ render(body,ctx){
     }
     return r;
   }
-  async function departures0(st,mode,noFilter){
+  async function departures0(st,mode,noFilter,area){
     const d0=new Date();d0.setHours(0,0,0,0);d0.setDate(d0.getDate()+dayOff);const d1=new Date(d0);d1.setDate(d1.getDate()+1);
     if(st.prov==='db'){
       const prod=mode==='bus'?'&bus=true&nationalExpress=false&national=false&regionalExpress=false&regional=false&suburban=false&subway=false&tram=false&ferry=false&taxi=false':'&bus=false&ferry=false&taxi=false';
@@ -4321,15 +4328,16 @@ render(body,ctx){
     }
     const out=[];let cur=null;
     for(let pg=0;pg<10;pg++){
-      const u=`${TT}/v6/stoptimes?stopId=${encodeURIComponent(st.id)}&time=${d0.toISOString()}&n=150${noFilter?'':'&mode='+MODES[mode].join(',')}${cur?'&pageCursor='+encodeURIComponent(cur):''}`;
+      const u=`${TT}/v6/stoptimes?${area?`center=${st.lat},${st.lon}&radius=250`:'stopId='+encodeURIComponent(st.id)}&time=${d0.toISOString()}&n=150${noFilter?'':'&mode='+MODES[mode].join(',')}${cur?'&pageCursor='+encodeURIComponent(cur):''}`;
       let r;try{r=await j(u)}catch(e){if(pg===0&&/404/.test(e.message))r=await j(u.replace('/v6/','/v5/'));else throw e}
       (r.stopTimes||[]).forEach(x=>{const t=x.place.departure||x.place.scheduledDeparture;if(!t)return;
         out.push({mode:x.mode,t,p:x.place.scheduledDeparture||t,line:x.displayName||x.routeShortName||x.tripShortName||'?',dir:x.headsign||(x.tripTo&&x.tripTo.name)||'',ic:ICON[x.mode]||'🚏',track:x.place.track||x.place.scheduledTrack||'',cancel:!!(x.cancelled||x.tripCancelled),col:x.routeColor})});
-      if(pg===0)glog('Öfis',`${st.name}: ${(r.stopTimes||[]).length} Einträge${noFilter?' (ohne Filter)':''}`);
+      if(pg===0)glog('Öfis',`${st.name}: ${(r.stopTimes||[]).length} Einträge${noFilter?' (ohne Filter)':''}${area?' (Umkreis)':''}`);
       const last=out[out.length-1];cur=r.nextPageCursor;
       if(!cur||!last||new Date(last.t)>=d1||!(r.stopTimes||[]).length)break;
     }
-    return out.filter(x=>{const t=new Date(x.t);return t>=d0&&t<d1});
+    const seen=new Set();
+    return out.filter(x=>{const t=new Date(x.t),k=x.t+'|'+x.line+'|'+x.dir;if(seen.has(k))return false;seen.add(k);return t>=d0&&t<d1});
   }
   function decode(str,prec){const f=Math.pow(10,prec??5),pts=[];let i=0,lat=0,lon=0;
     while(i<str.length){for(const k of[0,1]){let b,sh=0,res=0;do{b=str.charCodeAt(i++)-63;res|=(b&31)<<sh;sh+=5}while(b>=32);const d=res&1?~(res>>1):res>>1;if(k)lon+=d;else lat+=d}pts.push([lat/f,lon/f])}
@@ -4367,7 +4375,8 @@ render(body,ctx){
     if(!map||!dots)return;const now=Date.now();dots.clearLayers();
     radarSeg.forEach(s=>{const p=posOf(s,now);if(!p)return;
       const c=s.col?'#'+s.col.replace('#',''):(O.mode==='bus'?'#ff9500':'#0a84ff');
-      L.circleMarker(p,{pane:'veh',radius:7,color:'#fff',weight:2,fillColor:c,fillOpacity:1}).bindTooltip(`${s.ic||''} ${esc(s.name)}${s.to||s.dir?' → '+esc(s.to||s.dir):''}`,{direction:'top'}).addTo(dots)});
+      const ic=s.ic&&s.ic!=='•'?s.ic:(O.mode==='bus'?'🚌':'🚆');
+      L.marker(p,{pane:'veh',interactive:true,icon:L.divIcon({className:'',html:`<div class="o-veh" style="--c:${c}"><span>${ic}</span>${s.name?`<b>${esc(String(s.name).slice(0,6))}</b>`:''}</div>`,iconSize:[34,34],iconAnchor:[17,17]})}).bindTooltip(`${s.ic||''} ${esc(s.name)}${s.to||s.dir?' → '+esc(s.to||s.dir):''}`,{direction:'top'}).addTo(dots)});
   }
   async function initMap(){
     try{await loadLeaflet()}catch(e){const m=$('#oMap',body);if(m)m.innerHTML='<div class="mapload">Karte braucht Internet</div>';return}
