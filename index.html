@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.2","notes":["Assistent: Fenster immer oben, Eingabe über die Tastatur (Tippen oder 🎤 der Tastatur)","Neu: Erinnerungen mit Text, Tage bis Weihnachten, Umrechnen, Entscheidungen, Schere-Stein-Papier, Orakel, Guten Morgen/Gute Nacht, Statistik, Powerbank kaufen u. v. m.","Verlauf bleibt im Fenster sichtbar"]};
+window.GUFY={"v":"8.4","notes":["Standort-App: „Nachtragen“ – Zeiten eintragen, in denen du weg (oder zu Hause) warst, z. B. 14:00–16:00 (mit Code)","Mitteilung „Seit wann bist du weg/zu Hause?“, wenn sich dein Ort geändert hat, während GufyUI zu war","Zeit korrigieren, Updates & Standort alle 30 Sek."]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1085,6 +1085,15 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 @keyframes wvt{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
 #asst.top{align-items:flex-start}
 #asst.top .as-sheet{margin:calc(var(--sb,30px) + 8px) 10px 0}
+.lcorr{padding:14px 16px}
+.lc-q{margin:0 0 10px;font-size:15px}
+.lc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.lc-chips button{padding:8px 12px;border-radius:999px;background:var(--hover);border:1px solid var(--border);font-weight:650;font-size:13.5px}
+.lc-chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.lc-own{display:flex;align-items:center;gap:8px;margin-bottom:10px}.lc-own .input{flex:1}.lc-own span{color:var(--muted);font-weight:600}
+.lc-prev{padding:10px 12px;border-radius:12px;background:var(--hover);margin-bottom:10px;font-size:14px}
+.lc-hint{display:block;margin-top:8px;font-size:12px;text-align:center}
+.lc-range{display:flex;gap:10px;margin-bottom:10px}.lc-range label{flex:1;display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:650;color:var(--muted)}.lc-range .tinput{width:100%}
 </style>
 </head>
 <body class="dark">
@@ -1218,7 +1227,7 @@ const UPD_KEY='gufyui_pending',INST_KEY='gufyui_inst';
 })();
 function pendingUpdate(){try{const p=JSON.parse(localStorage.getItem(UPD_KEY)||'null');return p&&gufyCmp(p.v,GUFY.v)>0?p:null}catch(e){return null}}
 if(!pendingUpdate())try{localStorage.removeItem(UPD_KEY)}catch(e){}
-// Während GufyUI offen ist, alle 10 Minuten schauen, ob eine neue Version veröffentlicht wurde
+// Während GufyUI offen ist, alle 30 Sekunden schauen, ob eine neue Version veröffentlicht wurde
 async function checkForUpdate(){
   try{
     if(!/^https?:/.test(location.protocol))return false;
@@ -1229,7 +1238,9 @@ async function checkForUpdate(){
   }catch(e){}
   return false;
 }
-setInterval(checkForUpdate,10*60*1000);
+setInterval(checkForUpdate,30*1000);   // alle 30 Sekunden nach Updates schauen
+setTimeout(checkForUpdate,4000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(checkForUpdate,1500)});
 let updAnnounced=false;
 function announceUpdate(force){
   const p=pendingUpdate();if(!p||(updAnnounced&&!force)||current!=='desktop')return;
@@ -1672,6 +1683,54 @@ function advance(mult=1){
   }
   S.battery.level=lv;S.battery.last=now;
 }
+/* ---------- Akku-Verlauf (für „Zeit korrigieren“ in der Standort-App) ---------- */
+S.bsnap??=[];S.boosts??=[];
+if(S.setupDone&&S.battery&&S.battery.last){const L=S.bsnap,l=L[L.length-1];if(!l||l.t<S.battery.last)L.push({t:S.battery.last,lv:+(+S.battery.level).toFixed(3),home:!!S.loc.isHome})}
+function bsnap(force){if(realOn()||!S.setupDone)return;const now=Date.now(),L=S.bsnap,l=L[L.length-1];
+  if(!force&&l&&now-l.t<5*60000&&l.home===!!S.loc.isHome)return;
+  L.push({t:now,lv:+S.battery.level.toFixed(3),home:!!S.loc.isHome});
+  const cut=now-72*3600000;while(L.length&&L[0].t<cut)L.shift();if(L.length>1200)L.splice(0,L.length-1200)}
+function batSim(lv,t,end,home){ // Akku von t bis end rechnen, als wäre man die ganze Zeit zu Hause / unterwegs
+  const was=S.loc.isHome;S.loc.isHome=home;
+  try{while(t<end){const st=Math.min(end-t,60000-(t%60000));lv+=rate(new Date(t),lv)*st/3600000;lv=Math.max(0,Math.min(100,lv));t+=st;
+    if(t%60000===0&&lv<=0){const d=new Date(t);if(d.getHours()===0&&d.getMinutes()===0)lv=10}}}
+  finally{S.loc.isHome=was}
+  return lv;
+}
+function corrCalc(min){
+  advance();const now=Date.now(),t0=now-min*60000;
+  const L=S.bsnap.filter(x=>x.t<=t0),base=L[L.length-1];
+  if(!base)return null;
+  let a=batSim(base.lv,base.t,t0,base.home);const at0=a;
+  a=batSim(a,t0,now,!!S.loc.isHome);
+  S.boosts.filter(b=>b.t>t0).forEach(b=>a=Math.min(100,a+b.add));
+  return{lv:a,at0,t0};
+}
+function corrRange(a,b,home){ // a..b (ms) war man „home“, danach das Gegenteil bis jetzt
+  advance();const now=Date.now();if(b>now)b=now;if(a>=b)return null;
+  const L=S.bsnap.filter(x=>x.t<=a),base=L[L.length-1];if(!base)return null;
+  const atA=batSim(base.lv,base.t,a,base.home),atB=batSim(atA,a,b,home);let lv=batSim(atB,b,now,!home);
+  S.boosts.filter(x=>x.t>a).forEach(x=>lv=Math.min(100,lv+x.add));
+  return{lv,atA,atB,a,b,home};
+}
+function corrRangeApply(a,b,home){
+  const r=corrRange(a,b,home);if(!r)return false;
+  S.battery.level=r.lv;S.battery.last=Date.now();
+  S.bsnap=S.bsnap.filter(x=>x.t<=r.a);S.bsnap.push({t:r.a,lv:+r.atA.toFixed(3),home},{t:r.b,lv:+r.atB.toFixed(3),home:!home});bsnap(true);
+  glog('Akku',`Nachgetragen: ${new Date(r.a).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}–${new Date(r.b).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} ${home?'zu Hause':'unterwegs'} → ${r.lv.toFixed(1)} %`);
+  save();renderBattery();updateCC();
+  if(S.battery.level<=0&&!['empty','setup'].includes(current))batteryDead();
+  return true;
+}
+function corrApply(min){
+  const r=corrCalc(min);if(!r)return false;
+  S.battery.level=r.lv;S.battery.last=Date.now();
+  S.bsnap=S.bsnap.filter(x=>x.t<=r.t0);S.bsnap.push({t:r.t0,lv:+r.at0.toFixed(3),home:!!S.loc.isHome});bsnap(true);
+  glog('Akku',`Zeit korrigiert: seit ${min} Min. ${S.loc.isHome?'zu Hause':'unterwegs'} → ${r.lv.toFixed(1)} %`);
+  save();renderBattery();updateCC();
+  if(S.battery.level<=0&&!['empty','setup'].includes(current))batteryDead();
+  return true;
+}
 const dispPct=()=>{const l=S.battery.level;return l<=0?0:Math.min(100,Math.ceil(l-1e-9))};
 const charging=()=>realOn()?(realBatt.charging&&S.battery.level<99.95):(rate(new Date())>0&&S.battery.level<99.95);
 // Ungefähre Zeit wie bei einem echten Handy: „ca. 7½ Std.“, „ca. 40 Min.“
@@ -1703,6 +1762,7 @@ function remainText(){
 }
 let saveCount=0;
 function batteryTick(){
+  bsnap(false);
   if(S.giftNote){S.giftNote=false;save();notify('🌙','Mitternachts-Ladung','Dein Akku war um 0 Uhr leer – du hast 10 % geschenkt bekommen.','#5e5ce6')}
   if(S.setupDone)checkDebts();
   advance(inUse()?USE_MULT:1);
@@ -1780,10 +1840,15 @@ setInterval(batteryTick,1000);
 addEventListener('visibilitychange',()=>{advance(document.visibilityState==='visible'?1:USE_MULT);batteryTick();save()});
 
 /* ---------- Zuhause / Unterwegs ---------- */
+let resumeAt=Date.now(),resumeGap=S.battery&&S.battery.last?Date.now()-S.battery.last:0,hiddenAt=0;
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')hiddenAt=Date.now();else if(hiddenAt){resumeGap=Date.now()-hiddenAt;resumeAt=Date.now()}});
+function openCorr(){openApp('standort');setTimeout(()=>{const e=$('#lCorr');if(e)e.scrollIntoView({behavior:'smooth',block:'center'})},450)}
 function setHome(v,quiet){
   if(S.loc.isHome===v)return;
-  advance();S.loc.isHome=v;save();haptic();
-  if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 5 Std.).',v?'#34c759':'#ff9500');
+  const askAfter=!quiet&&S.loc.mode==='gps'&&Date.now()-resumeAt<180000&&resumeGap>10*60000;
+  advance();bsnap(true);S.loc.isHome=v;bsnap(true);save();haptic();
+  if(askAfter){resumeAt=0;notify('📍',v?'Seit wann bist du zu Hause?':'Seit wann bist du weg?',`GufyUI war ${fmtLen(Math.round(resumeGap/60000)*60000)} zu – tippe hier und trag es in der Standort-App ein.`,'#ff2a68',openCorr)}
+  else if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 5 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
 }
@@ -1829,6 +1894,9 @@ function loadLeaflet(){
 }
 function stopGeo(){if(geoWatch!==null){navigator.geolocation.clearWatch(geoWatch);geoWatch=null}}
 function checkGeoOnce(){if(navigator.geolocation)navigator.geolocation.getCurrentPosition(onGeo,onGeoErr,geoOpts);else onGeoErr({code:0})}
+// Standort alle 30 Sekunden prüfen (lädt man oder nicht?) – auch beim Zurückkehren in die App
+setInterval(()=>{if(S.setupDone&&S.loc.mode==='gps'&&document.visibilityState==='visible')checkGeoOnce()},30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.setupDone&&S.loc.mode==='gps')checkGeoOnce();if(document.visibilityState==='hidden'){advance();bsnap(true);save()}});
 
 /* =========================================================
    BOOT
@@ -2913,7 +2981,7 @@ function useItem(k){
   if(S.battery.level>=99.95){notify('🔋','Akku ist schon voll','Heb dir die Powerbank für später auf.');return}
   const it=ITEMS[k];
   S.battery.level=Math.min(100,S.battery.level+pctOf(it));
-  S.inv[k]--;save();renderBattery();
+  S.inv[k]--;S.boosts.push({t:Date.now(),add:pctOf(it)});S.boosts=S.boosts.filter(b=>b.t>Date.now()-72*3600000);save();renderBattery();
   haptic('success');coinPop('+'+fmtPct(pctOf(it))+' 🔋');
   notify(it.icon,'Powerbank eingelöst','+'+fmtPct(pctOf(it))+' Akku ('+it.min+' Min. Laufzeit)','#34c759');
 }
@@ -3090,6 +3158,10 @@ render(body,ctx){
     body.innerHTML=`<div id="lStat">${statusHTML()}</div>
       <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
       <div id="lGps">${gpsHTML()}</div>
+      <div class="slabel">Zeit korrigieren</div>
+      <div class="sgroup lcorr" id="lCorr"></div>
+      <div class="slabel">Nachtragen</div>
+      <div class="sgroup lcorr" id="lAdd"></div>
       <div class="slabel">Schlafenszeit</div>
       <div class="sgroup">
         <div class="srow"><span class="sic" style="background:#5e5ce6">😴</span><span class="sl">Schlafen ab</span><input type="time" class="tinput" id="sF" value="${S.sleep.from}"></div>
@@ -3107,8 +3179,49 @@ render(body,ctx){
     const upd=(k,v)=>askCode('Schlafenszeit ändern',()=>{advance();S.sleep[k]=v;save();renderBattery();updateCC();draw()},draw);
     $('#sF',body).onchange=e=>e.target.value&&upd('from',e.target.value);
     $('#sT',body).onchange=e=>e.target.value&&upd('to',e.target.value);
-    bindGps();
+    bindGps();corrDraw();addDraw();
     if(S.loc.mode==='gps')initMap();
+  }
+  const hm=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())};
+  let aHome=null,aFrom=null,aTo=null;
+  function toTs(v,ref){const [h,m]=v.split(':').map(Number),d=new Date();d.setHours(h,m,0,0);let t=d.getTime();if(t>Date.now())t-=864e5;if(ref!==undefined&&t<ref&&ref-t>12*3600000)t+=864e5;return t}
+  function addDraw(){
+    const el=$('#lAdd',body);if(!el)return;
+    if(aHome===null)aHome=!S.loc.isHome;           // standardmäßig das Gegenteil von jetzt
+    if(aFrom===null){aFrom=hm(Date.now()-150*60000);aTo=hm(Date.now()-30*60000)}
+    el.innerHTML=`<p class="lc-q">Zwischendurch woanders gewesen? Trag es hier ein:</p>
+      <div class="seg" style="margin-bottom:10px"><button data-ah="0" class="${!aHome?'on':''}">🚶 Ich war weg</button><button data-ah="1" class="${aHome?'on':''}">🏠 Ich war zu Hause</button></div>
+      <div class="lc-range"><label>Von<input type="time" class="tinput" id="laF" value="${aFrom}"></label><label>Bis<input type="time" class="tinput" id="laT" value="${aTo}"></label></div>
+      <div class="lc-prev" id="laPrev"></div>
+      <button class="btn primary" id="laOk" style="width:100%">Nachtragen 🔒</button>`;
+    const calc=()=>{const a=toTs(aFrom),b=toTs(aTo,a);return corrRange(a,b,aHome)};
+    const prev=()=>{const pv=$('#laPrev',el),ok=$('#laOk',el),a=toTs(aFrom),b=toTs(aTo,a);
+      if(b<=a){pv.textContent='„Bis“ muss nach „Von“ sein.';ok.disabled=true;return}
+      const r=calc();if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf noch nicht zurück.';ok.disabled=true;return}
+      ok.disabled=false;pv.innerHTML=`${fmtLen(Math.round((b-a)/60000)*60000)} ${aHome?'zu Hause':'weg'} · Akku jetzt <b>${dispPct()} %</b> → danach <b style="color:${r.lv<S.battery.level?'#ff9f0a':'#34c759'}">${r.lv<=0?0:Math.ceil(r.lv-1e-9)} %</b>`};
+    $$('[data-ah]',el).forEach(x=>x.onclick=()=>{aHome=x.dataset.ah==='1';haptic('select');addDraw()});
+    $('#laF',el).onchange=e=>{if(e.target.value){aFrom=e.target.value;prev()}};
+    $('#laT',el).onchange=e=>{if(e.target.value){aTo=e.target.value;prev()}};
+    $('#laOk',el).onclick=()=>{const a=toTs(aFrom),b=toTs(aTo,a),h=aHome;askCode('Zeit nachtragen',()=>{if(corrRangeApply(a,b,h)){haptic('success');notify('📍','Nachgetragen',`${hm(a)}–${hm(b)} ${h?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');aHome=aFrom=null;refresh();addDraw()}})};
+    prev();
+  }
+  let cMin=0;
+  function corrDraw(){
+    const el=$('#lCorr',body);if(!el)return;const h=!!S.loc.isHome;
+    const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']];
+    el.innerHTML=`<p class="lc-q">${h?'🏠 Wie lange bist du schon <b>zu Hause</b>?':'🚶 Wie lange bist du schon <b>weg</b>?'}</p>
+      <div class="lc-chips">${P.map(([m,t])=>`<button data-cm="${m}" class="${cMin===m?'on':''}">${t}</button>`).join('')}</div>
+      <div class="lc-own"><input class="input" id="lcIn" type="number" inputmode="numeric" min="1" max="2880" placeholder="Eigene Zeit" value="${cMin&&!P.some(p=>p[0]===cMin)?cMin:''}"><span>Min.</span></div>
+      <div class="lc-prev" id="lcPrev"></div>
+      <button class="btn primary" id="lcOk" style="width:100%" ${cMin?'':'disabled'}>Übernehmen 🔒</button>
+      <small class="muted lc-hint">Falls GufyUI zu war: so wird der Akku richtig nachgerechnet.</small>`;
+    const prev=()=>{const pv=$('#lcPrev',el),ok=$('#lcOk',el);if(!cMin){pv.innerHTML='Wähle eine Zeit';ok.disabled=true;return}
+      const r=corrCalc(cMin);if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf noch nicht zurück.';ok.disabled=true;return}
+      ok.disabled=false;pv.innerHTML=`Akku jetzt <b>${dispPct()} %</b> → danach <b style="color:${r.lv<S.battery.level?'#ff9f0a':'#34c759'}">${r.lv<=0?0:Math.ceil(r.lv-1e-9)} %</b>`};
+    $$('[data-cm]',el).forEach(b=>b.onclick=()=>{cMin=+b.dataset.cm;haptic('select');corrDraw()});
+    $('#lcIn',el).oninput=e=>{const v=Math.round(+e.target.value);cMin=v>0?Math.min(2880,v):0;$$('[data-cm]',el).forEach(x=>x.classList.remove('on'));prev()};
+    $('#lcOk',el).onclick=()=>{const m=cMin;if(!m)return;askCode('Zeit korrigieren',()=>{if(corrApply(m)){haptic('success');notify('⏱️','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${S.loc.isHome?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');cMin=0;refresh()}})};
+    prev();
   }
   function bindGps(){
     const hm=$('#lHome',body);if(hm)hm.onchange=e=>{const v=e.target.checked;e.target.checked=!v;askHome(v,refresh)};
@@ -3189,6 +3302,7 @@ render(body,ctx){
     const s=$('#lStat',body);if(!s)return;
     if(!map&&S.loc.mode==='gps'&&$('#lMap iframe',body)===null&&!(window.L&&L.map)&&geoPos){const el=$('#lMap',body);if(el&&!el.dataset.tried){el.dataset.tried=1;initMap()}}
     s.innerHTML=statusHTML();
+    const lc=$('#lCorr',body);if(lc&&!lc.contains(document.activeElement))corrDraw();
     if(S.loc.mode!=='gps'){$('#lGps',body).innerHTML=gpsHTML();bindGps();return}
     const inf=$('#lInfo',body);if(inf)inf.innerHTML=infoHTML();
     const st=$('#lSet',body);if(st)st.disabled=!geoPos;
@@ -4342,7 +4456,7 @@ renderHome();applyLook();tick();advance();renderBattery();devSync();
 if(S.setupDone){ensureQuests();checkDebts()}
 if(S.loc.mode==='gps'&&S.setupDone)startGeo();
 addEventListener('beforeunload',()=>{advance();save()});
-addEventListener('pagehide',()=>{advance();save()});
+addEventListener('pagehide',()=>{advance();bsnap(true);save()});
 boot();
 </script>
 </body>
