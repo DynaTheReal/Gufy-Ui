@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.1","notes":["Gemini heißt jetzt Gufy AI ✨","Animation, während Gufy AI nachdenkt – die Antwort erscheint Wort für Wort","Hängt eine Anfrage, bricht Gufy AI nach 20 Sek. ab und versucht es neu – mit „! Neuer Versuch …“ unter der Antwort","Bei Überlastung probiert Gufy AI automatisch andere Modelle"]};
+window.GUFY={"v":"10.2","notes":["Gufy AI antwortet jetzt kürzer, kommt schneller zum Punkt und benutzt ein paar Emojis 😄","Gufy AI-Karte: Leuchten wird nicht mehr an den Kanten abgeschnitten","Gemini heißt jetzt Gufy AI ✨","Animation, während Gufy AI nachdenkt – die Antwort erscheint Wort für Wort","Hängt eine Anfrage, bricht Gufy AI nach 20 Sek. ab und versucht es neu – mit „! Neuer Versuch …“ unter der Antwort","Bei Überlastung probiert Gufy AI automatisch andere Modelle"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1214,11 +1214,11 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .as-step.gem{align-items:flex-start;background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(66,133,244,.18))}
 .as-step.gem small{white-space:pre-wrap;overflow:visible;text-overflow:clip;max-height:none;display:block;word-break:break-word;font-size:14px;color:rgba(255,255,255,.92);line-height:1.4}
 .as-step.gem{position:relative;overflow:hidden}
-.as-step.gem.think::before{content:'';position:absolute;inset:-2px;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.13) 50%,transparent 70%);background-size:250% 100%;animation:aiSheen 1.6s linear infinite;pointer-events:none}
+.as-step.gem.think::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.13) 50%,transparent 70%);background-size:250% 100%;animation:aiSheen 1.6s linear infinite;pointer-events:none}
 @keyframes aiSheen{from{background-position:150% 0}to{background-position:-100% 0}}
-.as-step.gem.think{box-shadow:0 0 0 1.5px rgba(160,130,255,.55),0 0 22px rgba(124,92,255,.35);animation:aiGlow 2s ease-in-out infinite}
-@keyframes aiGlow{50%{box-shadow:0 0 0 1.5px rgba(66,180,255,.6),0 0 28px rgba(66,133,244,.45)}}
-.ai-orb{display:block;width:26px;height:26px;border-radius:50%;background:conic-gradient(from 0deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);animation:pwSpin 1.4s linear infinite,aiPulse 1.4s ease-in-out infinite;filter:blur(.3px);box-shadow:0 0 14px rgba(167,139,250,.7)}
+.as-step.gem.think{box-shadow:inset 0 0 0 1.5px rgba(160,130,255,.6),inset 0 0 18px rgba(124,92,255,.28);animation:aiGlow 2s ease-in-out infinite}
+@keyframes aiGlow{50%{box-shadow:inset 0 0 0 1.5px rgba(66,180,255,.65),inset 0 0 22px rgba(66,133,244,.32)}}
+.ai-orb{display:block;width:24px;height:24px;border-radius:50%;background:conic-gradient(from 0deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);animation:pwSpin 1.4s linear infinite,aiPulse 1.4s ease-in-out infinite;filter:blur(.3px);box-shadow:0 0 8px rgba(167,139,250,.6)}
 @keyframes aiPulse{50%{transform:scale(.82) rotate(180deg)}}
 .ai-dots{display:inline-flex;gap:5px;padding:4px 0}.ai-dots i{width:7px;height:7px;border-radius:50%;background:#c4b5fd;animation:aiDot 1.1s ease-in-out infinite}
 .ai-dots i:nth-child(2){animation-delay:.15s}.ai-dots i:nth-child(3){animation-delay:.3s}
@@ -2149,14 +2149,14 @@ function gemContext(){
 async function gemAsk(q,onRetry){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
   if(Date.now()-gemHistT>10*60000)gemHist=[];
-  const sys=`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker, freundlich und kurz (meist 1–4 Sätze), ohne Markdown, ohne Sternchen. Beantworte die Frage vollständig – brich nie mitten im Satz ab. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.\n\nInfos:\n${gemContext()}`;
+  const sys=`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.\n\nInfos:\n${gemContext()}`;
   const contents=[...gemHist,{role:'user',parts:[{text:q}]}];
   let last;
   let busy=0;
   for(const [m,think,wait] of[['gemini-flash-latest',1,0],['gemini-2.5-flash',1,0],['gemini-flash-lite-latest',1,0],['gemini-2.5-flash-lite',1,0],['gemini-2.0-flash',0,0],['gemini-flash-latest',1,2500]]){
     if(wait)await new Promise(r=>setTimeout(r,wait));
     if(busy&&onRetry)onRetry(busy);
-    const gc={maxOutputTokens:1200,temperature:.7};if(think)gc.thinkingConfig={thinkingBudget:0};
+    const gc={maxOutputTokens:800,temperature:.7};if(think)gc.thinkingConfig={thinkingBudget:0};
     const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};
     const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);   // hängt? nach 20 Sek. abbrechen
       try{return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal})}
