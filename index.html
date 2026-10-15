@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.5","notes":["Öfis: „Bei dir“ und „Schnellster heim“ jetzt ganz oben in der Öfis-App (statt in Standort)","Öfis: Abfahrten von allen Steigen einer Haltestelle (z. B. Westerland Alte Post)","Öfis: in Deutschland zusätzlich der DB-Fahrplan – Takt-Busse (alle 5 Min.) fehlen nicht mehr"]};
+window.GUFY={"v":"9.6","notes":["Neue App im Gufy Store: MathEdits ➗ – deine Mathe-Lern-App direkt in GufyUI"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1200,6 +1200,7 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .lb-load{height:60px;border-radius:10px;background:linear-gradient(90deg,var(--hover),rgba(127,127,127,.18),var(--hover));background-size:200% 100%;animation:lbSh 1.2s linear infinite}
 @keyframes lbSh{to{background-position:-200% 0}}
 .lb-ref{grid-column:1/-1;justify-self:end;font-size:12px;color:var(--muted);background:none;border:none;padding:2px 4px}
+.web-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 </style>
 </head>
 <body class="dark">
@@ -4405,6 +4406,18 @@ render(body,ctx){
   ctx.cleanup.push(()=>{clearInterval(iv);if(watch!==null)navigator.geolocation.clearWatch(watch)});
 }}
 ,
+/* ---------- MathEdits (Website in einer App) ---------- */
+mathedits:{name:'MathEdits',cat:'Lernen',full:true,store:true,icon:'➗',bg:'linear-gradient(135deg,#58cc02,#1cb0f6)',
+render(body,ctx){
+  const URL='https://dynathereal.github.io/mathedits/';
+  body.style.padding='0';body.style.position='relative';body.style.overflow='hidden';
+  body.innerHTML=`<div class="web-load" id="weLd"><div class="sd-spin" style="border-color:rgba(127,127,127,.25);border-top-color:var(--accent)"></div><small class="muted">MathEdits wird geladen …</small></div>
+    <iframe id="weF" src="${URL}" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;opacity:0;transition:opacity .3s" allow="clipboard-write; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+  const f=$('#weF',body),ld=$('#weLd',body);
+  f.onload=()=>{f.style.opacity=1;ld.remove();glog('MathEdits','geladen')};
+  const t=setTimeout(()=>{if(ld.isConnected)ld.innerHTML=`<small class="muted">Lädt sehr lange …</small><a class="btn" href="${URL}" target="_blank" rel="noopener">Im Browser öffnen</a>`},12000);
+  ctx.cleanup.push(()=>clearTimeout(t));
+}},
 /* ---------- Öfis (Bus & Bahn: Abfahrten + Radar) ---------- */
 oefi:{name:'Öfis',cat:'Werkzeuge',full:true,store:true,icon:'🚏',bg:'linear-gradient(135deg,#ffcc00,#ff7a00)',
 render(body,ctx){
