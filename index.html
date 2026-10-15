@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.6","notes":["Bugfix: Lange Fragen starten nicht mehr 5× Gufy AI gleichzeitig – die ganze Nachricht geht genau einmal an Gufy AI","Assistent öffnet sich schneller: Home-Taste nur noch ¾ Sekunde halten","Gufy AI kann jetzt Sachen ausführen – z. B. „Kannst du mich abmelden und dann ausschalten?“","Der Assistent versteht „ausschalten“, „herunterfahren“ und „melde mich ab“ jetzt auch direkt","Gufy AI: Fortschrittsbalken und Modell-Wechsel für den restlichen Tag"]};
+window.GUFY={"v":"10.7","notes":["Beta: AI-Quests ✨ – jeden Tag leichter Sport (Klimmzüge, Rad oder Joggen), eine andere Quest und eine verrückte, schwere AI-Quest von Gufy AI für 50 Coins","Einschalten: Einstellungen › Beta › AI-Quests","Assistent: Tastatur klappt beim Öffnen sofort aus","Gufy AI startet bei langen Fragen nur noch einmal"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1237,6 +1237,9 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .ai-bar i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#a78bfa,#60a5fa,#f472b6);background-size:200% 100%;animation:aiBar 1.5s linear infinite;transition:width .2s linear}
 @keyframes aiBar{to{background-position:-200% 0}}
 .ai-prog span{font-size:11.5px;color:rgba(255,255,255,.6);white-space:nowrap;min-width:84px;text-align:right}
+.qchip.qaichip{background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)!important;margin-left:4px}
+.qcard.qai{box-shadow:inset 0 0 0 1.5px rgba(167,139,250,.55)}
+.qcard.qpend b{opacity:.65;animation:aiDot 1.6s ease-in-out infinite}
 </style>
 </head>
 <body class="dark">
@@ -2155,12 +2158,12 @@ function gemContext(){
   if(typeof geoPos!=='undefined'&&geoPos)L.push(`Standort ungefähr: ${geoPos.lat.toFixed(2)}, ${geoPos.lon.toFixed(2)}.`);
   return L.join('\n');
 }
-async function gemAsk(q,onRetry){
+async function gemAsk(q,onRetry,opt={}){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
   if(Date.now()-gemHistT>10*60000)gemHist=[];
-  const sys=`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
+  const sys=opt.sys||`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
 WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutzer etwas TUN will, schreib für jede Aktion eine eigene Zeile genau so: [[BEFEHL: <einfacher deutscher Befehl>]] und danach höchstens einen kurzen Satz. Beispiele für Befehle, die GufyUI versteht: „Timer 5 Minuten“, „Wecker 7:30“, „Erinnere mich in 10 Minuten an Hausaufgaben“, „Taschenlampe an“, „Taschenlampe aus“, „Öffne Wetter“ (oder jede andere App), „Akku“, „Coins“, „Quests“, „Notiz Milch kaufen“, „Helligkeit 50 Prozent“, „Dunkelmodus an“, „Hintergrund wechseln“, „Würfeln“, „Neustart“, „Abmelden“, „Ausschalten“. Erfinde keine anderen Aktionen; wenn etwas nicht geht, sag das kurz.\n\nInfos:\n${gemContext()}`;
-  const contents=[...gemHist,{role:'user',parts:[{text:q}]}];
+  const contents=opt.sys?[{role:'user',parts:[{text:q}]}]:[...gemHist,{role:'user',parts:[{text:q}]}];
   let last;
   let busy=0;
   let ML=[['gemini-flash-latest',1,0],['gemini-2.5-flash',1,0],['gemini-flash-lite-latest',1,0],['gemini-2.5-flash-lite',1,0],['gemini-2.0-flash',0,0]];
@@ -2171,7 +2174,7 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
   for(const [m,think,wait] of ML){
     if(wait)await new Promise(r=>setTimeout(r,wait));
     if(busy&&onRetry)onRetry(busy);
-    const gc={maxOutputTokens:800,temperature:.7};if(think)gc.thinkingConfig={thinkingBudget:0};
+    const gc={maxOutputTokens:800,temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
     const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};
     const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);   // hängt? nach 20 Sek. abbrechen
       try{return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal})}
@@ -2195,7 +2198,7 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
     const ms=Date.now()-t0;S.gemAvg=Math.round(S.gemAvg?S.gemAvg*.6+ms*.4:ms);   // für den Fortschrittsbalken
     if(m!==(S.gemModel&&S.gemModel.day===dayKey(new Date())?S.gemModel.m:'gemini-flash-latest')){S.gemModel={day:dayKey(new Date()),m};glog('Gemini','Heute weiter mit '+m)}
     save();
-    gemHist.push({role:'user',parts:[{text:q}]},{role:'model',parts:[{text:t}]});if(gemHist.length>12)gemHist=gemHist.slice(-12);gemHistT=Date.now();
+    if(!opt.sys)gemHist.push({role:'user',parts:[{text:q}]},{role:'model',parts:[{text:t}]});if(gemHist.length>12)gemHist=gemHist.slice(-12);gemHistT=Date.now();
     return t;
   }
   if(busy)throw new Error(last==='Tageslimit'?'Dein kostenloses Gufy AI-Limit für heute ist aufgebraucht. Morgen geht es wieder.':'Gufy AI ist gerade überlastet. Versuch es in ein paar Minuten nochmal.');
@@ -2560,7 +2563,8 @@ $('#homebtn').onclick=goHome;
     if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},750)}});
   hb.addEventListener('pointerup',e=>{stop();
     if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();asFocus();return}
-    if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
+    if(Date.now()-t0<650){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
+  hb.addEventListener('touchend',()=>{if($('#asst')&&$('#asst').classList.contains('open'))asFocus()},{passive:true});   // iPhone: Tastatur sicher ausklappen
   hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
 addEventListener('keydown',e=>{if(e.key==='Escape'&&current==='desktop')goHome()});
@@ -3095,7 +3099,7 @@ $('#bright').oninput=e=>{S.brightness=+e.target.value;applyLook();save()};
    QUESTS – riesiger Generator, zu zweit, leicht bis extrem
    ========================================================= */
 const DIFFS=[['mittel','Mittel','#e0a800','🟡'],['schwer','Schwer','#ff9500','🟠'],['extrem','Extrem','#ff3b30','🔴']];
-const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit Eltern',own:'⭐ Eigene'};
+const TAGS={sport:'💪 Sport',fun:'😂 Fun',parents:'👨‍👩‍👦 Mit Eltern',own:'⭐ Eigene',ai:'✨ AI-Quest'};
 // Erlaubte Belohnungen je Schwierigkeit (kein 25er mehr)
 const COINSTEPS={mittel:[25,50],schwer:[50,100],extrem:[100,200,500]};
 // Belohnung = Grundwert × 2 ÷ 10 (z. B. 50 → 10, 400 → 80, 1000 → 200)
@@ -3171,18 +3175,22 @@ function genQuest(diff,avoid,kind){
   for(let k=0;k<40;k++){
     if(!kind&&own.length&&Math.random()<.3){
       const o=own[rnd(0,own.length-1)];q={i:o.i,title:o.title,coins:o.coins,tag:'own'};
+    }else if(kind==='ai'){
+      q={i:'✨',title:'Gufy AI denkt sich gerade eine Quest aus …',coins:50,tag:'ai',pending:true};
+    }else if(kind==='sportL'){
+      const tpl=QT_LIGHT[rnd(0,QT_LIGHT.length-1)];q={i:tpl.i,title:tpl.t(rnd(tpl.r[0],tpl.r[1])),coins:tpl.c,tag:'sport',hint:tpl.h||''};
     }else if(kind==='sport'||(!kind&&Math.random()<.2)){
       const tpl=QT[rnd(0,QT.length-1)],[a,b]=tpl.r[diff],n=nice(rnd(a,b));
       q={i:tpl.i,title:tpl.t(n),coins:snapCoins(tpl.cv[diff],diff),tag:tpl.g,hint:tpl.h||''};
     }else{
       let L=QF[diff];
-      if(kind==='parents')L=L.filter(f=>f[3]);else if(kind==='fun')L=L.filter(f=>!f[3]);
+      if(kind==='parents')L=L.filter(f=>f[3]);else if(kind==='fun')L=L.filter(f=>!f[3]);   // 'other' = alles außer Sport
       const f=L[rnd(0,L.length-1)];
       q={i:f[0],title:f[1],coins:f[2],tag:f[3]?'parents':'fun'};
     }
     if(!avoid.some(x=>x.title===q.title||x.i===q.i))break;
   }
-  if(q.tag!=='own')q.coins=QUEST_PAY(q.coins);
+  if(q.tag!=='own'&&q.tag!=='ai')q.coins=QUEST_PAY(q.coins);
   q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
@@ -3191,7 +3199,33 @@ function failDebt(d){d.status='failed';S.coins=-1000;save();updateCoins();haptic
   notify('💸','Schuld nicht erledigt',`„${d.title}“ wurde nicht gemacht – Coins auf −1.000.`,'#ff453a')}
 function checkDebts(){S.debts??=[];const t=dayKey();S.debts.forEach(d=>{if(d.status==='open'&&d.day!==t)failDebt(d)})}
 // 5 Tagesquests: genau 1× Sport, immer 1× mit den Eltern, Rest witzig/peinlich
-const DAILY_SLOTS=[['extrem','fun'],['schwer','parents'],['schwer','sport']];
+const DAILY_SLOTS0=[['extrem','fun'],['schwer','parents'],['schwer','sport']];
+const DAILY_SLOTS_AI=[['mittel','sportL'],['schwer','other'],['extrem','ai']];   // Beta „AI-Quests“: leichter Sport, etwas anderes, AI-Quest
+const DAILY_SLOTS={get length(){return dailySlots().length},forEach:(f)=>dailySlots().forEach(f),slice:(a,b)=>dailySlots().slice(a,b)};
+function dailySlots(){return S.aiQuests?DAILY_SLOTS_AI:DAILY_SLOTS0}
+// leichter Sport (keine Liegestütze): Klimmzüge, Fahrrad, Joggen
+const QT_LIGHT=[
+  {i:'🧗',t:n=>`Schaff ${n} Klimmzüge (gern mit Pausen)`,r:[3,6],c:50},
+  {i:'🚴',t:n=>`Fahr ${n} km Fahrrad`,r:[5,10],c:50,h:'Mit Helm'},
+  {i:'🏃',t:n=>`Jogg ${n} km – Tempo egal`,r:[2,3],c:50}
+];
+let aiQBusy=false;
+async function aiQuestFill(){
+  if(aiQBusy||!S.aiQuests||!S.daily)return;const q=S.daily.list.find(x=>x.tag==='ai'&&x.pending&&!x.done);if(!q)return;
+  if(!gemGet()){q.title='Für AI-Quests brauchst du Gufy AI – sag dem Assistenten „API-Key“';q.noKey=true;return}
+  aiQBusy=true;q.noKey=false;
+  const old=(S.aiQOld||[]).slice(-12).join(' | ');
+  const sys=`Du erfindest für GufyUI genau EINE witzige, total zufällige und SCHWERE Tagesquest auf Deutsch für einen Jugendlichen (er macht Quests oft mit seinem besten Freund). Stil: absurd, peinlich-lustig, kreativ, sehr konkret – z. B. „Sing auf der Straße so laut du kannst ‚Alle meine Entchen‘ im Würstchen-Style und wünsch danach deinem Würstchen-Freund einen guten Donut-Geburtstag“. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, nichts mit Fremden anfassen, heute machbar. Höchstens 2 Sätze. Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>"}`;
+  try{
+    const t=await gemAsk(`Erfinde die AI-Quest für heute (${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}). Nicht wiederholen: ${old||'–'}`,null,{sys,temp:1.1});
+    let o=null;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
+    const txt=(o&&o.quest||t).replace(/^["„]|["“]$/g,'').trim().slice(0,260);
+    if(S.daily.list.includes(q)&&!q.done){q.title=txt;q.i=(o&&o.emoji||'✨').slice(0,4);q.pending=false;S.aiQOld=(S.aiQOld||[]).concat(txt).slice(-20);glog('AI-Quest',txt)}
+  }catch(e){q.title='Gufy AI konnte gerade keine Quest erfinden – tippe 🎲 zum neu Versuchen';glog('AI-Quest','Fehler: '+e.message)}
+  aiQBusy=false;save();
+  if(appCtx&&appCtx.id==='quests'&&appCtx.redraw)appCtx.redraw();
+  if(typeof updateWidgets==='function'&&current==='desktop')updateWidgets($('#track'));
+}
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 function ensureQuests(){
   // alte eigene Quests anpassen (keine "Leicht"-Stufe, keine 25 Coins mehr)
@@ -3209,7 +3243,7 @@ function ensureQuests(){
   }
   if(!S.daily||S.daily.day!==dayKey()){
     const list=[];DAILY_SLOTS.forEach(([d,k])=>list.push(genQuest(d,list,k)));
-    S.daily={day:dayKey(),list,v:2};S.questsV6=S.questsV7=true;save();
+    S.daily={day:dayKey(),list,v:2,ai:!!S.aiQuests};S.questsV6=S.questsV7=true;save();
   }else if(S.daily.v!==2){ // heutige Liste an die neuen Regeln anpassen, Erledigtes bleibt
     const L=S.daily.list;
     DAILY_SLOTS.forEach(([d,k],i)=>{const q=L[i];
@@ -3226,6 +3260,10 @@ function ensureQuests(){
       if(j>=0){used.add(j);out.push(L[j])}else out.push(genQuest(d,out,k))});
     S.daily.list=out;save();
   }
+  if(S.daily&&S.daily.day===dayKey()&&!!S.daily.ai!==!!S.aiQuests){ // Beta AI-Quests an/aus → offene Quests nach neuen Regeln
+    const SL=dailySlots(),L=S.daily.list;SL.forEach(([d,k],i)=>{if(!L[i]||!L[i].done)L[i]=genQuest(d,L.filter((_,j)=>j!==i),k)});L.length=SL.length;S.daily.ai=!!S.aiQuests;save()}
+  if(S.daily&&S.daily.ai===undefined)S.daily.ai=!!S.aiQuests;
+  setTimeout(aiQuestFill,50);
   // Reparatur: „erledigt“ ohne Eintrag im Verlauf (= ohne Coins) → wieder offen
   if(S.daily&&S.histClr!==dayKey()){
     const h=(S.questDone||[]).filter(e=>dayKey(new Date(e.t))===S.daily.day);let fix=0;
@@ -3281,15 +3319,16 @@ render(body,ctx){
   let tab='today';
   const dcol=d=>(DIFFS.find(x=>x[0]===d)||DIFFS[0]);
   function untilMidnight(){const n=new Date(),m=new Date(n);m.setHours(24,0,0,0);return fmtDur((m-n)/3600000)}
+  ctx.redraw=()=>{if(tab==='today')draw()};
   function draw(){
     ensureQuests();
     const L=S.daily.list,doneN=L.filter(q=>q.done).length;
     let html=`<div class="hero"><div class="gold"><small>Deine Coins</small><b>🪙 <span class="js-coins">${fmtNum(S.coins)}</span></b></div><div><small>Heute geschafft</small><b>🏆 ${doneN}/${L.length}</b></div></div>
       <div class="tabs"><button data-tab="today" class="${tab==='today'?'on':''}">📅 Heute</button><button data-tab="own" class="${tab==='own'?'on':''}">⭐ Eigene</button><button data-tab="hist" class="${tab==='hist'?'on':''}">📜 Verlauf</button></div>`;
     if(tab==='today'){
-      html+=sortQ(L).map(i=>{const q=L[i],d=dcol(q.diff);return `<div class="qcard ${q.done?'qdoneC':''}" data-qi="${i}" style="--dc:${d[2]}"><div class="qic">${esc(q.i)}</div>
-        <div class="qt"><small class="qchip" style="background:${d[2]}">${d[1]}</small><b>${esc(q.title)}</b><small class="muted">${TAGS[q.tag]||''}${q.hint?' · '+esc(q.hint):''}</small><br><span class="coin">🪙 ${q.coins}</span></div>
-        <div class="qbtns">${q.done?`<span class="qok">✅</span>`:`<button class="qdone" data-done="${i}">✓ Geschafft</button><button class="qre" data-re="${i}">🎲</button>`}</div></div>`}).join('');
+      html+=sortQ(L).map(i=>{const q=L[i],d=dcol(q.diff);return `<div class="qcard ${q.done?'qdoneC':''} ${q.tag==='ai'?'qai':''} ${q.pending?'qpend':''}" data-qi="${i}" style="--dc:${d[2]}"><div class="qic">${esc(q.i)}</div>
+        <div class="qt"><small class="qchip" style="background:${d[2]}">${d[1]}</small>${q.tag==='ai'?'<small class="qchip qaichip">✨ AI</small>':''}<b>${esc(q.title)}</b><small class="muted">${TAGS[q.tag]||''}${q.hint?' · '+esc(q.hint):''}</small><br><span class="coin">🪙 ${q.coins}</span></div>
+        <div class="qbtns">${q.done?`<span class="qok">✅</span>`:`${q.pending?'':`<button class="qdone" data-done="${i}">✓ Geschafft</button>`}<button class="qre" data-re="${i}">🎲</button>`}</div></div>`}).join('');
       html+=`<div class="qfoot"><button class="btn" id="qAll">🔄 Neu würfeln</button><small class="muted">Neue Quests in ${untilMidnight()}</small></div>`;
     }else if(tab==='own'){
       const O=S.customQ||[];
@@ -3677,9 +3716,13 @@ render(body,ctx){
       c.innerHTML=`<div class="sgroup">
           <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:#5e5ce6">📐</span><span class="sl">Bildschirm bis ganz unten</span><label class="switch"><input type="checkbox" id="bDown" ${S.betaDown?'checked':''}><span></span></label></div>
+          <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)">✨</span><span class="sl">AI-Quests<br><small class="muted">Leichter Sport, eine andere Quest und eine verrückte AI-Quest (50 Coins)</small></span><label class="switch"><input type="checkbox" id="bAiQ" ${S.aiQuests?'checked':''}><span></span></label></div>
         </div>
         <p class="slabel" style="text-transform:none;letter-spacing:0;font-weight:500;line-height:1.5">${sup?(realBatt?`Gerät: ${Math.round(realBatt.level*100)} %${realBatt.charging?' · lädt':''}`:'Akku wird gelesen …'):'Dieser Browser gibt den Akku nicht frei (z. B. iPhone/Safari).'}</p>`;
       $('#bDown',c).onchange=e=>{S.betaDown=e.target.checked;save();detectPhone();haptic()};
+      $('#bAiQ',c).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
+        askCode(v?'AI-Quests einschalten':'AI-Quests ausschalten',()=>{S.aiQuests=v;save();ensureQuests();go('beta');haptic('success');
+          notify('✨',v?'AI-Quests an':'AI-Quests aus',v?(gemGet()?'Deine offenen Quests von heute wurden neu gemischt – Gufy AI erfindet gerade deine AI-Quest.':'Für die AI-Quest brauchst du noch Gufy AI – sag dem Assistenten „API-Key“.'):'Du bekommst wieder die normalen Tagesquests.','#7c5cff')})};
       const t=$('#bReal',c);
       if(t)t.onchange=e=>{const v=e.target.checked;e.target.checked=!v;
         askCode(v?'Beta: Echten Akku nutzen':'Beta ausschalten',()=>{
