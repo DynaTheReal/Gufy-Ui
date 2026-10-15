@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.4","notes":["Gufy AI: Fortschrittsbalken mit „noch ca. X Sek.“ – lernt, wie lange Antworten bei dir dauern","Musste Gufy AI auf ein anderes Modell wechseln, nimmt es den Rest des Tages gleich dieses Modell","Chat scrollt wieder bis unten, alter Verlauf wird beim Schließen ausgeblendet"]};
+window.GUFY={"v":"10.5","notes":["Assistent öffnet sich schneller: Home-Taste nur noch ¾ Sekunde halten","Gufy AI kann jetzt Sachen ausführen – z. B. „Kannst du mich abmelden und dann ausschalten?“","Der Assistent versteht „ausschalten“, „herunterfahren“ und „melde mich ab“ jetzt auch direkt","Gufy AI: Fortschrittsbalken und Modell-Wechsel für den restlichen Tag"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1039,7 +1039,7 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 #tpill{position:fixed;top:calc(var(--sb,30px) + 6px);left:50%;transform:translateX(-50%);z-index:1250;padding:6px 14px;border-radius:999px;background:rgba(255,159,10,.95);color:#000;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;box-shadow:0 6px 18px rgba(0,0,0,.3);border:0}
 #tpill.arm{background:#ff453a;color:#fff}#tpill small{opacity:.7}
 /* 7.1: Home-Taste halten → Assistent */
-#homebtn.hold::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(#a78bfa var(--ha,0deg),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:hold 1s linear forwards}
+#homebtn.hold::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(#a78bfa var(--ha,0deg),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:hold .75s linear forwards}
 @property --ha{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes hold{to{--ha:360deg}}
 #homebtn.ready{box-shadow:0 0 0 3px #a78bfa,0 0 30px 8px rgba(167,139,250,.6)!important}
@@ -2158,7 +2158,8 @@ function gemContext(){
 async function gemAsk(q,onRetry){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
   if(Date.now()-gemHistT>10*60000)gemHist=[];
-  const sys=`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.\n\nInfos:\n${gemContext()}`;
+  const sys=`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
+WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutzer etwas TUN will, schreib für jede Aktion eine eigene Zeile genau so: [[BEFEHL: <einfacher deutscher Befehl>]] und danach höchstens einen kurzen Satz. Beispiele für Befehle, die GufyUI versteht: „Timer 5 Minuten“, „Wecker 7:30“, „Erinnere mich in 10 Minuten an Hausaufgaben“, „Taschenlampe an“, „Taschenlampe aus“, „Öffne Wetter“ (oder jede andere App), „Akku“, „Coins“, „Quests“, „Notiz Milch kaufen“, „Helligkeit 50 Prozent“, „Dunkelmodus an“, „Hintergrund wechseln“, „Würfeln“, „Neustart“, „Abmelden“, „Ausschalten“. Erfinde keine anderen Aktionen; wenn etwas nicht geht, sag das kurz.\n\nInfos:\n${gemContext()}`;
   const contents=[...gemHist,{role:'user',parts:[{text:q}]}];
   let last;
   let busy=0;
@@ -2556,7 +2557,7 @@ $('#homebtn').onclick=goHome;
   const stop=()=>{clearTimeout(holdT);hb.classList.remove('hold','ready')};
   hb.addEventListener('contextmenu',e=>e.preventDefault());
   hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
-    if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},1000)}});
+    if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},750)}});
   hb.addEventListener('pointerup',e=>{stop();
     if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();asFocus();return}
     if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
@@ -4974,13 +4975,15 @@ function planCmd(raw){
   // Smalltalk & Hilfe
   if(/^(hallo|hi|hey|servus|moin|guten (tag|abend))\b/.test(s))return{ic:'👋',txt:'Hallo',run:()=>`Hallo ${S.name||''}! Was kann ich für dich tun?`};
   if(/^danke|dankeschön/.test(s))return{ic:'😊',txt:'Bitte',run:()=>'Gern geschehen!'};
-  if(/wer bist du|wie heißt du/.test(s))return{ic:'✨',txt:'Über mich',run:()=>'Ich bin der Gufy Assistent. Halte die Home-Taste 1 Sekunde und sag mir, was ich tun soll.'};
+  if(/wer bist du|wie heißt du/.test(s))return{ic:'✨',txt:'Über mich',run:()=>'Ich bin der Gufy Assistent. Halte die Home-Taste kurz (¾ Sekunde) und sag mir, was ich tun soll.'};
   if(/was kannst du|hilfe|befehle/.test(s))return{ic:'💡',txt:'Hilfe',run:()=>'Timer, Wecker, Taschenlampe, Apps öffnen, Wetter, Akku, Coins, Quests, Notizen, Rechnen, Helligkeit, Dunkelmodus, Hintergrund, Powerbank, Würfeln, Witze und mehr – auch mehrere Sachen auf einmal.'};
   if(/stimme aus|nicht vorlesen|vorlesen aus|sei leise/.test(s))return{ic:'🔇',txt:'Vorlesen aus',run:()=>{S.asstVoice=false;save();return 'Ich lese nicht mehr vor.'}};
   if(/stimme an|vorlesen an|lies vor/.test(s)&&!/notiz/.test(s))return{ic:'🔊',txt:'Vorlesen an',run:()=>{S.asstVoice=true;save();glog('Vorlesen','eingeschaltet');return 'Ich lese wieder vor. Achtung: Auf dem iPhone kann das Mikro danach nichts mehr hören, bis du GufyUI neu startest.'}};
   if(/\bapi|schlüssel|(gemini|gufy ai|ki) (einricht|key|schlüssel)|(gemini|gufy ai) einrichten/.test(s))return{ic:'🔑',txt:'Gufy AI einrichten',opens:true,run:()=>{setTimeout(gemDialog,150);return 'Hier kannst du deinen Gufy AI-Schlüssel eingeben.'}};
   if(/neustart|starte neu|neu starten/.test(s))return{ic:'🔄',txt:'Neustart',opens:true,run:()=>{setTimeout(()=>doAction('restart'),900);return 'GufyUI startet neu …'}};
-  if(/sperr|bildschirm aus|abmelden/.test(s))return{ic:'🔒',txt:'Sperren',opens:true,run:()=>{setTimeout(logout,600);return 'Gesperrt.'}};
+  if(/^(bitte )?(schalt\w* )?(dich |das handy |handy |gerät |gufy\w* |telefon |alles )?(aus|ausschalten|abschalten|herunterfahren|runterfahren)( bitte)?$|herunterfahren|fahr\w* (dich )?runter|shut ?down|power ?off|handy aus|gerät aus/.test(s)&&!/lampe|licht|ton|stimme|vorlesen|dunkel|timer|wecker|wlan|bluetooth/.test(s))
+    return{ic:'⏻',txt:'Ausschalten',opens:true,run:()=>{setTimeout(()=>doAction('off'),700);return 'GufyUI wird ausgeschaltet …'}};
+  if(/sperr|bildschirm aus|abmelden|meld\w* (mich )?ab|ausloggen|log\w* (mich )?aus/.test(s))return{ic:'🔒',txt:'Sperren',opens:true,run:()=>{setTimeout(logout,600);return 'Gesperrt.'}};
   // Timer-Rest & Wecker
   if(/wie lange noch|timer.*(übrig|noch|läuft)|restzeit/.test(s))return{ic:'⏱️',txt:'Timer',run:()=>{if(!S.atimers.length)return 'Es läuft kein Timer.';const n=S.atimers.slice().sort((a,b)=>a.end-b.end)[0];return `Noch ${fmtLen(Math.ceil((n.end-Date.now())/1000)*1000)}.`}};
   if((m=s.match(/(?:wecker|weck\w* mich|alarm)\D*?(?:um|für)?\s*(\d{1,2})(?:[:.](\d{2})|\s*uhr\s*(\d{1,2})?)?/))&&!/minute|stunde|sekunde/.test(s)){
@@ -5133,8 +5136,18 @@ async function runAssistant(text){
       await new Promise(r=>setTimeout(r,250));pb.classList.add('done');setTimeout(()=>pb.remove(),300);
       row.classList.remove('think');const rw=$('.ai-retry',row);if(rw)rw.remove();
       $('.ic',row).textContent='✨';
+      const cmds=[];if(!bad2){res2=res2.replace(/\[\[\s*BEFEHL\s*:\s*([^\]]+?)\s*\]\]/gi,(_,c)=>{cmds.push(c.trim());return''}).replace(/\n{3,}/g,'\n\n').trim();if(!res2&&cmds.length)res2='Mach ich! 👍'}
       if(bad2){$('small',row).textContent=res2;$('.st',row).textContent='⚠️'}
       else await aiType($('small',row),res2,box);
+      if(cmds.length)glog('Gemini','Befehle: '+cmds.join(' | '));
+      for(const c of cmds.slice(0,5)){const q2=planCmd(c);if(q2.unknown)continue;   // nur Befehle, die GufyUI wirklich kennt
+        if(q2.err){box.insertAdjacentHTML('beforeend',`<div class="as-step err"><span class="ic">${q2.ic}</span><div><b>${esc(q2.err)}</b><small></small></div><span class="st">⚠️</span></div>`);said.push(q2.err);continue}
+        const k2=rid+'-ai'+Math.random().toString(36).slice(2,6);
+        box.insertAdjacentHTML('beforeend',`<div class="as-step" data-k="${k2}"><span class="ic">${q2.ic}</span><div><b>${esc(q2.txt)}</b><small></small></div><span class="st">⏳</span></div>`);
+        const r2=$(`.as-step[data-k="${k2}"]`,box);requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
+        if(q2.opens){await new Promise(r=>setTimeout(r,600));closeAssistant(true);await new Promise(r=>setTimeout(r,280))}
+        let o2='';try{o2=await q2.run()}catch(e){o2='Fehler'}
+        if(r2){$('small',r2).textContent=o2||'';$('.st',r2).textContent='✅'}said.push(o2);haptic('success')}
       said.push(res2);if(!bad2)haptic('success');requestAnimationFrame(()=>{box.scrollTop=row.offsetHeight>box.clientHeight?row.offsetTop-box.offsetTop-8:box.scrollHeight});
       continue}
     let res='',bad=false;try{res=await p.run()}catch(e){res='Fehler';bad=true}
