@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.2","notes":["Gufy AI antwortet jetzt kürzer, kommt schneller zum Punkt und benutzt ein paar Emojis 😄","Gufy AI-Karte: Leuchten wird nicht mehr an den Kanten abgeschnitten","Gemini heißt jetzt Gufy AI ✨","Animation, während Gufy AI nachdenkt – die Antwort erscheint Wort für Wort","Hängt eine Anfrage, bricht Gufy AI nach 20 Sek. ab und versucht es neu – mit „! Neuer Versuch …“ unter der Antwort","Bei Überlastung probiert Gufy AI automatisch andere Modelle"]};
+window.GUFY={"v":"10.3","notes":["Assistent: Du kannst im Chat wieder ganz nach unten scrollen – lange Antworten werden nicht mehr abgeschnitten","Beim Schließen werden alte Nachrichten ausgeblendet – mit „🕘 Ältere Nachrichten anzeigen“ holst du sie zurück","Gufy AI antwortet jetzt kürzer, kommt schneller zum Punkt und benutzt ein paar Emojis 😄","Gufy AI-Karte: Leuchten wird nicht mehr an den Kanten abgeschnitten","Gemini heißt jetzt Gufy AI ✨","Animation, während Gufy AI nachdenkt – die Antwort erscheint Wort für Wort","Hängt eine Anfrage, bricht Gufy AI nach 20 Sek. ab und versucht es neu – mit „! Neuer Versuch …“ unter der Antwort","Bei Überlastung probiert Gufy AI automatisch andere Modelle"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1058,8 +1058,11 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .as-orb.listen{animation:orbL .5s ease-in-out infinite alternate;box-shadow:0 0 40px 6px rgba(167,139,250,.9)}
 @keyframes orbL{from{transform:scale(.9)}to{transform:scale(1.25)}}
 .as-x{width:34px;height:34px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:15px}
-.as-log{max-height:46vh}
-.as-log{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:40px}
+.as-log{max-height:none;flex:1 1 auto;min-height:0}
+.as-log{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;display:flex;flex-direction:column;gap:8px;min-height:40px;padding-bottom:4px}
+.as-log>*{flex-shrink:0}
+.as-log .old{display:none}.as-log.show-old .old{display:flex}.as-log.show-old .as-me.old{display:block}
+.as-hist{align-self:center;font-size:12.5px;font-weight:650;color:rgba(255,255,255,.75);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px}
 .as-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .as-chips button{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:12.5px}
 .as-me{align-self:flex-end;background:#7c5cff;padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:85%;font-weight:600}
@@ -5092,6 +5095,7 @@ async function runAssistant(text){
     else plans=plans.map(p=>p.unknown?gemQ(p.raw):p);
   }else if(plans.some(p=>p.unknown))plans.forEach(p=>{if(p.unknown)p.err+=' Sag „API-Key“, dann frage ich Gufy AI.'});
   const ch=$('.as-chips',box);if(ch)ch.style.display='none';
+  const hb=$('.as-hist',box);if(hb)box.prepend(hb);
   const olds=box.querySelectorAll('.as-me');if(olds.length>=6){let n=olds[0];const stop=olds[1];while(n&&n!==stop){const x=n.nextElementSibling;n.remove();n=x}}
   box.insertAdjacentHTML('beforeend',`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${rid}-${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join(''));
   const said=[];requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
@@ -5110,7 +5114,7 @@ async function runAssistant(text){
       $('.ic',row).textContent='✨';
       if(bad2){$('small',row).textContent=res2;$('.st',row).textContent='⚠️'}
       else await aiType($('small',row),res2,box);
-      said.push(res2);if(!bad2)haptic('success');requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
+      said.push(res2);if(!bad2)haptic('success');requestAnimationFrame(()=>{box.scrollTop=row.offsetHeight>box.clientHeight?row.offsetTop-box.offsetTop-8:box.scrollHeight});
       continue}
     let res='',bad=false;try{res=await p.run()}catch(e){res='Fehler';bad=true}
     if(row){$('small',row).textContent=res;$('.st',row).textContent=bad?'⚠️':'✅'}
@@ -5144,7 +5148,14 @@ function openAssistant(){
   $('.as-sheet',a).animate([{transform:'translateY(-40px) scale(.96)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
 }
 function asFocus(){const i=$('#asTxt');if(i&&$('#asst').classList.contains('open'))i.focus()}
+function asHideOld(a){const box=$('#asLog',a);if(!box)return;
+  $$('.as-me,.as-step',box).forEach(x=>x.classList.add('old'));box.classList.remove('show-old');
+  const ch=$('.as-chips',box);if(ch)ch.style.display='';
+  let b=$('.as-hist',box);const n=$$('.as-me.old',box).length;
+  if(n&&!b){b=document.createElement('button');b.className='as-hist';box.prepend(b);b.onclick=()=>{box.classList.add('show-old');b.remove();const c=$('.as-chips',box);if(c)c.style.display='none';haptic('select');requestAnimationFrame(()=>box.scrollTop=box.scrollHeight)}}
+  if(b)b.textContent=`🕘 Ältere Nachrichten anzeigen (${n})`;}
 function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;const i=$('#asTxt',a);if(i)i.blur();
+  setTimeout(()=>asHideOld(a),quick?0:220);
   if(quick){a.classList.remove('open');return}
   $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(-40px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
