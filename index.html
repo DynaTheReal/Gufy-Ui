@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.3","notes":["Assistent: Home-Taste 1 Sek. halten – das Fenster kommt sofort, ohne Loslassen","Spracheingabe startet direkt, die Tastatur nur wenn du ins Feld tippst","Neue Befehle: Wecker, Spiel-Vorschlag, Quest-Vorschlag, Powerbank, Zu Hause/Unterwegs, Stoppuhr, Zufallszahl, Neustart, Sperren u. v. m."]};
+window.GUFY={"v":"7.4","notes":["Spracheingabe: funktioniert jetzt auch beim zweiten, dritten … Mal","Assistent: Home-Taste 1 Sek. halten – Fenster kommt sofort","Viele neue Befehle"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -4227,25 +4227,37 @@ async function runAssistant(text){
   if(!$('#asst').classList.contains('open')&&all)notify('✨','Gufy Assistent',all,'#7c5cff');
   speak(all);
 }
-let asRec=null;
+/* Spracheingabe: EIN Erkenner für die ganze Sitzung (iOS-Web-Apps schaffen sonst nur das erste Mal) */
+let asRec=null,asRun=false,asSess=null,asQueue=false;
 function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen')}
-function asListen(){
-  const a=$('#asst');if(!a)return;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
-  try{if(asRec)asRec.abort()}catch(e){}
-  let r;try{r=new SR()}catch(e){asStatus('Spracheingabe nicht verfügbar – schreib einfach.','warn');return}
-  asRec=r;r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
-  let txt='',done=false;const inp=$('#asTxt',a);
-  r.onstart=()=>{asStatus('Ich höre zu …','listen');haptic('select')};
-  r.onresult=e=>{txt=[...e.results].map(x=>x[0].transcript).join('');inp.value=txt;
-    if(e.results[e.results.length-1].isFinal&&!done){done=true;asStatus('');inp.value='';runAssistant(txt)}};
-  r.onerror=e=>{asRec=null;
-    asStatus(e.error==='not-allowed'||e.error==='service-not-allowed'?'Das iPhone erlaubt hier kein Mikrofon – tippe ins Feld und nutze das 🎤 der Tastatur.':e.error==='no-speech'?'Nichts gehört – tippe auf 🎤 und sprich nochmal.':'Spracheingabe hat nicht geklappt – tippe auf 🎤.','warn')};
-  r.onend=()=>{if(asRec===r)asRec=null;if(!done){if(txt.trim()){done=true;asStatus('');inp.value='';runAssistant(txt)}else if($('#asSt')&&$('#asSt').classList.contains('listen'))asStatus('Nichts gehört – tippe auf 🎤 oder schreib.','warn')}};
-  try{r.start()}catch(e){asStatus('Tippe auf 🎤, um zu sprechen.','warn')}
+function asMake(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
+  if(asRec)return asRec;
+  let r;try{r=new SR()}catch(e){return null}
+  r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  r.onstart=()=>{asRun=true;if(asSess)asStatus('Ich höre zu …','listen');haptic('select')};
+  r.onresult=e=>{const ss=asSess;if(!ss)return;ss.txt=[...e.results].map(x=>x[0].transcript).join('');const i=$('#asTxt');if(i)i.value=ss.txt;
+    if(e.results[e.results.length-1].isFinal&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(ss.txt);try{r.stop()}catch(_){}}};
+  r.onerror=e=>{const ss=asSess;if(!ss)return;ss.err=e.error};
+  r.onend=()=>{asRun=false;const ss=asSess;asSess=null;
+    if(asQueue){asQueue=false;setTimeout(asListen,250);return}
+    if(!ss||ss.done)return;
+    if(ss.txt&&ss.txt.trim()){ss.done=true;asStatus('');const i=$('#asTxt');if(i)i.value='';runAssistant(ss.txt);return}
+    if(ss.err&&ss.err!=='no-speech'&&ss.err!=='aborted'&&!ss.retried){ // iOS: zweiter Versuch klappt oft
+      asSess={txt:'',done:false,retried:true};setTimeout(()=>{try{r.start()}catch(_){asStatus('Tippe auf 🎤, um nochmal zu sprechen.','warn')}},400);return}
+    if(!$('#asst')||!$('#asst').classList.contains('open'))return;
+    asStatus(ss.err==='not-allowed'||ss.err==='service-not-allowed'?'Mikrofon nicht erlaubt – tippe ins Feld und nutze das 🎤 der Tastatur.':ss.err&&ss.err!=='no-speech'?'Nicht verstanden – tippe auf 🎤 und versuch es nochmal.':'Nichts gehört – tippe auf 🎤 oder schreib.','warn')};
+  return asRec=r;
 }
-function asStop(){try{if(asRec)asRec.abort()}catch(e){}asRec=null}
+function asListen(){
+  if(!$('#asst'))return;
+  const r=asMake();
+  if(!r){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
+  if(asRun){asQueue=true;try{r.stop()}catch(e){}return}   // erst sauber beenden, dann neu starten
+  asSess={txt:'',done:false,retried:false};
+  try{r.start()}catch(e){asQueue=true;try{r.stop()}catch(_){}}
+}
+function asStop(){asSess=null;asQueue=false;if(asRec&&asRun){try{asRec.stop()}catch(e){}}}
 function openAssistant(){
   if(current!=='desktop')return;
   let a=$('#asst');
