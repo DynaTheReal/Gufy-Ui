@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.5","notes":["Spracheingabe: hängt sie, startet GufyUI das Mikrofon automatisch neu – kein Neustart mehr nötig","Assistent: Home-Taste 1 Sek. halten","Viele neue Befehle"]};
+window.GUFY={"v":"7.6","notes":["Spracheingabe: Vorlesen/Töne werden vor dem Zuhören gestoppt – das hat das Mikro blockiert","Kommt nichts an, versucht GufyUI es automatisch mit frischem Mikro nochmal","Neu: Einstellungen → Logs (zum Nachschauen und Kopieren)"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1071,6 +1071,7 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .as-in .as-go{background:linear-gradient(135deg,#7c5cff,#ff5fa2);font-weight:800;font-size:20px}
 #asMic.rec{background:#ff453a;animation:orb .6s ease-in-out infinite alternate}
 .as-hint{text-align:center;color:rgba(255,255,255,.5);font-size:11.5px}
+.logbox{white-space:pre-wrap;word-break:break-word;font:11.5px/1.5 ui-monospace,Menlo,monospace;background:var(--panel-solid);border:1px solid var(--border);border-radius:14px;padding:12px;max-height:60vh;overflow:auto;user-select:text;-webkit-user-select:text;margin:0}
 </style>
 </head>
 <body class="dark">
@@ -3190,7 +3191,7 @@ render(body,ctx){
 /* ---------- Einstellungen ---------- */
 settings:{name:'Einstellungen',icon:'⚙️',bg:'linear-gradient(135deg,#8e9eab,#4b5563)',
 render(body,ctx){
-  const TITLES={adj:'Bildschirm anpassen',beta:'Beta',update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin'};
+  const TITLES={adj:'Bildschirm anpassen',beta:'Beta',update:'Softwareupdate',profil:'Profil',look:'Darstellung',wall:'Hintergrund',pw:'Passwort',info:'Über GufyUI',admin:'Admin',logs:'Logs'};
   const sw=(id,on)=>`<label class="switch"><input type="checkbox" id="${id}" ${on?'checked':''}><span></span></label>`;
   const row=(ic,col,label,right,attr='')=>`<${attr?'button':'div'} class="srow" ${attr}><span class="sic" style="background:${col}">${ic}</span><span class="sl">${label}</span>${right}</${attr?'button':'div'}>`;
   const nav=(ic,col,label,go,val='')=>row(ic,col,label,`${val?`<span class="sv">${val}</span>`:''}<span class="chev">›</span>`,`data-go="${go}"`);
@@ -3218,6 +3219,7 @@ render(body,ctx){
         ${nav('⚙️','#8e8e93','Softwareupdate','update','GufyUI '+GUFY.v)}
         ${S.dev?nav('📐','#30d158','Bildschirm anpassen','adj',((S.adjT||0)||(S.adjB||0))?(S.adjT||0)+' / '+(S.adjB||0)+' px':''):''}
         ${nav('🧪','#af52de','Beta','beta',S.betaBatt?'An':'')}
+        ${nav('📋','#636366','Logs','logs',GLOG.length+' Einträge')}
         ${nav('ℹ️','#4f8cff','Über GufyUI','info')}
         ${nav('🛠️','#636366','Admin','admin',adminOK?'Entsperrt':'')}
       </div>
@@ -3254,6 +3256,16 @@ render(body,ctx){
       ['aT','aB'].forEach(id=>{$('#'+id,c).oninput=e=>set(id,+e.target.value)});
       $$('[data-step]',c).forEach(b=>b.onclick=()=>{const id=b.dataset.step;set(id,+$('#'+id,c).value+ +b.dataset.d);haptic('select')});
       $('#aRst',c).onclick=()=>{set('aT',0);set('aB',0);haptic()};
+    }
+    if(tab==='logs'){
+      c.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn primary" id="lgCp" style="flex:1">📋 Kopieren</button><button class="btn" id="lgClr" style="flex:1">🗑️ Leeren</button></div>
+        <p class="muted" style="font-size:12.5px;margin:0 0 10px">Neueste oben. Zum Weiterschicken: Kopieren und in den Chat einfügen.</p>
+        <pre id="logBox" class="logbox"></pre>`;
+      $('#logBox',c).textContent=GLOG.slice().reverse().join('\n')||'Noch keine Einträge.';
+      $('#lgCp',c).onclick=async()=>{const t=GLOG.join('\n');let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+        if(!ok){const r=document.createRange();r.selectNodeContents($('#logBox',c));const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}
+        notify('📋',ok?'Logs kopiert':'Logs markiert',ok?GLOG.length+' Zeilen in der Zwischenablage':'Jetzt „Kopieren“ tippen','#636366')};
+      $('#lgClr',c).onclick=()=>{GLOG.length=0;try{localStorage.removeItem('gufyui_log')}catch(e){}$('#logBox',c).textContent='Leer.'};
     }
     if(tab==='beta'){
       const sup=!!navigator.getBattery;
@@ -4015,6 +4027,18 @@ render(body,ctx){
 };
 
 /* =========================================================
+   LOGS – Einstellungen → Logs
+   ========================================================= */
+const GLOG=(()=>{try{return JSON.parse(localStorage.getItem('gufyui_log')||'[]')}catch(e){return[]}})();
+let glogT=0;
+function glog(tag,msg){const d=new Date();GLOG.push(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3,'0')} [${tag}] ${msg}`);
+  if(GLOG.length>400)GLOG.splice(0,GLOG.length-400);clearTimeout(glogT);glogT=setTimeout(()=>{try{localStorage.setItem('gufyui_log',JSON.stringify(GLOG))}catch(e){}},400);
+  const el=$('#logBox');if(el){el.textContent=GLOG.slice().reverse().join('\n')}}
+addEventListener('error',e=>glog('Fehler',(e.message||'')+' @'+(e.lineno||'')));
+addEventListener('unhandledrejection',e=>glog('Fehler',String(e.reason&&e.reason.message||e.reason)));
+glog('Start','GufyUI '+GUFY.v+' · '+(navigator.standalone?'Home-Bildschirm-App':'Browser')+' · '+(navigator.userAgent.match(/OS [\d_]+|Version\/[\d.]+/g)||[]).join(' '));
+
+/* =========================================================
    WETTER (Open-Meteo, ohne Schlüssel)
    ========================================================= */
 let wxErr='',wxP=null;
@@ -4205,8 +4229,9 @@ function planCmd(raw){
   }
   return{ic:'🤔',err:`„${raw}“ habe ich nicht verstanden.`};
 }
-function speak(t){try{if(!window.speechSynthesis||S.asstVoice===false)return;const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function speak(t,n=0){try{if(!window.speechSynthesis||S.asstVoice===false)return;if(asRun){if(n<8)setTimeout(()=>speak(t,n+1),250);else glog('Vorlesen','übersprungen (Mikro läuft)');return}glog('Vorlesen',t.slice(0,60));const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 async function runAssistant(text){
+  glog('Assistent','Befehl: „'+text+'“');
   const box=$('#asLog');if(!box)return;
   const parts=splitCmd(text);if(!parts.length)return;
   const plans=parts.map(planCmd);
@@ -4227,45 +4252,63 @@ async function runAssistant(text){
   if(!$('#asst').classList.contains('open')&&all)notify('✨','Gufy Assistent',all,'#7c5cff');
   speak(all);
 }
-/* Spracheingabe: EIN Erkenner für die ganze Sitzung (iOS-Web-Apps schaffen sonst nur das erste Mal) */
-let asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0;
+/* Spracheingabe
+   iPhone-Probleme: (1) Vorlesen/Töne belegen das Audio → Mikro läuft, liefert aber nichts.
+   (2) Erkenner hängt manchmal. Deshalb: vor dem Zuhören Vorlesen stoppen, kurz warten,
+   bei Hängern/leeren Ergebnissen einen frischen Erkenner nehmen. Alles wird geloggt. */
+let asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false;
 function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen')}
 function asMake(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
-  if(asRec)return asRec;
-  let r;try{r=new SR()}catch(e){return null}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){glog('Mikro','SpeechRecognition gibt es hier nicht');return null}
+  if(asRec&&!asFresh)return asRec;
+  if(asRec)asReset();asFresh=false;
+  let r;try{r=new SR()}catch(e){glog('Mikro','new SR() Fehler: '+e.message);return null}
+  const id=++asN;glog('Mikro',`Erkenner #${id} erstellt`);
   r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
-  r.onstart=()=>{asRun=true;clearTimeout(asWd);if(asSess){asSess.started=true;asStatus('Ich höre zu …','listen')}haptic('select');clearTimeout(asMax);asMax=setTimeout(()=>{try{r.stop()}catch(_){}},12000)};
-  r.onresult=e=>{const ss=asSess;if(!ss)return;ss.txt=[...e.results].map(x=>x[0].transcript).join('');const i=$('#asTxt');if(i)i.value=ss.txt;
-    if(e.results[e.results.length-1].isFinal&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(ss.txt);try{r.stop()}catch(_){}}};
-  r.onerror=e=>{const ss=asSess;if(!ss)return;ss.err=e.error};
-  r.onend=()=>{if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);const ss=asSess;asSess=null;
+  r.onstart=()=>{glog('Mikro',`#${id} onstart`);asRun=true;clearTimeout(asWd);if(asSess){asSess.started=true;asStatus('Ich höre zu …','listen')}haptic('select');clearTimeout(asMax);asMax=setTimeout(()=>{glog('Mikro',`#${id} 12 s vorbei → stop`);try{r.stop()}catch(_){}},12000)};
+  r.onaudiostart=()=>glog('Mikro',`#${id} audiostart`);
+  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);if(asSess)asSess.sound=true};
+  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);if(asSess)asSess.sound=true};
+  r.onspeechend=()=>glog('Mikro',`#${id} speechend`);
+  r.onnomatch=()=>glog('Mikro',`#${id} nomatch`);
+  r.onresult=e=>{const ss=asSess;const t=[...e.results].map(x=>x[0].transcript).join('');const fin=e.results[e.results.length-1].isFinal;
+    glog('Mikro',`#${id} result${fin?' (final)':''}: „${t}“`);if(!ss)return;ss.txt=t;const i=$('#asTxt');if(i)i.value=t;
+    if(fin&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(t);try{r.stop()}catch(_){}}};
+  r.onerror=e=>{glog('Mikro',`#${id} error: ${e.error}${e.message?' – '+e.message:''}`);const ss=asSess;if(ss)ss.err=e.error};
+  r.onend=()=>{glog('Mikro',`#${id} onend`);if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);const ss=asSess;asSess=null;
     if(asQueue){asQueue=false;setTimeout(asListen,250);return}
     if(!ss||ss.done)return;
     if(ss.txt&&ss.txt.trim()){ss.done=true;asStatus('');const i=$('#asTxt');if(i)i.value='';runAssistant(ss.txt);return}
-    if(ss.err&&ss.err!=='no-speech'&&ss.err!=='aborted'&&!ss.retried){ // iOS: neuer Erkenner, zweiter Versuch
-      asReset();setTimeout(()=>asListen(true),350);return}
+    // nichts erkannt, obwohl das Mikro lief → mit frischem Erkenner nochmal
+    if(!ss.retried&&ss.err!=='not-allowed'&&ss.err!=='aborted'&&(ss.err||ss.sound||ss.started)){
+      glog('Mikro','kein Ergebnis → frischer Erkenner, 2. Versuch');asFresh=true;asStatus('Nochmal bitte …','listen');setTimeout(()=>asListen(true),300);return}
+    asFresh=true; // nächstes Mal sicherheitshalber neu
     if(!$('#asst')||!$('#asst').classList.contains('open'))return;
-    asStatus(ss.err==='not-allowed'||ss.err==='service-not-allowed'?'Mikrofon nicht erlaubt – tippe ins Feld und nutze das 🎤 der Tastatur.':ss.err&&ss.err!=='no-speech'?'Nicht verstanden – tippe auf 🎤 und versuch es nochmal.':'Nichts gehört – tippe auf 🎤 oder schreib.','warn')};
+    asStatus(ss.err==='not-allowed'||ss.err==='service-not-allowed'?'Mikrofon nicht erlaubt – tippe ins Feld und nutze das 🎤 der Tastatur.':'Nicht verstanden – tippe auf 🎤 und versuch es nochmal.','warn')};
   return asRec=r;
 }
-/* hängt der Erkenner (kommt auf dem iPhone vor), wird er weggeworfen und neu erstellt */
 function asReset(){clearTimeout(asWd);clearTimeout(asMax);const r=asRec;asRec=null;asRun=false;asQueue=false;
-  if(r){r.onend=r.onresult=r.onerror=r.onstart=null;try{r.abort()}catch(e){}}}
+  if(r){glog('Mikro','Erkenner verworfen');r.onend=r.onresult=r.onerror=r.onstart=r.onaudiostart=r.onsoundstart=r.onspeechstart=null;try{r.abort()}catch(e){}}}
+function asQuiet(){ // Vorlesen & Töne aus, damit das Mikro frei ist
+  let busy=false;
+  try{if(window.speechSynthesis&&(speechSynthesis.speaking||speechSynthesis.pending)){busy=true;speechSynthesis.cancel();glog('Mikro','Vorlesen gestoppt')}}catch(e){}
+  try{if(audioCtx&&audioCtx.state==='running'){audioCtx.suspend();busy=true;glog('Mikro','Töne pausiert')}}catch(e){}
+  return busy;
+}
 function asListen(retry){
   if(!$('#asst'))return;
-  if(asRun){ // läuft noch: sauber stoppen – falls er hängt, nach 1,2 s neu erstellen
-    asQueue=true;try{asRec.stop()}catch(e){}
-    clearTimeout(asWd);asWd=setTimeout(()=>{if(asRun||asQueue){asReset();asListen()}},1200);return}
+  if(asRun){glog('Mikro','läuft noch → stop, dann neu');asQueue=true;try{asRec.stop()}catch(e){}
+    clearTimeout(asWd);asWd=setTimeout(()=>{if(asRun||asQueue){glog('Mikro','hängt beim Stoppen');asReset();asListen()}},1200);return}
+  if(asQuiet()&&!retry)return void setTimeout(()=>asListen(true),450);
   const r=asMake();
   if(!r){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
-  asSess={txt:'',done:false,retried:!!retry,started:false};
+  asSess={txt:'',done:false,retried:!!retry,started:false,sound:false};
   asStatus('Mikrofon startet …','listen');
-  try{r.start()}catch(e){asReset();if(!retry)return setTimeout(()=>asListen(true),300);asStatus('Tippe auf 🎤, um nochmal zu sprechen.','warn');return}
-  clearTimeout(asWd);asWd=setTimeout(()=>{if(asSess&&!asSess.started){asReset();if(!retry)asListen(true);else asStatus('Mikrofon reagiert nicht – tippe auf 🎤.','warn')}},2500);
+  try{r.start();glog('Mikro','start()')}catch(e){glog('Mikro','start() Fehler: '+e.message);asReset();if(!retry)return void setTimeout(()=>asListen(true),300);asStatus('Tippe auf 🎤, um nochmal zu sprechen.','warn');return}
+  clearTimeout(asWd);asWd=setTimeout(()=>{if(asSess&&!asSess.started){glog('Mikro','kein onstart nach 2,5 s');asReset();if(!retry)asListen(true);else asStatus('Mikrofon reagiert nicht – tippe auf 🎤.','warn')}},2500);
 }
-function asStop(){asSess=null;asQueue=false;clearTimeout(asWd);if(asRec&&asRun){try{asRec.stop()}catch(e){}}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){asSess=null;asReset()}});
+function asStop(){asSess=null;asQueue=false;clearTimeout(asWd);if(asRec&&asRun){glog('Mikro','stop (Fenster/Eingabe)');try{asRec.stop()}catch(e){}}}
+document.addEventListener('visibilitychange',()=>{glog('App',document.visibilityState==='hidden'?'im Hintergrund':'wieder sichtbar');if(document.visibilityState==='hidden'){asSess=null;asReset()}});
 function openAssistant(){
   if(current!=='desktop')return;
   let a=$('#asst');
