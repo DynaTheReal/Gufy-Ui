@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.6","notes":["Neue App im Gufy Store: MathEdits ➗ – deine Mathe-Lern-App direkt in GufyUI"]};
+window.GUFY={"v":"9.7","notes":["Gufy Assistent + Gemini ✨: Was der Assistent nicht versteht, beantwortet jetzt Gemini","Einrichtung: neuer Schritt für deinen Gemini-Schlüssel (mit Link zu Google) – oder „Vielleicht später“","Schon eingerichtet? Sag dem Assistenten einfach „API-Key“, dann kannst du den Schlüssel eingeben"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1201,6 +1201,17 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 @keyframes lbSh{to{background-position:-200% 0}}
 .lb-ref{grid-column:1/-1;justify-self:end;font-size:12px;color:var(--muted);background:none;border:none;padding:2px 4px}
 .web-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.gem-get{display:block;width:100%;text-align:center;text-decoration:none;margin-bottom:10px}
+.gem-steps{margin:0 0 12px;padding-left:20px;font-size:13.5px;color:var(--muted);text-align:left;line-height:1.6}
+.gem-note{display:block;margin-top:8px;font-size:12px;text-align:center}
+.gem-dlg{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.gem-dlg.open{opacity:1}
+.gem-card{width:min(380px,100%);background:var(--panel-solid);color:var(--text);border-radius:24px;padding:22px 20px;text-align:center;border:1px solid var(--border);transform:scale(.94);transition:transform .3s cubic-bezier(.2,.9,.22,1)}
+.gem-dlg.open .gem-card{transform:none}
+.gem-card h2{margin:4px 0 6px}
+.gem-btns{display:flex;gap:10px;margin-top:14px}.gem-btns .btn{flex:1}
+.as-step.gem{align-items:flex-start;background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(66,133,244,.18))}
+.as-step.gem small{white-space:pre-wrap;font-size:14px;color:rgba(255,255,255,.92);line-height:1.4}
 </style>
 </head>
 <body class="dark">
@@ -2093,12 +2104,63 @@ function boot(){
 }
 
 /* =========================================================
+   GEMINI – hilft dem Assistenten, wenn er etwas nicht versteht
+   Schlüssel bleibt NUR auf diesem Gerät (eigener Speicher, nicht im Backup)
+   ========================================================= */
+const GEM_LINK='https://aistudio.google.com/apikey';
+const gemGet=()=>{try{return localStorage.getItem('gufyui_gem')||''}catch(e){return''}};
+const gemSet=k=>{try{k?localStorage.setItem('gufyui_gem',k):localStorage.removeItem('gufyui_gem')}catch(e){}};
+const gemOkFormat=k=>/^AIza[0-9A-Za-z_\-]{25,}$/.test(k);
+function gemFormHTML(val){
+  return `<a class="btn primary gem-get" href="${GEM_LINK}" target="_blank" rel="noopener">🔑 Schlüssel bei Google holen</a>
+    <ol class="gem-steps"><li>Mit Google anmelden</li><li>„API-Schlüssel erstellen“ tippen</li><li>Schlüssel kopieren und hier einfügen</li></ol>
+    <div class="pwwrap"><input class="input" id="gemIn" type="password" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(val||'')}"><button id="gemEye" type="button">👁️</button></div>
+    <div class="s-err" id="sErr"></div>
+    <small class="muted gem-note">Der Schlüssel bleibt nur auf diesem Gerät. Frag Gemini nichts Privates.</small>`;
+}
+function gemFormBind(c){const i=$('#gemIn',c),e=$('#gemEye',c);if(e)e.onclick=()=>{i.type=i.type==='password'?'text':'password'}}
+async function gemAsk(q){
+  const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
+  const body={systemInstruction:{parts:[{text:`Du bist der Gufy Assistent in GufyUI, einem Handy-System. ${S.name?'Der Nutzer heißt '+S.name+'. ':''}Antworte immer auf Deutsch, freundlich und kurz (höchstens 3–4 Sätze), ohne Markdown. Heute ist ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`}]},contents:[{role:'user',parts:[{text:q}]}],generationConfig:{maxOutputTokens:400,temperature:.7}};
+  let last;
+  for(const m of['gemini-flash-latest','gemini-2.5-flash','gemini-2.0-flash']){
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+    if(r.status===404){last='Modell '+m+' nicht da';continue}
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){const msg=d.error&&d.error.message||('HTTP '+r.status);glog('Gemini',m+': '+msg);
+      if(r.status===400&&/api key/i.test(msg)||r.status===403)throw new Error('Der Schlüssel funktioniert nicht. Sag „API-Key“, um ihn neu einzugeben.');
+      if(r.status===429)throw new Error('Gemini ist gerade überlastet oder dein Tageslimit ist erreicht. Versuch es später nochmal.');
+      throw new Error('Gemini-Fehler: '+msg)}
+    const t=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
+    glog('Gemini',m+' ok ('+t.length+' Zeichen)');
+    return t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ')||'Gemini hat keine Antwort gegeben.';
+  }
+  throw new Error('Gemini nicht erreichbar ('+last+')');
+}
+function gemDialog(){
+  let d=$('#gemDlg');if(d)d.remove();
+  d=h(`<div id="gemDlg" class="gem-dlg"><div class="gem-card"><div class="s-ico" style="font-size:40px">✨</div><h2>Gemini-Schlüssel</h2>
+    <p class="muted" style="margin:0 0 14px;font-size:14px">${gemGet()?'Du hast schon einen Schlüssel. Du kannst ihn hier ersetzen oder löschen.':'Damit fragt der Assistent Gemini, wenn er etwas nicht versteht.'}</p>
+    ${gemFormHTML('')}
+    <div class="gem-btns">${gemGet()?'<button class="btn" id="gemDel">Löschen</button>':'<button class="btn" id="gemNo">Später</button>'}<button class="btn primary" id="gemOk">Speichern</button></div></div></div>`);
+  document.body.appendChild(d);gemFormBind(d);
+  const close=()=>{d.classList.remove('open');setTimeout(()=>d.remove(),250)};
+  requestAnimationFrame(()=>d.classList.add('open'));
+  d.addEventListener('pointerdown',e=>{if(e.target===d)close()});
+  const no=$('#gemNo',d);if(no)no.onclick=close;
+  const del=$('#gemDel',d);if(del)del.onclick=()=>{gemSet('');haptic();notify('✨','Gemini','Schlüssel gelöscht.','#7c5cff');close()};
+  $('#gemOk',d).onclick=()=>{const v=$('#gemIn',d).value.trim(),er=$('#sErr',d);
+    if(!gemOkFormat(v)){er.textContent='Der Schlüssel sieht nicht richtig aus – er fängt mit „AIza“ an.';haptic('error');return}
+    gemSet(v);haptic('success');notify('✨','Gemini eingerichtet','Der Assistent fragt jetzt Gemini, wenn er etwas nicht weiß.','#7c5cff');glog('Gemini','Schlüssel gespeichert');close()};
+}
+
+/* =========================================================
    EINRICHTUNG
    ========================================================= */
 let step=0,helloTimer=null;
-const tmp={name:'',pw:'',theme:'dark',accent:'#4f8cff',wall:9,isHome:true};
+const tmp={name:'',pw:'',theme:'dark',accent:'#4f8cff',wall:9,isHome:true,gem:''};
 const HELLOS=['Hallo','Hello','Bonjour','Hola','Ciao','Hej','Olá','Merhaba','こんにちは','안녕하세요','Привет'];
-const STEPS=7;
+const STEPS=8;
 function renderSetup(){
   clearInterval(helloTimer);
   const c=$('#setupCard');
@@ -2133,24 +2195,30 @@ function renderSetup(){
       <div class="walls">${WALLS.map((w,i)=>[w,i]).sort((a,b)=>(b[1]>=SCENE0)-(a[1]>=SCENE0)).map(([w,i])=>`<button data-wall="${i}" class="${i===tmp.wall?'sel':''}" style="background:${w}"></button>`).join('')}</div>`;
   }else if(step===5){
     html=`<div class="s-ico">📍</div><h1>Wo bist du gerade?</h1>
-      <p class="s-sub">Unterwegs verbraucht GufyUI Akku – 100 % halten 5 Stunden. Zu Hause lädt er in ca. 8 Stunden wieder voll.</p>
+      <p class="s-sub">Unterwegs verbraucht GufyUI Akku – 100 % halten 8 Stunden. Zu Hause lädt er in ca. 8 Stunden wieder voll.</p>
       <div class="themes">
         <button class="themecard ${tmp.isHome?'sel':''}" data-home="1"><div style="font-size:46px;padding:8px">🏠</div><b>Zu Hause</b></button>
         <button class="themecard ${!tmp.isHome?'sel':''}" data-home="0"><div style="font-size:46px;padding:8px">🚶</div><b>Unterwegs</b></button>
       </div>
       <p class="s-sub" style="font-size:13px;margin:0">In der App „Standort“ kannst du später GPS einschalten und deine Schlafenszeit festlegen.</p>`;
   }else if(step===6){
+    html=`<div class="s-ico">✨</div><h1>KI für den Assistenten</h1>
+      <p class="s-sub">Wenn der Gufy Assistent etwas nicht versteht, fragt er <b>Gemini</b>. Dafür brauchst du einen kostenlosen API-Schlüssel von Google.</p>
+      ${gemFormHTML(tmp.gem)}
+      <button class="btn" id="sGemLater" style="width:100%;margin-top:10px">Vielleicht später</button>`;
+  }else if(step===7){
     html=`<div class="s-ico">✅</div><h1>Alles bereit, ${esc(tmp.name)}!</h1>
       <p class="s-sub">Dein GufyUI ist eingerichtet. Erledige Quests, sammle Coins und halte deinen Akku am Leben!</p>
       <div class="card summary">
         <div class="row"><span>Name</span><b>${esc(tmp.name)}</b></div>
         <div class="row"><span>Passwort</span><b>${'•'.repeat(tmp.pw.length)}</b></div>
         <div class="row"><span>Standort</span><b>${tmp.isHome?'🏠 Zu Hause':'🚶 Unterwegs'}</b></div>
+        <div class="row"><span>Gemini</span><b>${tmp.gem?'✨ Eingerichtet':'Später'}</b></div>
       </div>
       <button class="btn primary big" id="finish">GufyUI starten</button>`;
   }
   const dots=Array.from({length:STEPS},(_,i)=>`<i class="${i===step?'on':''}"></i>`).join('');
-  const foot=(step>0&&step<6)?`<div class="s-foot"><button class="btn" data-back>Zurück</button><button class="btn primary" data-next>Weiter</button></div>`:(step===6?`<div class="s-foot"><button class="btn" data-back>Zurück</button></div>`:'');
+  const foot=(step>0&&step<7)?`<div class="s-foot"><button class="btn" data-back>Zurück</button><button class="btn primary" data-next>Weiter</button></div>`:(step===7?`<div class="s-foot"><button class="btn" data-back>Zurück</button></div>`:'');
   c.innerHTML=`<div class="dots">${dots}</div><div class="s-body">${html}</div>${foot}`;
 
   if(step===0){
@@ -2165,6 +2233,7 @@ function renderSetup(){
       s.style.width=(sc*25)+'%';s.style.background=['#ff3b30','#ff3b30','#ff9f0a','#34c759','#34c759'][sc]};
     $('#eye').onclick=()=>{const t=p.type==='password'?'text':'password';p.type=t;$('#sPw2').type=t};
   }
+  if(step===6){gemFormBind(c);$('#sGemLater').onclick=()=>{tmp.gem='';step++;renderSetup()}}
   $$('[data-theme]',c).forEach(b=>b.onclick=()=>{tmp.theme=b.dataset.theme;S.theme=tmp.theme;applyLook();renderSetup()});
   $$('[data-acc]',c).forEach(b=>b.onclick=()=>{tmp.accent=b.dataset.acc;S.accent=tmp.accent;applyLook();renderSetup()});
   $$('[data-wall]',c).forEach(b=>b.onclick=()=>{tmp.wall=+b.dataset.wall;$$('[data-wall]',c).forEach(x=>x.classList.toggle('sel',x===b))});
@@ -2180,13 +2249,14 @@ function nextStep(){
     if(a.length<4)return setErr('Das Passwort braucht mindestens 4 Zeichen.');
     if(a!==b)return setErr('Die Passwörter stimmen nicht überein.');
     tmp.pw=a}
+  if(step===6){const v=($('#gemIn')||{}).value?.trim()||'';if(v&&!gemOkFormat(v))return setErr('Der Schlüssel sieht nicht richtig aus – er fängt mit „AIza“ an.');tmp.gem=v}
   step++;renderSetup();
 }
-$('#setupCard').addEventListener('keydown',e=>{if(e.key==='Enter'&&step>0&&step<6)nextStep()});
+$('#setupCard').addEventListener('keydown',e=>{if(e.key==='Enter'&&step>0&&step<7)nextStep()});
 function finishSetup(){
   S.name=tmp.name;S.pw=hash(tmp.pw);S.theme=tmp.theme;S.accent=tmp.accent;S.wall=tmp.wall;
   S.loc.isHome=tmp.isHome;S.battery={level:100,last:Date.now()};
-  S.setupDone=true;S.firstLogin=true;S.questsV3=true;tmp.pw='';
+  S.setupDone=true;S.firstLogin=true;S.questsV3=true;tmp.pw='';if(tmp.gem)gemSet(tmp.gem);tmp.gem='';
   ensureQuests();save();
   boot();
 }
@@ -4845,6 +4915,7 @@ function planCmd(raw){
   if(/was kannst du|hilfe|befehle/.test(s))return{ic:'💡',txt:'Hilfe',run:()=>'Timer, Wecker, Taschenlampe, Apps öffnen, Wetter, Akku, Coins, Quests, Notizen, Rechnen, Helligkeit, Dunkelmodus, Hintergrund, Powerbank, Würfeln, Witze und mehr – auch mehrere Sachen auf einmal.'};
   if(/stimme aus|nicht vorlesen|vorlesen aus|sei leise/.test(s))return{ic:'🔇',txt:'Vorlesen aus',run:()=>{S.asstVoice=false;save();return 'Ich lese nicht mehr vor.'}};
   if(/stimme an|vorlesen an|lies vor/.test(s)&&!/notiz/.test(s))return{ic:'🔊',txt:'Vorlesen an',run:()=>{S.asstVoice=true;save();glog('Vorlesen','eingeschaltet');return 'Ich lese wieder vor. Achtung: Auf dem iPhone kann das Mikro danach nichts mehr hören, bis du GufyUI neu startest.'}};
+  if(/\bapi|schlüssel|gemini (einricht|key|schlüssel)|gemini einrichten/.test(s))return{ic:'🔑',txt:'Gemini-Schlüssel',opens:true,run:()=>{setTimeout(gemDialog,150);return 'Hier kannst du deinen Gemini-Schlüssel eingeben.'}};
   if(/neustart|starte neu|neu starten/.test(s))return{ic:'🔄',txt:'Neustart',opens:true,run:()=>{setTimeout(()=>doAction('restart'),900);return 'GufyUI startet neu …'}};
   if(/sperr|bildschirm aus|abmelden/.test(s))return{ic:'🔒',txt:'Sperren',opens:true,run:()=>{setTimeout(logout,600);return 'Gesperrt.'}};
   // Timer-Rest & Wecker
@@ -4956,14 +5027,19 @@ function planCmd(raw){
     if(!appAvail(app))return{ic:APPS[app].icon,err:`${APPS[app].name} ist nicht installiert – lade es im Gufy Store.`};
     return{ic:APPS[app].icon,txt:APPS[app].name+' öffnen',opens:true,run:()=>{openApp(app);return `${APPS[app].name} geöffnet.`}};
   }
-  return{ic:'🤔',err:`„${raw}“ habe ich nicht verstanden.`};
+  return{ic:'🤔',err:`„${raw}“ habe ich nicht verstanden.`,unknown:true,raw};
 }
 function speak(t,n=0){try{if(!window.speechSynthesis||S.asstVoice!==true)return;if(asRun){if(n<8)setTimeout(()=>speak(t,n+1),250);else glog('Vorlesen','übersprungen (Mikro läuft)');return}glog('Vorlesen',t.slice(0,60));const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 async function runAssistant(text){
   glog('Assistent','Befehl: „'+text+'“');
   const box=$('#asLog');if(!box)return;
   const parts=splitCmd(text);if(!parts.length)return;
-  const plans=parts.map(planCmd),rid=Date.now().toString(36);
+  let plans=parts.map(planCmd);const rid=Date.now().toString(36);
+  const gemQ=q=>({ic:'✨',txt:'Gemini',gem:true,run:()=>gemAsk(q)});
+  if(gemGet()){
+    if(plans.every(p=>p.unknown))plans=[gemQ(text)];          // ganze Frage an Gemini (nicht zerstückeln)
+    else plans=plans.map(p=>p.unknown?gemQ(p.raw):p);
+  }else if(plans.some(p=>p.unknown))plans.forEach(p=>{if(p.unknown)p.err+=' Sag „API-Key“, dann frage ich Gemini.'});
   const ch=$('.as-chips',box);if(ch)ch.style.display='none';
   const olds=box.querySelectorAll('.as-me');if(olds.length>=6){let n=olds[0];const stop=olds[1];while(n&&n!==stop){const x=n.nextElementSibling;n.remove();n=x}}
   box.insertAdjacentHTML('beforeend',`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${rid}-${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join(''));
@@ -4973,8 +5049,10 @@ async function runAssistant(text){
     if(p.err){said.push(p.err);continue}
     if(p.wait){$('.st',row).textContent='⏳';await new Promise(r=>setTimeout(r,p.wait));$('.st',row).textContent='✅';continue}
     if(p.opens){closeAssistant(true);await new Promise(r=>setTimeout(r,280))}
-    let res='';try{res=await p.run()}catch(e){res='Fehler'}
-    if(row){$('small',row).textContent=res;$('.st',row).textContent='✅'}
+    if(p.gem&&row){$('small',row).textContent='denkt nach …';row.classList.add('gem')}
+    let res='',bad=false;try{res=await p.run()}catch(e){res=p.gem?e.message:'Fehler';bad=true}
+    if(row){$('small',row).textContent=res;$('.st',row).textContent=bad?'⚠️':'✅'}
+    requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
     said.push(res);haptic('success');
     if(p.opens&&i<plans.length-1)await new Promise(r=>setTimeout(r,500));
   }
