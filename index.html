@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"9.8","notes":["Gemini-Fenster sitzt jetzt oben – die Tastatur ist nicht mehr im Weg","Jeder API-Schlüssel wird angenommen (muss nicht mehr mit AIza anfangen)","Gufy Assistent + Gemini ✨: Was der Assistent nicht versteht, beantwortet jetzt Gemini","Einrichtung: neuer Schritt für deinen Gemini-Schlüssel (mit Link zu Google) – oder „Vielleicht später“","Schon eingerichtet? Sag dem Assistenten einfach „API-Key“, dann kannst du den Schlüssel eingeben"]};
+window.GUFY={"v":"9.9","notes":["Gemini: Antworten werden nicht mehr abgeschnitten","Gemini kennt jetzt mehr: deinen Namen, Uhrzeit, Akku, Coins, offene Quests und das Wetter – und spricht dich mit „du“ an","Gemini merkt sich das Gespräch 10 Minuten, du kannst also nachfragen","Gemini-Fenster oben, jeder API-Schlüssel geht"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1212,7 +1212,7 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .gem-card h2{margin:4px 0 6px}
 .gem-btns{display:flex;gap:10px;margin-top:14px}.gem-btns .btn{flex:1}
 .as-step.gem{align-items:flex-start;background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(66,133,244,.18))}
-.as-step.gem small{white-space:pre-wrap;font-size:14px;color:rgba(255,255,255,.92);line-height:1.4}
+.as-step.gem small{white-space:pre-wrap;overflow:visible;text-overflow:clip;max-height:none;display:block;word-break:break-word;font-size:14px;color:rgba(255,255,255,.92);line-height:1.4}
 </style>
 </head>
 <body class="dark">
@@ -2120,21 +2120,42 @@ function gemFormHTML(val){
     <small class="muted gem-note">Der Schlüssel bleibt nur auf diesem Gerät. Frag Gemini nichts Privates.</small>`;
 }
 function gemFormBind(c){const i=$('#gemIn',c),e=$('#gemEye',c);if(e)e.onclick=()=>{i.type=i.type==='password'?'text':'password'}}
+let gemHist=[],gemHistT=0;   // Gesprächsverlauf (für Nachfragen), nach 10 Min. vergessen
+function gemContext(){
+  const d=new Date(),L=[];
+  L.push(`Datum/Uhrzeit: ${d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, ${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`);
+  if(S.name)L.push(`Du sprichst mit ${S.name}. Sprich ihn direkt mit „du“ an (nie „der Nutzer“).`);
+  try{L.push(`GufyUI-Akku: ${dispPct()} %, ${S.loc.isHome?'zu Hause (lädt)':'unterwegs'}. Coins: ${S.coins||0}.`)}catch(e){}
+  try{if(S.daily&&S.daily.list){const o=S.daily.list.filter(q=>!q.done).map(q=>q.title);L.push(o.length?`Offene Tagesquests: ${o.join('; ')}.`:'Alle Tagesquests sind erledigt.')}}catch(e){}
+  try{if(S.wx&&S.wx.d&&S.wx.d.current){const c=S.wx.d.current;L.push(`Wetter (${S.wx.place||'Standort'}): ${Math.round(c.temperature_2m)} °C, ${wxCode(c.weather_code,c.is_day).t}, Wind ${Math.round(c.wind_speed_10m)} km/h.`)}}catch(e){}
+  if(typeof geoPos!=='undefined'&&geoPos)L.push(`Standort ungefähr: ${geoPos.lat.toFixed(2)}, ${geoPos.lon.toFixed(2)}.`);
+  return L.join('\n');
+}
 async function gemAsk(q){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
-  const body={systemInstruction:{parts:[{text:`Du bist der Gufy Assistent in GufyUI, einem Handy-System. ${S.name?'Der Nutzer heißt '+S.name+'. ':''}Antworte immer auf Deutsch, freundlich und kurz (höchstens 3–4 Sätze), ohne Markdown. Heute ist ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`}]},contents:[{role:'user',parts:[{text:q}]}],generationConfig:{maxOutputTokens:400,temperature:.7}};
+  if(Date.now()-gemHistT>10*60000)gemHist=[];
+  const sys=`Du bist der Gufy Assistent in GufyUI, einem selbstgebauten Handy-System. Antworte immer auf Deutsch, locker, freundlich und kurz (meist 1–4 Sätze), ohne Markdown, ohne Sternchen. Beantworte die Frage vollständig – brich nie mitten im Satz ab. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.\n\nInfos:\n${gemContext()}`;
+  const contents=[...gemHist,{role:'user',parts:[{text:q}]}];
   let last;
-  for(const m of['gemini-flash-latest','gemini-2.5-flash','gemini-2.0-flash']){
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+  for(const [m,think] of[['gemini-flash-latest',1],['gemini-2.5-flash',1],['gemini-2.0-flash',0]]){
+    const gc={maxOutputTokens:1200,temperature:.7};if(think)gc.thinkingConfig={thinkingBudget:0};
+    const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};
+    let r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+    if(r.status===400&&think){delete gc.thinkingConfig;r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)})}
     if(r.status===404){last='Modell '+m+' nicht da';continue}
     const d=await r.json().catch(()=>({}));
     if(!r.ok){const msg=d.error&&d.error.message||('HTTP '+r.status);glog('Gemini',m+': '+msg);
       if(r.status===400&&/api key/i.test(msg)||r.status===403)throw new Error('Der Schlüssel funktioniert nicht. Sag „API-Key“, um ihn neu einzugeben.');
       if(r.status===429)throw new Error('Gemini ist gerade überlastet oder dein Tageslimit ist erreicht. Versuch es später nochmal.');
       throw new Error('Gemini-Fehler: '+msg)}
-    const t=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts||[]).map(p=>p.text||'').join('').trim();
-    glog('Gemini',m+' ok ('+t.length+' Zeichen)');
-    return t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ')||'Gemini hat keine Antwort gegeben.';
+    const c=d.candidates&&d.candidates[0]||{};
+    let t=(c.content&&c.content.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
+    glog('Gemini',`${m} ok (${t.length} Zeichen, ${c.finishReason||'?'})`);
+    t=t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ').replace(/[*_#]{1,3}/g,'');
+    if(c.finishReason==='MAX_TOKENS')t+=' …';
+    if(!t)return 'Gemini hat keine Antwort gegeben.';
+    gemHist.push({role:'user',parts:[{text:q}]},{role:'model',parts:[{text:t}]});if(gemHist.length>12)gemHist=gemHist.slice(-12);gemHistT=Date.now();
+    return t;
   }
   throw new Error('Gemini nicht erreichbar ('+last+')');
 }
