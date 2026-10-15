@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.0","notes":["8 Live-Hintergründe (Aurora, Sternschnuppen, Lavalampe, Neon-Grid, Ozean, Regenstadt, Glühwürmchen, Galaxie)","6 neue Szenen: Schwarzes Loch, Cyber City, Kirschblüte, Vulkan, Nordlichtsee, Neon-Ringe","Hintergründe nach Kategorien sortiert","Kontrollzentrum: Akkulaufzeit an und aus","Nur noch 3 Quests pro Tag"]};
+window.GUFY={"v":"7.1","notes":["Neue App im Store: Wetter – Windstärke jetzt und in den nächsten Stunden, Regen ja/nein","Gufy Assistent: Home-Taste 2 Sek. halten, sprechen oder schreiben – mehrere Befehle auf einmal","Timer laufen im Hintergrund weiter (oben sichtbar)","Neues Widget: Wetter"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1014,6 +1014,57 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .lw-gal{left:50%;top:50%;width:240%;aspect-ratio:1;transform:translate(-50%,-50%);background-size:cover!important;animation:gal 240s linear infinite}
 @keyframes gal{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.livew *{animation-duration:0s!important}}
+/* 7.1: Wetter */
+.wx{padding:14px 14px 20px}
+.wx-empty{text-align:center;padding:40px 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.wx-hero{border-radius:26px;padding:18px 20px;color:#fff;text-align:center;box-shadow:0 14px 34px rgba(0,0,0,.25)}
+.wx-hero small{opacity:.85;font-weight:600}
+.wx-now{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0}.wx-now span{font-size:54px}.wx-now b{font-size:72px;font-weight:300;letter-spacing:-3px}
+.wx-rain{display:inline-block;margin-top:12px;padding:7px 14px;border-radius:999px;background:rgba(255,255,255,.18);font-weight:650;font-size:14px}
+.wx-rain.yes{background:rgba(10,132,255,.55)}
+.wx-wind{display:flex;gap:16px;align-items:center;margin-top:14px;padding:16px;border-radius:22px;background:var(--panel-solid);border:1px solid var(--border)}
+.wx-comp{width:76px;height:76px;flex:none;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;position:relative;background:radial-gradient(circle,var(--hover),transparent 70%)}
+.wx-comp i{font-style:normal;font-size:30px;color:var(--accent);display:block;transition:transform .6s}.wx-comp small{position:absolute;bottom:4px;font-size:11px;font-weight:700;color:var(--muted)}
+.wx-bf b{font-size:34px}.wx-bf span{font-weight:600;color:var(--muted)}
+.wx-wrow{display:flex;gap:12px;flex-wrap:wrap;font-size:13.5px;margin:4px 0 8px}
+.wx-bar{height:6px;border-radius:3px;background:var(--hover);overflow:hidden}.wx-bar i{display:block;height:100%;border-radius:3px}
+.wx-hours{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:2px 14px 6px;touch-action:pan-x}
+.wx-hours::-webkit-scrollbar{display:none}
+.wx-h{flex:none;width:76px;padding:10px 6px;border-radius:18px;background:var(--panel-solid);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px}
+.wx-h.rain{background:rgba(10,132,255,.14);border-color:rgba(10,132,255,.45)}
+.wx-h small{color:var(--muted);font-weight:700}.wx-h .i{font-size:24px}.wx-h b{font-size:17px}.wx-h .r{color:#5ac8fa;font-weight:600}
+.wx-h .bf{color:#000;font-weight:800;font-size:10.5px;padding:2px 6px;border-radius:6px}
+.wx-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px}
+/* 7.1: Timer-Anzeige */
+#tpill{position:fixed;top:calc(var(--sb,30px) + 6px);left:50%;transform:translateX(-50%);z-index:1250;padding:6px 14px;border-radius:999px;background:rgba(255,159,10,.95);color:#000;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;box-shadow:0 6px 18px rgba(0,0,0,.3);border:0}
+#tpill.arm{background:#ff453a;color:#fff}#tpill small{opacity:.7}
+/* 7.1: Home-Taste halten → Assistent */
+#homebtn.hold::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(#a78bfa var(--ha,0deg),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:hold 2s linear forwards}
+@property --ha{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes hold{to{--ha:360deg}}
+#homebtn.ready{box-shadow:0 0 0 3px #a78bfa,0 0 30px 8px rgba(167,139,250,.6)!important}
+#homebtn{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+#asst{position:fixed;inset:0;z-index:1400;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#asst.open{display:flex}
+.as-sheet{position:relative;width:min(100%,520px);margin:0 10px calc(14px + env(safe-area-inset-bottom));padding:22px 16px 14px;border-radius:30px;background:rgba(22,22,30,.92);color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px;max-height:75vh;overflow:hidden}
+.as-sheet::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;background:linear-gradient(120deg,#7c5cff,#ff5fa2,#ffb35c,#4fd1ff,#7c5cff);background-size:300% 300%;animation:asg 4s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+@keyframes asg{to{background-position:300% 0}}
+.as-orb{width:44px;height:44px;border-radius:50%;margin:0 auto;background:radial-gradient(circle at 35% 30%,#fff,#a78bfa 30%,#ff5fa2 60%,#4fd1ff);box-shadow:0 0 30px rgba(167,139,250,.7);animation:orb 2.4s ease-in-out infinite alternate}
+@keyframes orb{to{transform:scale(1.12) rotate(40deg)}}
+.as-title{text-align:center;font-size:18px}
+.as-log{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:40px}
+.as-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.as-chips button{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:12.5px}
+.as-me{align-self:flex-end;background:#7c5cff;padding:8px 12px;border-radius:16px 16px 4px 16px;max-width:85%;font-weight:600}
+.as-step{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.07);animation:stepIn .3s ease}
+.as-step.err{background:rgba(255,69,58,.14)}
+.as-step .ic{font-size:22px}.as-step div{flex:1;min-width:0}.as-step small{display:block;color:rgba(255,255,255,.7);margin-top:2px}
+.as-in{display:flex;gap:8px}
+.as-in input{flex:1;min-width:0;padding:13px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;font-size:16px;outline:none;-webkit-user-select:text;user-select:text}
+.as-in button{width:46px;height:46px;flex:none;border-radius:50%;border:0;font-size:18px;background:rgba(255,255,255,.1);color:#fff}
+.as-in .as-go{background:linear-gradient(135deg,#7c5cff,#ff5fa2);font-weight:800;font-size:20px}
+#asMic.rec{background:#ff453a;animation:orb .6s ease-in-out infinite alternate}
+.as-hint{text-align:center;color:rgba(255,255,255,.5);font-size:11.5px}
 </style>
 </head>
 <body class="dark">
@@ -2158,8 +2209,15 @@ function goHome(){
 }
 $('#homebtn').onclick=goHome;
 // Home-Taste reagiert sofort beim Loslassen – auch wenn ein Klick verschluckt wird
-(()=>{const hb=$('#homebtn');let t0=0;hb.addEventListener('pointerdown',e=>{t0=Date.now();try{hb.setPointerCapture(e.pointerId)}catch(_){}});
-  hb.addEventListener('pointerup',e=>{if(Date.now()-t0<800){e.preventDefault();hb.dataset.skip=Date.now();goHome()}});
+(()=>{const hb=$('#homebtn');let t0=0,holdT=0,held=false;
+  const stop=()=>{clearTimeout(holdT);hb.classList.remove('hold','ready')};
+  hb.addEventListener('contextmenu',e=>e.preventDefault());
+  hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
+    if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');haptic('heavy')},2000)}});
+  hb.addEventListener('pointerup',e=>{stop();
+    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();openAssistant();return}
+    if(Date.now()-t0<800){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
+  hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
 addEventListener('keydown',e=>{if(e.key==='Escape'&&current==='desktop')goHome()});
 $$('[data-open]').forEach(b=>b.onclick=()=>openApp(b.dataset.open));
@@ -2243,6 +2301,11 @@ const WTYPES={
     upd:el=>{const v=S.vsf||{half:6,floni:0};const hp='<svg viewBox="0 0 24 22"><path d="M12 21.4l-1.5-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.5 11.6L12 21.4z"/></svg>';
       $('.js-vch',el).innerHTML=[0,1,2].map(k=>{const f=Math.max(0,Math.min(2,v.half-k*2));return `<div class="vh"><div class="vh-bg">${hp}</div><div class="vh-fg" style="width:${f*50}%">${hp}</div></div>`}).join('');
       $('.js-vcf',el).innerHTML='<span class="vfi" style="width:22px;height:22px;font-size:12px;vertical-align:-3px">F</span> '+fmtNum(v.floni)}},
+  wx:{name:'Wetter',sizes:['s'],open:()=>appAvail('weather')?'weather':null,
+    html:()=>`<div class="wt js-wxp">Wetter</div><div class="cw-ic js-wxi" style="font-size:30px"></div><div class="cw-num js-wxt" style="font-size:34px"></div><div class="cw-sub js-wxw"></div><div class="cw-sub js-wxr"></div>`,
+    upd:el=>{if(!S.wx||Date.now()-S.wx.t>30*60000){wxLoad(false)}if(!S.wx){$('.js-wxw',el).textContent=wxErr||'Lädt …';return}
+      const c=S.wx.d.current,b=beaufort(c.wind_speed_10m),r=rainSummary(S.wx.d);$('.js-wxi',el).textContent=wxCode(c.weather_code,c.is_day).i;
+      $('.js-wxt',el).textContent=Math.round(c.temperature_2m)+'°';$('.js-wxw',el).textContent=`💨 Stärke ${b.n} · ${Math.round(c.wind_speed_10m)} km/h`;$('.js-wxr',el).textContent=(r.now?'🌧️ ':'☂️ ')+r.text.replace(' in den nächsten 12 Std.','')}},
   debtw:{name:'Schulden',sizes:['s'],open:()=>appAvail('debts')?'debts':null,
     html:()=>`<div class="wt">Schulden</div><div class="cw-ic js-di"></div><div class="cw-num js-dn" style="font-size:30px"></div><div class="cw-sub js-ds"></div>`,
     upd:el=>{const o=(S.debts||[]).filter(d=>d.status==='open');$('.js-di',el).textContent=o.length?'⚠️':'✅';
@@ -3904,7 +3967,255 @@ render(body,ctx){
   list();
 }}
 
+,
+/* ---------- Wetter ---------- */
+weather:{name:'Wetter',cat:'Werkzeuge',full:true,store:true,icon:'🌦️',bg:'linear-gradient(135deg,#4facfe,#00c6fb)',
+render(body,ctx){
+  let busy=false;
+  function draw(){
+    const w=S.wx;
+    if(!w||!w.d){body.innerHTML=`<div class="wx"><div class="wx-empty"><div class="gm-big">🌦️</div><b>${busy?'Wetter wird geladen …':'Noch keine Wetterdaten'}</b><p class="muted">${esc(wxErr||'')}</p>${busy?'':'<button class="btn primary" id="wR">Laden</button>'}</div>${cityHTML()}</div>`;bind();return}
+    const c=w.d.current,H=wxHours(w.d,12),bf=beaufort(c.wind_speed_10m),cd=wxCode(c.weather_code,c.is_day),rs=rainSummary(w.d);
+    body.innerHTML=`<div class="wx">
+      <div class="wx-hero" style="background:${cd.bg}"><small>📍 ${esc(w.place||'Mein Standort')}</small><div class="wx-now"><span>${cd.i}</span><b>${Math.round(c.temperature_2m)}°</b></div><div>${cd.t}</div>
+        <div class="wx-rain ${rs.now?'yes':''}">${rs.now?'🌧️':'☂️'} ${rs.text}</div></div>
+      <div class="wx-wind"><div class="wx-comp"><i style="transform:rotate(${c.wind_direction_10m+90}deg)">➤</i><small>${dirName(c.wind_direction_10m)}</small></div>
+        <div style="flex:1"><small class="muted">WINDSTÄRKE</small><div class="wx-bf"><b>${bf.n}</b> <span>${bf.t}</span></div>
+          <div class="wx-wrow"><span>💨 ${Math.round(c.wind_speed_10m)} km/h</span><span>🌀 Böen ${Math.round(c.wind_gusts_10m)} km/h</span></div>
+          <div class="wx-bar"><i style="width:${Math.min(100,bf.n/12*100)}%;background:${bf.c}"></i></div></div></div>
+      <div class="slabel">Nächste Stunden</div>
+      <div class="wx-hours">${H.map(h=>{const b=beaufort(h.w),k=wxCode(h.code,h.day);return `<div class="wx-h ${h.rain?'rain':''}"><small>${h.label}</small><span class="i">${k.i}</span><b>${Math.round(h.temp)}°</b>
+        <span class="r">${h.rain?'🌧️ ':'💧 '}${h.prob}%</span><span class="w">💨 ${Math.round(h.w)}</span><span class="bf" style="background:${b.c}">Bft ${b.n}</span></div>`}).join('')}</div>
+      <div class="wx-foot"><small class="muted">Stand ${new Date(w.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · Daten: Open-Meteo</small><button class="btn" id="wR">${busy?'…':'↻ Aktualisieren'}</button></div>
+      ${cityHTML()}</div>`;
+    bind();
+  }
+  function cityHTML(){return `<div class="sgroup" style="padding:12px;margin-top:14px"><div style="display:flex;gap:8px"><input class="input" id="wC" placeholder="Ort suchen (z. B. Berlin)" value="${esc(S.wxCity||'')}"><button class="btn primary" id="wCs">🔍</button></div>
+    ${S.wxCity?'<button class="btn" id="wGps" style="width:100%;margin-top:8px">📍 Meinen Standort benutzen</button>':''}</div>`}
+  function bind(){
+    const r=$('#wR',body);if(r)r.onclick=()=>load(true);
+    const cs=$('#wCs',body);if(cs)cs.onclick=async()=>{const q=$('#wC',body).value.trim();if(!q)return;busy=true;draw();
+      try{const res=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name='+encodeURIComponent(q)).then(x=>x.json());
+        const p=res.results&&res.results[0];if(!p)throw new Error('Ort nicht gefunden');
+        S.wxCity=p.name;S.wxLoc={lat:p.latitude,lon:p.longitude};save();busy=false;load(true)}catch(e){busy=false;wxErr=e.message||'Ort nicht gefunden';notify('🌦️','Wetter',wxErr,'#ff453a');draw()}};
+    const gp=$('#wGps',body);if(gp)gp.onclick=()=>{S.wxCity='';S.wxLoc=null;save();load(true)};
+  }
+  async function load(force){busy=true;draw();await wxLoad(force);busy=false;if(body.isConnected)draw()}
+  draw();load(false);
+  const iv=setInterval(()=>{if(body.isConnected&&S.wx&&Date.now()-S.wx.t>15*60000)load(true)},60000);
+  ctx.cleanup.push(()=>clearInterval(iv));
+}}
+
 };
+
+/* =========================================================
+   WETTER (Open-Meteo, ohne Schlüssel)
+   ========================================================= */
+let wxErr='',wxP=null;
+const BFT=[[1,'Windstille'],[6,'leiser Zug'],[12,'leichte Brise'],[20,'schwache Brise'],[29,'mäßige Brise'],[39,'frische Brise'],[50,'starker Wind'],[62,'steifer Wind'],[75,'stürmischer Wind'],[89,'Sturm'],[103,'schwerer Sturm'],[118,'orkanartiger Sturm'],[1e9,'Orkan']];
+function beaufort(kmh){const n=BFT.findIndex(b=>kmh<b[0]);return{n,t:BFT[n][1],c:n<=3?'#34c759':n<=5?'#ffd60a':n<=7?'#ff9f0a':'#ff453a'}}
+const dirName=d=>['N','NO','O','SO','S','SW','W','NW'][Math.round(((d%360)+360)%360/45)%8];
+function wxCode(c,day=1){
+  const n=day?{i:'☀️',bg:'linear-gradient(160deg,#4facfe,#2b7de9)'}:{i:'🌙',bg:'linear-gradient(160deg,#141e46,#2b3a7a)'};
+  if(c===0)return{...n,t:'Klar'};
+  if(c<=2)return{i:day?'🌤️':'🌙',t:'Heiter',bg:n.bg};
+  if(c===3)return{i:'☁️',t:'Bewölkt',bg:'linear-gradient(160deg,#6b7a90,#3d4757)'};
+  if(c===45||c===48)return{i:'🌫️',t:'Nebel',bg:'linear-gradient(160deg,#8d97a5,#59616d)'};
+  if(c>=51&&c<=57)return{i:'🌦️',t:'Nieselregen',bg:'linear-gradient(160deg,#5a7391,#344559)'};
+  if((c>=61&&c<=67)||(c>=80&&c<=82))return{i:'🌧️',t:c>=80?'Regenschauer':'Regen',bg:'linear-gradient(160deg,#3f5a7a,#1f2d40)'};
+  if((c>=71&&c<=77)||c===85||c===86)return{i:'🌨️',t:'Schnee',bg:'linear-gradient(160deg,#9fb3c8,#5d7189)'};
+  if(c>=95)return{i:'⛈️',t:'Gewitter',bg:'linear-gradient(160deg,#3a3550,#16131f)'};
+  return{...n,t:'–'};
+}
+const isRainCode=c=>(c>=51&&c<=67)||(c>=80&&c<=82)||c>=95;
+function wxHours(d,n){
+  const h=d.hourly,now=Date.now(),out=[];
+  for(let i=0;i<h.time.length&&out.length<n;i++){const t=new Date(h.time[i]).getTime();if(t<now-3600000)continue;
+    const p=h.precipitation_probability?h.precipitation_probability[i]??0:0,mm=h.precipitation?h.precipitation[i]??0:0;
+    out.push({label:out.length?new Date(t).getHours()+' Uhr':'Jetzt',temp:h.temperature_2m[i],w:h.wind_speed_10m[i],g:h.wind_gusts_10m?h.wind_gusts_10m[i]:0,code:h.weather_code[i],day:h.is_day?h.is_day[i]:1,prob:p,mm,rain:mm>=.1||isRainCode(h.weather_code[i])||p>=60})}
+  return out;
+}
+function rainSummary(d){
+  const c=d.current,now=(c.precipitation||0)>=.1||isRainCode(c.weather_code);
+  const H=wxHours(d,12),k=H.findIndex(h=>h.rain);
+  if(now){const e=H.findIndex(h=>!h.rain);return{now,text:e>0?`Es regnet – bis ca. ${H[e].label}`:'Es regnet'}}
+  return{now,text:k<0?'Kein Regen in den nächsten 12 Std.':k<=1?'Gleich kommt Regen':`Regen ab ca. ${H[k].label}`};
+}
+function wxPos(){
+  if(S.wxLoc)return Promise.resolve(S.wxLoc);
+  if(typeof geoPos!=='undefined'&&geoPos)return Promise.resolve({lat:geoPos.lat,lon:geoPos.lon});
+  return new Promise(res=>{
+    if(!navigator.geolocation)return res(S.loc&&S.loc.home||null);
+    navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lon:p.coords.longitude}),()=>res(S.loc&&S.loc.home||null),{timeout:9000,maximumAge:600000});
+  });
+}
+function wxLoad(force){
+  if(!force&&S.wx&&Date.now()-S.wx.t<10*60000)return Promise.resolve(S.wx);
+  if(wxP)return wxP;
+  wxP=(async()=>{
+    try{
+      const p=await wxPos();if(!p)throw new Error('Kein Standort – such oben einen Ort.');
+      const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat.toFixed(3)}&longitude=${p.lon.toFixed(3)}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day&forecast_days=2&timezone=auto&wind_speed_unit=kmh`;
+      const d=await fetch(u).then(r=>{if(!r.ok)throw new Error('Wetterdienst nicht erreichbar');return r.json()});
+      S.wx={t:Date.now(),d,place:S.wxCity||'Mein Standort'};wxErr='';save();
+      if(typeof updateWidgets==='function'&&current==='desktop')updateWidgets($('#track'));
+    }catch(e){wxErr=e.message&&!/fetch/i.test(e.message)?e.message:'Keine Verbindung zum Wetterdienst'}
+    wxP=null;return S.wx;
+  })();
+  return wxP;
+}
+
+/* =========================================================
+   TIMER (laufen auch, wenn keine App offen ist)
+   ========================================================= */
+S.atimers??=[];
+let audioCtx=null;
+function beep(n=3){try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();const t0=audioCtx.currentTime;
+  for(let i=0;i<n;i++)for(let j=0;j<2;j++){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=j?1320:880;o.connect(g);g.connect(audioCtx.destination);
+    const s=t0+i*.6+j*.16;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.25,s+.01);g.gain.exponentialRampToValueAtTime(.001,s+.14);o.start(s);o.stop(s+.15)}}catch(e){}}
+function addTimer(ms,label){const t={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),end:Date.now()+ms,label:label||fmtLen(ms)};S.atimers.push(t);save();timerTick();return t}
+const fmtLen=ms=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return [h&&h+' Std.',m&&m+' Min.',x&&x+' Sek.'].filter(Boolean).join(' ')||'0 Sek.'};
+const fmtLeft=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+pad(m):m)+':'+pad(s%60)};
+function timerTick(){
+  const now=Date.now(),done=S.atimers.filter(t=>t.end<=now);
+  if(done.length){S.atimers=S.atimers.filter(t=>t.end>now);save();
+    done.forEach(t=>{notify('⏰','Timer abgelaufen',`${t.label} sind um!`,'#ff9f0a');haptic('error');beep()})}
+  let p=$('#tpill');
+  if(!S.atimers.length){if(p)p.remove();return}
+  if(!p){p=document.createElement('button');p.id='tpill';document.body.append(p);
+    p.onclick=()=>{if(p.dataset.arm){S.atimers.shift();save();delete p.dataset.arm;haptic();timerTick();return}p.dataset.arm=1;p.classList.add('arm');haptic('select');setTimeout(()=>{delete p.dataset.arm;p.classList.remove('arm');timerTick()},2500);timerTick()}}
+  const n=S.atimers.slice().sort((a,b)=>a.end-b.end)[0];
+  p.innerHTML=p.dataset.arm?'✕ Timer stoppen?':`⏱️ ${fmtLeft(n.end-now)}${S.atimers.length>1?` <small>+${S.atimers.length-1}</small>`:''}`;
+}
+setInterval(timerTick,500);
+
+/* =========================================================
+   GUFY ASSISTENT – Home-Taste 2 Sek. halten
+   ========================================================= */
+const NUMW={null:0,ein:1,eins:1,eine:1,einen:1,einer:1,zwei:2,drei:3,vier:4,fünf:5,fuenf:5,sechs:6,sieben:7,acht:8,neun:9,zehn:10,elf:11,zwölf:12,zwoelf:12,dreizehn:13,vierzehn:14,fünfzehn:15,sechzehn:16,siebzehn:17,achtzehn:18,neunzehn:19,zwanzig:20,dreißig:30,dreissig:30,vierzig:40,fünfzig:50,sechzig:60,neunzig:90,hundert:100};
+function wordNum(w){
+  w=w.toLowerCase();if(/^\d+([.,]\d+)?$/.test(w))return parseFloat(w.replace(',','.'));
+  if(w in NUMW)return NUMW[w];
+  const m=w.match(/^(\w+?)und(\w+)$/);if(m&&m[1] in NUMW&&m[2] in NUMW)return NUMW[m[1]]+NUMW[m[2]];
+  return null;
+}
+function parseDur(s){
+  s=s.toLowerCase().replace(/eineinhalb|anderthalb/g,'1.5').replace(/(\d+)\s*einhalb/g,(_,n)=>+n+.5).replace(/([a-zäöüß]+)einhalb/g,(m,w)=>{const n=wordNum(w);return n===null?m:String(n+.5)});
+  let ms=0,hit=false;
+  if(/halbe\s+stunde/.test(s)){ms+=1800000;hit=true}
+  if(/viertel\s*stunde/.test(s)){ms+=900000;hit=true}
+  const re=/([\wäöüß.,]+)\s*(stunden|stunde|std\.?|h\b|minuten|minute|min\.?|m\b|sekunden|sekunde|sek\.?|s\b)/g;let m;
+  while((m=re.exec(s))){const n=wordNum(m[1]);if(n===null)continue;hit=true;const u=m[2];ms+=n*(u.startsWith('st')||u==='h'?3600000:u.startsWith('m')?60000:1000)}
+  return hit?ms:null;
+}
+const APP_ALIAS={store:'shop',shop:'shop',laden:'shop','gufy store':'shop',einstellungen:'settings',settings:'settings',karte:'standort',map:'standort',taschenlampe:'flash',lampe:'flash',rechner:'calc',taschenrechner:'calc',uhr:'clock',stoppuhr:'clock',flappy:'flappy',vsf:'vsf','tic tac toe':'ttt',tictactoe:'ttt',reaktion:'reaction',reaktionstest:'reaction',würfel:'random',zufall:'random'};
+function findApp(s){
+  s=s.toLowerCase();
+  for(const [k,v] of Object.entries(APP_ALIAS))if(s.includes(k))return v;
+  let best=null;for(const [id,a] of Object.entries(APPS)){const n=a.name.toLowerCase();if(s.includes(n)&&(!best||n.length>APPS[best].name.length))best=id}
+  return best;
+}
+const JOKES=['Warum können Geister so schlecht lügen? Weil man durch sie hindurchsieht. 👻','Was macht ein Pirat am Computer? Er drückt die Enter-Taste. 🏴‍☠️','Treffen sich zwei Magnete. Sagt der eine: „Was soll ich heute bloß anziehen?“ 🧲','Was ist grün und klopft an die Tür? Ein Klopfsalat. 🥬','Wie nennt man einen Bumerang, der nicht zurückkommt? Stock. 🪵'];
+/* ein Satz → mehrere Befehle */
+function splitCmd(t){return t.replace(/[.!?]+/g,',').split(/\s*(?:,|;|\bund\s+dann\b|\bund\s+danach\b|\bdanach\b|\banschließend\b|\bdann\b|\bund\b|\bsowie\b|\bplus\b)\s*/i).map(x=>x.trim()).filter(x=>x.length>1)}
+function planCmd(raw){
+  const s=raw.toLowerCase().replace(/[„“"]/g,'').trim();
+  const on=/\b(an|ein|einschalten|anschalten|anmachen|aktivier\w*)\b/.test(s),off=/\b(aus|ausschalten|ausmachen|deaktivier\w*|stopp\w*|beende\w*)\b/.test(s);
+  let m;
+  if(/\b(warte|warten|pause)\b/.test(s)){const d=parseDur(s)||3000;return{ic:'⏳',txt:`${fmtLen(d)} warten`,wait:d}}
+  if(/timer|wecke mich|erinnere mich|countdown/.test(s)||(/\bstell\w*\b/.test(s)&&parseDur(s))){
+    if(off&&!parseDur(s))return{ic:'⏱️',txt:'Timer gestoppt',run:()=>{const n=S.atimers.length;S.atimers=[];save();timerTick();return n?'Alle Timer gestoppt.':'Es läuft kein Timer.'}};
+    const d=parseDur(s);if(!d)return{ic:'⏱️',err:'Wie lange soll der Timer laufen?'};
+    return{ic:'⏱️',txt:`Timer: ${fmtLen(d)}`,run:()=>{addTimer(d);return `Timer auf ${fmtLen(d)} gestellt.`}};
+  }
+  if(/taschenlampe|lampe|licht/.test(s)){
+    if(!appAvail('flash'))return{ic:'🔦',err:'Die Taschenlampe ist nicht installiert – lade sie im Gufy Store.'};
+    if(off)return{ic:'🔦',txt:'Taschenlampe aus',run:()=>{if(curApp()==='flash')goHome();return 'Taschenlampe aus.'}};
+    return{ic:'🔦',txt:'Taschenlampe an',opens:true,run:()=>{openApp('flash');setTimeout(()=>{const w=$('.flashapp');if(w&&!w.classList.contains('on'))$('.flashbtn').click()},350);return 'Taschenlampe an.'}};
+  }
+  if(/helligkeit|heller|dunkler/.test(s)){
+    m=s.match(/(\d+)\s*%?/);let v=m?+m[1]:/heller/.test(s)?S.brightness+20:/dunkler/.test(s)?S.brightness-20:/max|voll/.test(s)?100:null;
+    if(v===null)return{ic:'☀️',err:'Auf wie viel Prozent?'};v=Math.max(20,Math.min(100,v));
+    return{ic:'☀️',txt:`Helligkeit ${v} %`,run:()=>{S.brightness=v;applyLook();save();const b=$('#bright');if(b)b.value=v;return `Helligkeit auf ${v} %.`}};
+  }
+  if(/dunkelmodus|dark ?mode|hellmodus|light ?mode/.test(s)){const d=/hell|light/.test(s)?off:!off;
+    return{ic:'🌙',txt:d?'Dunkelmodus an':'Hellmodus an',run:()=>{S.theme=d?'dark':'light';applyLook();save();return d?'Dunkelmodus an.':'Hellmodus an.'}}}
+  if(/nicht stören|nichtstören|ruhemodus/.test(s))return{ic:'🔕',txt:off?'Nicht stören aus':'Nicht stören an',run:()=>{S.dnd=!off;save();updateCC();return off?'Nicht stören aus.':'Nicht stören an.'}};
+  if(/wetter|regnet|regen|wind|temperatur|wie warm|wie kalt/.test(s))return{ic:'🌦️',txt:'Wetter',async:true,run:async()=>{
+    await wxLoad(false);if(!S.wx)return 'Ich konnte das Wetter gerade nicht laden.';
+    const c=S.wx.d.current,b=beaufort(c.wind_speed_10m),r=rainSummary(S.wx.d);
+    return `${wxCode(c.weather_code,c.is_day).t}, ${Math.round(c.temperature_2m)}°. Wind Stärke ${b.n} (${Math.round(c.wind_speed_10m)} km/h, ${b.t}). ${r.text}.`}};
+  if(/wie spät|uhrzeit|wie viel uhr/.test(s))return{ic:'🕐',txt:'Uhrzeit',run:()=>`Es ist ${new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`};
+  if(/welcher tag|datum|welches datum|heute ist/.test(s))return{ic:'📅',txt:'Datum',run:()=>`Heute ist ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'})}.`};
+  if(/akku|batterie/.test(s))return{ic:'🔋',txt:'Akku',run:()=>`Akku: ${dispPct()} %. ${remainText().replace(/\.+$/,'')}.`};
+  if(/coins|münzen|geld/.test(s)&&!/floni/.test(s))return{ic:'🪙',txt:'Coins',run:()=>`Du hast ${fmtNum(S.coins)} Coins.`};
+  if(/floni/.test(s))return{ic:'🟣',txt:'Floni Coins',run:()=>`Du hast ${fmtNum((S.vsf||{}).floni||0)} Floni Coins.`};
+  if(/\bleben\b|herzen/.test(s)){const h=(S.vsf||{half:6}).half;return{ic:'❤️',txt:'VSF Leben',run:()=>`VSF hat ${h/2} von 3 Herzen.`}}
+  if(/quest/.test(s)&&!/öffne|zeig|starte/.test(s))return{ic:'⚔️',txt:'Quests',run:()=>{ensureQuests();const L=S.daily.list;const o=L.filter(q=>!q.done);return o.length?`Noch ${o.length} offen: ${o.map(q=>q.title).join(' · ')}`:'Alle Quests für heute geschafft! 🎉'}};
+  if((m=s.match(/(?:notiere|notiz|merk dir|schreib\w*(?: eine)? notiz)\s*:?\s*(.*)/))){const tx=raw.replace(/^.*?(notiere|notiz|merk dir|schreib\w*( eine)? notiz)\s*:?\s*/i,'').trim();
+    if(!tx)return{ic:'📝',err:'Was soll ich notieren?'};return{ic:'📝',txt:'Notiz: '+tx,run:()=>{S.notes.push({id:Date.now(),text:tx,t:Date.now()});save();return 'Notiz gespeichert.'}}}
+  if(/witz/.test(s))return{ic:'😂',txt:'Witz',run:()=>JOKES[Math.floor(Math.random()*JOKES.length)]};
+  if(/würfel/.test(s))return{ic:'🎲',txt:'Würfeln',run:()=>`Gewürfelt: ${1+Math.floor(Math.random()*6)} 🎲`};
+  if(/münze|kopf oder zahl/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
+  if(/hintergrund/.test(s)){const i=WALLNAMES.findIndex(n=>s.includes(n.toLowerCase()));const k=i>=0?i:Math.floor(Math.random()*WALLS.length);
+    return{ic:'🖼️',txt:'Hintergrund: '+WALLNAMES[k],run:()=>{S.wall=k;applyLook();save();return `Hintergrund: ${WALLNAMES[k]}.`}}}
+  if(/home|startbildschirm|schließ|schliess|zurück/.test(s))return{ic:'🏠',txt:'Home',run:()=>{goHome();return 'Zurück zum Home-Bildschirm.'}};
+  if((m=s.match(/(?:was ist|rechne|wie viel ist|wieviel ist)\s+(.+)/))){
+    const ex=m[1].replace(/plus/g,'+').replace(/minus/g,'-').replace(/mal|x|×/g,'*').replace(/geteilt durch|durch|÷/g,'/').replace(/,/g,'.').replace(/\b([a-zäöüß]+)\b/g,w=>{const n=wordNum(w);return n===null?'':n});
+    if(/^[\d\s+\-*/().]+$/.test(ex)&&/\d/.test(ex)){try{const v=Function('return ('+ex+')')();if(isFinite(v))return{ic:'🧮',txt:'Rechnen',run:()=>`${m[1].trim()} = ${String(+v.toFixed(6)).replace('.',',')}`}}catch(e){}}
+  }
+  const app=findApp(s);
+  if(app&&/öffne|starte|zeig|geh zu|mach .* auf|spiel|^\w+$|app/.test(s)||app&&s.split(' ').length<=3){
+    if(!appAvail(app))return{ic:APPS[app].icon,err:`${APPS[app].name} ist nicht installiert – lade es im Gufy Store.`};
+    return{ic:APPS[app].icon,txt:APPS[app].name+' öffnen',opens:true,run:()=>{openApp(app);return `${APPS[app].name} geöffnet.`}};
+  }
+  return{ic:'🤔',err:`„${raw}“ habe ich nicht verstanden.`};
+}
+function speak(t){try{if(!window.speechSynthesis||S.asstVoice===false)return;const u=new SpeechSynthesisUtterance(t.replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,''));u.lang='de-DE';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+async function runAssistant(text){
+  const box=$('#asLog');if(!box)return;
+  const parts=splitCmd(text);if(!parts.length)return;
+  const plans=parts.map(planCmd);
+  box.innerHTML=`<div class="as-me">${esc(text)}</div>`+plans.map((p,i)=>`<div class="as-step ${p.err?'err':''}" data-k="${i}"><span class="ic">${p.ic}</span><div><b>${esc(p.err||p.txt)}</b><small></small></div><span class="st">${p.err?'⚠️':'⏳'}</span></div>`).join('');
+  const said=[];
+  for(let i=0;i<plans.length;i++){
+    const p=plans[i],row=$(`.as-step[data-k="${i}"]`,box);
+    if(p.err){said.push(p.err);continue}
+    if(p.wait){$('.st',row).textContent='⏳';await new Promise(r=>setTimeout(r,p.wait));$('.st',row).textContent='✅';continue}
+    if(p.opens){closeAssistant(true);await new Promise(r=>setTimeout(r,280))}
+    let res='';try{res=await p.run()}catch(e){res='Fehler'}
+    if(row){$('small',row).textContent=res;$('.st',row).textContent='✅'}
+    said.push(res);haptic('success');
+    if(p.opens&&i<plans.length-1)await new Promise(r=>setTimeout(r,500));
+  }
+  const all=said.filter(Boolean).join(' ');
+  if(!$('#asst').classList.contains('open')&&all)notify('✨','Gufy Assistent',all,'#7c5cff');
+  speak(all);
+}
+function openAssistant(){
+  if(current!=='desktop')return;
+  let a=$('#asst');
+  if(!a){a=document.createElement('div');a.id='asst';document.body.append(a);
+    a.innerHTML=`<div class="as-sheet"><div class="as-orb"></div><b class="as-title">Was kann ich für dich tun?</b>
+      <div class="as-log" id="asLog"><div class="as-chips">${['Stell einen Timer auf 3 Minuten und schalte die Taschenlampe an','Wie ist das Wetter?','Wie viel Akku habe ich?','Öffne Snake','Notiere Pizza kaufen'].map(c=>`<button data-ex="${esc(c)}">${esc(c)}</button>`).join('')}</div></div>
+      <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sag oder schreib etwas … 🎤" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form>
+      <small class="as-hint">Tipp: Tippe ins Feld und dann unten auf der Tastatur auf 🎤 zum Diktieren.</small></div>`;
+    a.addEventListener('pointerdown',e=>{if(e.target===a)closeAssistant()});
+    $('#asForm',a).onsubmit=e=>{e.preventDefault();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();runAssistant(t)};
+    $$('[data-ex]',a).forEach(b=>b.onclick=()=>{$('#asTxt',a).value=b.dataset.ex});
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition,mic=$('#asMic',a);
+    if(!SR)mic.style.display='none';
+    else mic.onclick=()=>{try{const r=new SR();r.lang='de-DE';r.interimResults=true;mic.classList.add('rec');
+      r.onresult=e=>{const t=[...e.results].map(x=>x[0].transcript).join('');$('#asTxt',a).value=t;if(e.results[e.results.length-1].isFinal){mic.classList.remove('rec');$('#asForm',a).requestSubmit()}};
+      r.onerror=r.onend=()=>mic.classList.remove('rec');r.start()}catch(e){mic.classList.remove('rec')}};
+  }
+  a.classList.add('open');haptic('heavy');
+  const inp=$('#asTxt',a);inp.focus();
+  $('.as-sheet',a).animate([{transform:'translateY(40px)',opacity:0},{transform:'none',opacity:1}],{duration:380,easing:SPRING});
+}
+function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('open'))return;const i=$('#asTxt',a);if(i)i.blur();
+  if(quick){a.classList.remove('open');return}
+  $('.as-sheet',a).animate([{transform:'none',opacity:1},{transform:'translateY(40px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
 /* =========================================================
    START
