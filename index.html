@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.0","notes":["Assistent: Audiospur zeigt, ob das Mikro deine Stimme hört","Ab dem 2. Mal pro App-Start öffnet sich automatisch die Tastatur zum Diktieren (iPhone erlaubt die Spracherkennung nur einmal)","Logs unter Einstellungen → Logs"]};
+window.GUFY={"v":"8.1","notes":["Assistent: Wenn die Tastatur aufgeht, rutscht das Fenster nach oben – beim direkten Zuhören bleibt es unten","Audiospur zeigt, ob das Mikro deine Stimme hört","Ab dem 2. Mal pro App-Start: Diktieren über die Tastatur"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1082,6 +1082,8 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .as-wave.talk i{height:22px}.as-wave.talk i:nth-child(odd){height:14px}.as-wave.talk i:nth-child(4){height:28px}
 .as-wave.talk i{animation-name:wvt}
 @keyframes wvt{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+#asst.top{align-items:flex-start}
+#asst.top .as-sheet{margin:calc(var(--sb,30px) + 8px) 10px 0}
 </style>
 </head>
 <body class="dark">
@@ -2232,7 +2234,7 @@ $('#homebtn').onclick=goHome;
   hb.addEventListener('pointerdown',e=>{t0=Date.now();held=false;try{hb.setPointerCapture(e.pointerId)}catch(_){}
     if(current==='desktop'){hb.classList.add('hold');holdT=setTimeout(()=>{held=true;hb.classList.add('ready');openAssistant();setTimeout(()=>hb.classList.remove('hold','ready'),300)},1000)}});
   hb.addEventListener('pointerup',e=>{stop();
-    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();if(asKbd){asKbd=false;const i=$('#asTxt');if(i){i.focus();asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','')}}return}
+    if(held){held=false;e.preventDefault();hb.dataset.skip=Date.now();if(asKbd){asKbd=false;const i=$('#asTxt');if(i){asKbdMsg=true;asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');i.focus()}}return}
     if(Date.now()-t0<700){e.preventDefault();hb.dataset.skip=Date.now();goHome()}else hb.dataset.skip=Date.now()});
   hb.addEventListener('pointercancel',()=>{stop();held=false});
   hb.onclick=e=>{if(hb.dataset.skip&&Date.now()-hb.dataset.skip<600)return;goHome()}})();
@@ -4266,7 +4268,7 @@ async function runAssistant(text){
    iPhone-Probleme: (1) Vorlesen/Töne belegen das Audio → Mikro läuft, liefert aber nichts.
    (2) Erkenner hängt manchmal. Deshalb: vor dem Zuhören Vorlesen stoppen, kurz warten,
    bei Hängern/leeren Ergebnissen einen frischen Erkenner nehmen. Alles wird geloggt. */
-let asKbd=false,asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
+let asKbd=false,asKbdMsg=false,asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
 function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen');const w=$('#asWave');if(w){w.classList.toggle('on',mode==='listen');if(mode!=='listen')w.classList.remove('talk')}}
 let asTalkT=0;
 function asTalk(){const w=$('#asWave');if(!w)return;w.classList.add('on','talk');clearTimeout(asTalkT);asTalkT=setTimeout(()=>w.classList.remove('talk'),700)}
@@ -4339,11 +4341,15 @@ function openAssistant(){
       <form class="as-in" id="asForm"><input id="asTxt" placeholder="Sprich oder schreib …" autocomplete="off" enterkeyhint="send"><button type="button" id="asMic" title="Sprechen">🎤</button><button type="submit" class="as-go">↑</button></form></div>`;
     a.addEventListener('pointerdown',e=>{if(e.target===a)closeAssistant()});
     $('#asForm',a).onsubmit=e=>{e.preventDefault();asStop();const t=$('#asTxt',a).value.trim();if(!t)return;$('#asTxt',a).value='';$('#asTxt',a).blur();asStatus('');runAssistant(t)};
-    $('#asTxt',a).addEventListener('focus',()=>{asStop();asStatus('')});
-    $('#asMic',a).onclick=()=>{if(SR_ONCE()){$('#asTxt',a).focus();asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');return}$('#asTxt',a).blur();if(asRun&&!(asSess&&asSess.started))asReset();asListen()};
+    // Tastatur offen → Fenster rutscht nach oben, Tastatur zu → wieder unten
+    const toTop=on=>{if(a.classList.contains('top')===on)return;const sh=$('.as-sheet',a),r0=sh.getBoundingClientRect();a.classList.toggle('top',on);sh.style.transform='';
+      const r1=sh.getBoundingClientRect();sh.animate([{transform:`translateY(${r0.top-r1.top}px)`},{transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.9,.22,1)'})};
+    $('#asTxt',a).addEventListener('focus',()=>{asStop();if(!asKbdMsg)asStatus('');asKbdMsg=false;toTop(true)});
+    $('#asTxt',a).addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==$('#asTxt',a))toTop(false)},120));
+    $('#asMic',a).onclick=()=>{if(SR_ONCE()){asKbdMsg=true;asStatus('🎤 Tippe unten auf der Tastatur auf das Mikrofon','');$('#asTxt',a).focus();return}$('#asTxt',a).blur();if(asRun&&!(asSess&&asSess.started))asReset();asListen()};
     $$('[data-ex]',a).forEach(b=>b.onclick=()=>{asStop();runAssistant(b.dataset.ex)});
     // Tastatur: Fenster bleibt sichtbar über der Tastatur
-    if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('.as-sheet',a);if(!sh)return;const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);sh.style.transform=kb>40?`translateY(${-kb+20}px)`:''};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
+    if(window.visualViewport){const vv=visualViewport,fit=()=>{const sh=$('.as-sheet',a);if(!sh)return;if(a.classList.contains('top')){sh.style.transform='';return}const kb=Math.max(0,innerHeight-vv.height-vv.offsetTop);sh.style.transform=kb>40?`translateY(${-kb+20}px)`:''};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}
   }
   if(a.classList.contains('open'))return;
   a.classList.add('open');haptic('heavy');
@@ -4353,7 +4359,7 @@ function openAssistant(){
   if(SR_ONCE()){glog('Mikro','2. Mal in diesem App-Start → Tastatur-Diktieren');asKbd=true;asStatus('Lass los und tippe unten auf der Tastatur auf 🎤','warn');return}
   asListen();
 }
-function closeAssistant(quick){asKbd=false;const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
+function closeAssistant(quick){asKbd=false;setTimeout(()=>{const a=$('#asst');if(a&&!a.classList.contains('open'))a.classList.remove('top')},260);const a=$('#asst');if(!a||!a.classList.contains('open'))return;asStop();const i=$('#asTxt',a);if(i)i.blur();
   if(quick){a.classList.remove('open');return}
   $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(60px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
 
