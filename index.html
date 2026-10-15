@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"7.6","notes":["Spracheingabe: Vorlesen/Töne werden vor dem Zuhören gestoppt – das hat das Mikro blockiert","Kommt nichts an, versucht GufyUI es automatisch mit frischem Mikro nochmal","Neu: Einstellungen → Logs (zum Nachschauen und Kopieren)"]};
+window.GUFY={"v":"7.7","notes":["Spracheingabe: jedes Mal ein frisches Mikrofon – das zweite, dritte … Mal hört es jetzt richtig zu","Hört das Mikro 5 Sek. gar nichts, startet es automatisch neu","Logs unter Einstellungen → Logs"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -4256,7 +4256,7 @@ async function runAssistant(text){
    iPhone-Probleme: (1) Vorlesen/Töne belegen das Audio → Mikro läuft, liefert aber nichts.
    (2) Erkenner hängt manchmal. Deshalb: vor dem Zuhören Vorlesen stoppen, kurz warten,
    bei Hängern/leeren Ergebnissen einen frischen Erkenner nehmen. Alles wird geloggt. */
-let asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false;
+let asRec=null,asRun=false,asSess=null,asQueue=false,asWd=0,asMax=0,asN=0,asFresh=false,asSil=0;
 function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}const o=$('#asst .as-orb');if(o)o.classList.toggle('listen',mode==='listen')}
 function asMake(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){glog('Mikro','SpeechRecognition gibt es hier nicht');return null}
@@ -4266,23 +4266,24 @@ function asMake(){
   const id=++asN;glog('Mikro',`Erkenner #${id} erstellt`);
   r.lang='de-DE';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
   r.onstart=()=>{glog('Mikro',`#${id} onstart`);asRun=true;clearTimeout(asWd);if(asSess){asSess.started=true;asStatus('Ich höre zu …','listen')}haptic('select');clearTimeout(asMax);asMax=setTimeout(()=>{glog('Mikro',`#${id} 12 s vorbei → stop`);try{r.stop()}catch(_){}},12000)};
-  r.onaudiostart=()=>glog('Mikro',`#${id} audiostart`);
-  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);if(asSess)asSess.sound=true};
-  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);if(asSess)asSess.sound=true};
+  r.onaudiostart=()=>{glog('Mikro',`#${id} audiostart`);clearTimeout(asSil);
+    asSil=setTimeout(()=>{const ss=asSess;if(r===asRec&&ss&&!ss.sound&&!ss.done&&!ss.retried){glog('Mikro',`#${id} 5 s kein Ton → frischer Erkenner`);ss.silent=true;try{r.stop()}catch(_){}}},5000)};
+  r.onsoundstart=()=>{glog('Mikro',`#${id} soundstart`);clearTimeout(asSil);if(asSess)asSess.sound=true};
+  r.onspeechstart=()=>{glog('Mikro',`#${id} speechstart`);clearTimeout(asSil);if(asSess)asSess.sound=true};
   r.onspeechend=()=>glog('Mikro',`#${id} speechend`);
   r.onnomatch=()=>glog('Mikro',`#${id} nomatch`);
   r.onresult=e=>{const ss=asSess;const t=[...e.results].map(x=>x[0].transcript).join('');const fin=e.results[e.results.length-1].isFinal;
     glog('Mikro',`#${id} result${fin?' (final)':''}: „${t}“`);if(!ss)return;ss.txt=t;const i=$('#asTxt');if(i)i.value=t;
     if(fin&&!ss.done){ss.done=true;asStatus('');if(i)i.value='';runAssistant(t);try{r.stop()}catch(_){}}};
   r.onerror=e=>{glog('Mikro',`#${id} error: ${e.error}${e.message?' – '+e.message:''}`);const ss=asSess;if(ss)ss.err=e.error};
-  r.onend=()=>{glog('Mikro',`#${id} onend`);if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);const ss=asSess;asSess=null;
+  r.onend=()=>{glog('Mikro',`#${id} onend`);if(r!==asRec)return;asRun=false;clearTimeout(asWd);clearTimeout(asMax);clearTimeout(asSil);const ss=asSess;asSess=null;
+    asFresh=true; // iPhone: ein Erkenner hört nur EINMAL richtig zu → beim nächsten Mal immer neu
     if(asQueue){asQueue=false;setTimeout(asListen,250);return}
     if(!ss||ss.done)return;
     if(ss.txt&&ss.txt.trim()){ss.done=true;asStatus('');const i=$('#asTxt');if(i)i.value='';runAssistant(ss.txt);return}
     // nichts erkannt, obwohl das Mikro lief → mit frischem Erkenner nochmal
-    if(!ss.retried&&ss.err!=='not-allowed'&&ss.err!=='aborted'&&(ss.err||ss.sound||ss.started)){
+    if(!ss.retried&&ss.err!=='not-allowed'&&(ss.silent||(ss.err!=='aborted'&&(ss.err||ss.sound)))){
       glog('Mikro','kein Ergebnis → frischer Erkenner, 2. Versuch');asFresh=true;asStatus('Nochmal bitte …','listen');setTimeout(()=>asListen(true),300);return}
-    asFresh=true; // nächstes Mal sicherheitshalber neu
     if(!$('#asst')||!$('#asst').classList.contains('open'))return;
     asStatus(ss.err==='not-allowed'||ss.err==='service-not-allowed'?'Mikrofon nicht erlaubt – tippe ins Feld und nutze das 🎤 der Tastatur.':'Nicht verstanden – tippe auf 🎤 und versuch es nochmal.','warn')};
   return asRec=r;
@@ -4300,6 +4301,7 @@ function asListen(retry){
   if(asRun){glog('Mikro','läuft noch → stop, dann neu');asQueue=true;try{asRec.stop()}catch(e){}
     clearTimeout(asWd);asWd=setTimeout(()=>{if(asRun||asQueue){glog('Mikro','hängt beim Stoppen');asReset();asListen()}},1200);return}
   if(asQuiet()&&!retry)return void setTimeout(()=>asListen(true),450);
+  if(asFresh&&asRec&&!retry){asReset();return void setTimeout(()=>asListen(true),250)}
   const r=asMake();
   if(!r){asStatus('Sprechen geht hier nicht – tippe ins Feld und nutze das 🎤 der Tastatur.','warn');return}
   asSess={txt:'',done:false,retried:!!retry,started:false,sound:false};
