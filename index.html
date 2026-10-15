@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"10.9","notes":["🤖 AI-Hintergründe: Einstellungen › Hintergrund › AI – beschreib deinen Wunsch-Hintergrund und Gufy AI erstellt ihn nur für dich, auch als Live-Hintergrund","7 neue Hintergründe: Leuchtturm, Nebula, Neon-Stadt, Pastell-Wellen, Glas-Kugeln und Live: Schneefall & Blubberblasen","Einrichtung: Hintergründe jetzt nach Kategorien sortiert"]};
+window.GUFY={"v":"11.0","notes":["AI-Hintergründe: neues, cleanes Menü mit Ideen-Vorschlägen","Live / Still und Aufwand (Wenig / Viel) als schöne Schalter – Stil ist jetzt immer automatisch","Beim Erstellen: Lade-Animation mit Fortschrittsbalken und „noch ca. X Sek.“","🤖 AI-Hintergründe: Einstellungen › Hintergrund › AI – beschreib deinen Wunsch-Hintergrund und Gufy AI erstellt ihn nur für dich, auch als Live-Hintergrund","7 neue Hintergründe: Leuchtturm, Nebula, Neon-Stadt, Pastell-Wellen, Glas-Kugeln und Live: Schneefall & Blubberblasen","Einrichtung: Hintergründe jetzt nach Kategorien sortiert"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -969,7 +969,33 @@ body.phone.gap.fulldown .appbody{padding-bottom:calc(110px + var(--gapH,0px))}
 .wcats button{flex:none;padding:9px 14px;border-radius:999px;background:var(--panel-solid);border:1px solid var(--border);font-weight:650;font-size:14px;white-space:nowrap;transition:background .2s,color .2s}
 .wcats button small{opacity:.55;margin-left:3px;font-weight:600}
 .wcats button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.aiw-box{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(66,133,244,.12));border:1px solid rgba(124,92,255,.35);margin-bottom:16px}
+.aiw-box{position:relative;display:flex;flex-direction:column;gap:12px;padding:18px 16px;border-radius:24px;margin-bottom:18px;overflow:hidden;
+  background:radial-gradient(120% 80% at 0% 0%,rgba(167,139,250,.35),transparent 60%),radial-gradient(100% 80% at 100% 100%,rgba(96,165,250,.28),transparent 60%),radial-gradient(80% 60% at 100% 0%,rgba(244,114,182,.22),transparent 60%),var(--panel-solid);
+  border:1px solid rgba(167,139,250,.35);box-shadow:0 10px 30px rgba(124,92,255,.18)}
+.aiw-hd{display:flex;gap:12px;align-items:center}.aiw-hd b{display:block;font-size:16.5px}.aiw-hd small{color:var(--muted);font-size:13px}
+.aiw-ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6);box-shadow:0 6px 16px rgba(124,92,255,.4)}
+.aiw-in{border-radius:18px;padding:2px;background:linear-gradient(135deg,rgba(167,139,250,.7),rgba(96,165,250,.6),rgba(244,114,182,.6))}
+.aiw-in textarea{display:block;width:100%;border:0;outline:0;resize:none;min-height:84px;border-radius:16px;padding:12px 14px;font:inherit;font-size:15.5px;color:var(--text);background:rgba(20,20,30,.82)}
+body:not(.dark) .aiw-in textarea{background:rgba(255,255,255,.92)}
+.aiw-sug{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}.aiw-sug::-webkit-scrollbar{display:none}
+.aiw-sug button{flex:none;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--text)}
+body:not(.dark) .aiw-sug button{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.08)}
+.aiw-opt{display:flex;align-items:center;justify-content:space-between;gap:10px}.aiw-opt>span{font-weight:650;font-size:14.5px}
+.aiw-seg{display:flex;gap:3px;padding:3px;border-radius:14px;background:rgba(127,127,127,.16)}
+.aiw-seg button{padding:8px 13px;border-radius:11px;font-weight:650;font-size:13.5px;color:var(--muted);transition:background .2s,color .2s,transform .15s}
+.aiw-seg button.on{background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff;box-shadow:0 3px 10px rgba(99,102,241,.4)}
+.aiw-seg button:active{transform:scale(.95)}
+.aiw-hint{color:var(--muted);font-size:12.5px;text-align:right;margin-top:-6px}
+.aiw-go{width:100%;padding:15px;border-radius:16px;font-weight:750;font-size:16px;color:#fff;background:linear-gradient(90deg,#8b5cf6,#3b82f6,#ec4899,#8b5cf6);background-size:300% 100%;animation:aiGo 6s linear infinite;box-shadow:0 8px 22px rgba(99,102,241,.45)}
+.aiw-go:active{transform:scale(.98)}
+@keyframes aiGo{to{background-position:-300% 0}}
+.aiw-run{align-items:center;text-align:center;padding:28px 18px 22px;gap:10px}
+.aiw-orb{width:84px;height:84px;border-radius:50%;padding:4px;background:conic-gradient(#a78bfa,#60a5fa,#f472b6,#a78bfa);animation:pwSpin 2.4s linear infinite;box-shadow:0 0 40px rgba(167,139,250,.55)}
+.aiw-orb i{display:block;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff9,#7c5cff 45%,#1e1b4b);animation:aiPulse 2.4s ease-in-out infinite}
+.aiw-rt{font-size:17px;margin-top:6px}.aiw-rp{color:var(--muted);font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aiw-bar{width:100%;height:8px;border-radius:8px;background:rgba(127,127,127,.2);overflow:hidden;margin-top:8px}
+.aiw-bar i{display:block;height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);background-size:300% 100%;animation:aiGo 2.5s linear infinite;transition:width .25s linear}
+.aiw-rs{width:100%;display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
 .aiw-box textarea{resize:none;min-height:76px;font:inherit}
 .aiw-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .aiw-chk{display:flex;align-items:center;gap:8px;font-weight:650}.aiw-chk input{width:20px;height:20px;accent-color:var(--accent)}
@@ -1252,7 +1278,7 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .ai-prog{display:flex;align-items:center;gap:8px;margin-top:6px;transition:opacity .3s}
 .ai-prog.done{opacity:0}
 .ai-bar{flex:1;height:5px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden}
-.ai-bar i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#a78bfa,#60a5fa,#f472b6);background-size:200% 100%;animation:aiBar 1.5s linear infinite;transition:width .2s linear}
+.ai-bar i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#a78bfa,#60a5fa,#f472b6,#a78bfa);background-size:300% 100%;animation:aiGo 2.5s linear infinite;transition:width .2s linear}
 @keyframes aiBar{to{background-position:-200% 0}}
 .ai-prog span{font-size:11.5px;color:rgba(255,255,255,.6);white-space:nowrap;min-width:84px;text-align:right}
 .qchip.qaichip{background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)!important;margin-left:4px}
@@ -2291,7 +2317,7 @@ function aiJpeg(b64,mime){return new Promise((res,rej)=>{const im=new Image();im
 async function aiWallImage(prompt,onStep){
   const key=gemGet();
   for(const m of['gemini-2.5-flash-image','gemini-2.5-flash-image-preview','gemini-2.0-flash-preview-image-generation']){
-    onStep&&onStep('Bild-KI ('+m.replace('gemini-','')+') …');
+    onStep&&onStep('🖼️ Bild-KI malt …');
     const body={contents:[{role:'user',parts:[{text:`Erzeuge ein wunderschönes Handy-Hintergrundbild im Hochformat (9:16), randlos, ohne Text, ohne Buchstaben, ohne Logos, ohne Rahmen. Motiv: ${prompt}`}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}};
     if(/2\.5/.test(m))body.generationConfig.imageConfig={aspectRatio:'9:16'};
     let r,d;
@@ -2307,18 +2333,18 @@ async function aiWallImage(prompt,onStep){
   }
   return null;
 }
-async function aiWallSvg(prompt,live,onStep){
-  onStep&&onStep('Gufy AI zeichnet …');
-  const sys=`Du bist ein Grafikdesigner. Antworte NUR mit einem einzigen, gültigen SVG-Code (kein Text davor oder danach, kein Markdown). Format: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">. Es ist ein schöner, detailreicher Handy-Hintergrund: Verläufe, Formen, Tiefe, harmonische Farben, KEIN Text, keine Buchstaben, keine Bilder von außen, kein <script>. Halte den Code unter 25000 Zeichen.${live?' LIVE: Füge sanfte, endlos wiederholende Animationen mit <animate> oder <animateTransform> (repeatCount="indefinite", langsam, 4–20 s) hinzu, z. B. schwebende Lichter, ziehende Wolken, funkelnde Sterne, Wellen.':' Keine Animationen.'}`;
-  const t=await gemAsk(`Hintergrund-Motiv: ${prompt}`,null,{sys,temp:.9,raw:true,maxTok:12000,timeout:90000});
+async function aiWallSvg(prompt,live,onStep,eff){
+  onStep&&onStep('✏️ Gufy AI zeichnet …');
+  const sys=`Du bist ein Grafikdesigner. Antworte NUR mit einem einzigen, gültigen SVG-Code (kein Text davor oder danach, kein Markdown). Format: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">. Es ist ein schöner, detailreicher Handy-Hintergrund: Verläufe, Formen, Tiefe, harmonische Farben, KEIN Text, keine Buchstaben, keine Bilder von außen, kein <script>. ${eff==='high'?'AUFWAND HOCH: sehr viele Details, mehrere Ebenen (Vorder-, Mittel-, Hintergrund), Lichteffekte, Schatten und Texturen. Code bis 40000 Zeichen.':'AUFWAND NIEDRIG: klar und schön, nicht zu viele Elemente. Code unter 12000 Zeichen.'}${live?' LIVE: Füge sanfte, endlos wiederholende Animationen mit <animate> oder <animateTransform> (repeatCount="indefinite", langsam, 4–20 s) hinzu, z. B. schwebende Lichter, ziehende Wolken, funkelnde Sterne, Wellen.':' Keine Animationen.'}`;
+  const t=await gemAsk(`Hintergrund-Motiv: ${prompt}`,null,{sys,temp:.9,raw:true,maxTok:eff==='high'?16000:6000,timeout:eff==='high'?120000:60000});
   const x=aiSvgClean(t);if(!x)throw new Error('Gufy AI hat kein gültiges Bild gezeichnet – versuch es nochmal.');
   return x;
 }
-async function aiWallMake(prompt,live,mode,onStep){
+async function aiWallMake(prompt,live,mode,onStep,eff){
   if(!gemGet())throw new Error('Du brauchst zuerst Gufy AI – sag dem Assistenten „API-Key“.');
   let w=null;
-  if(mode!=='svg'){const img=await aiWallImage(prompt,onStep);if(img)w={type:'img',data:img}}
-  if(!w){if(mode==='img')onStep&&onStep('Bild-KI geht mit deinem Schlüssel nicht – Gufy AI zeichnet stattdessen …');w={type:'svg',data:await aiWallSvg(prompt,live,onStep)}}
+  if(mode!=='svg'){const img=await aiWallImage(prompt+(eff==='high'?'. Sehr detailreich, hochwertig, kinoreife Beleuchtung, viele feine Details.':'. Klarer, schöner Look.'),onStep);if(img)w={type:'img',data:img}}
+  if(!w){w={type:'svg',data:await aiWallSvg(prompt,live,onStep,eff)}}
   w.id='aw'+Date.now().toString(36);w.prompt=prompt;w.live=!!live;w.t=Date.now();
   await aiwPut(w);AIW.unshift(w);glog('AI-Hintergrund',`${w.type} gespeichert (${Math.round(w.data.length/1024)} KB)`);
   return w;
@@ -3899,31 +3925,52 @@ render(body,ctx){
     if(tab==='wall'){
       const tile=i=>`<button class="wtile ${i===S.wall?'sel':''}" data-w="${i}"><div class="wprev" style="background:${WALLS[i]}">${liveLayer(i)}<span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span>${LIVE[i]?'<em class="wlive">LIVE</em>':''}</div><small>${WALLNAMES[i]}</small></button>`;
       const CI={'AI':'🤖','Live':'✨','Weltraum':'🪐','Natur':'🏔️','Stadt & Neon':'🌃','Abstrakt':'🔷','Verläufe':'🎨'};
-      let wc=S.aiWall?'AI':wallCat(S.wall),aiLive=false,aiMode='auto',aiBusy=false,aiMsg='';
+      let wc=S.aiWall?'AI':wallCat(S.wall),aiLive=false,aiEff='low',aiBusy=false,aiMsg='',aiT0=0,aiRaf=0;
       const atile=w=>`<button class="wtile ${S.aiWall===w.id?'sel':''}" data-aw="${w.id}"><div class="wprev" style="background:${aiwBg(w)}">${w.live?aiwLive(w):''}<span class="wclock">${pad(new Date().getHours())}:${pad(new Date().getMinutes())}</span>${w.live?'<em class="wlive">LIVE</em>':''}<em class="wai">✨ AI</em></div><small>${esc(w.prompt.slice(0,22))}</small></button>`;
       const drawW=()=>{
         const list=WALLS.map((_,i)=>i).filter(i=>wallCat(i)===wc);
-        const aiHTML=`<div class="aiw-box"><b>🤖 Eigenen Hintergrund erstellen</b><small class="muted">Beschreib, was du sehen willst – Gufy AI erstellt ihn nur für dich.</small>
-            <textarea class="input" id="awP" rows="3" placeholder="z. B. Sylt bei Sonnenuntergang mit Leuchtturm, Neon-Stil" ${aiBusy?'disabled':''}></textarea>
-            <div class="aiw-row"><label class="aiw-chk"><input type="checkbox" id="awL" ${aiLive?'checked':''}> ✨ Live (bewegt)</label>
-              <select class="input" id="awM" style="width:auto;padding:8px 10px"><option value="auto" ${aiMode==='auto'?'selected':''}>Automatisch</option><option value="img" ${aiMode==='img'?'selected':''}>Foto-Stil (Bild-KI)</option><option value="svg" ${aiMode==='svg'?'selected':''}>Gezeichnet</option></select></div>
-            <button class="btn primary" id="awGo" style="width:100%" ${aiBusy?'disabled':''}>${aiBusy?'⏳ Wird erstellt …':'✨ Hintergrund generieren'}</button>
-            <div class="aiw-msg" id="awMsg">${esc(aiMsg)}</div></div>
-          ${AIW.length?`<div class="slabel">Deine AI-Hintergründe</div><div class="wgrid">${AIW.map(atile).join('')}</div>`:''}`;
+        const SUG=[['🌅','Sylt bei Sonnenuntergang'],['🌌','Galaxie mit Nebel'],['🌃','Neon-Stadt bei Regen'],['🌊','Türkises Meer von oben'],['🐉','Drache über Bergen'],['🍭','Süßigkeiten-Land']];
+        const aiEst=()=>Math.round(((S.awAvg&&S.awAvg[aiEff])||(aiEff==='high'?45000:18000))/1000);
+        const aiHTML=aiBusy?`<div class="aiw-box aiw-run">
+            <div class="aiw-orb"><i></i></div>
+            <b class="aiw-rt">Dein Hintergrund entsteht …</b>
+            <small class="aiw-rp">„${esc(drawW.run||'')}“</small>
+            <div class="aiw-bar"><i id="awBar"></i></div>
+            <div class="aiw-rs"><span id="awStep">${esc(aiMsg)}</span><span id="awLeft"></span></div>
+          </div>`
+          :`<div class="aiw-box">
+            <div class="aiw-hd"><span class="aiw-ic">🎨</span><div><b>Eigenen Hintergrund erstellen</b><small>Beschreib dein Motiv – Gufy AI macht ihn nur für dich.</small></div></div>
+            <div class="aiw-in"><textarea id="awP" rows="3" placeholder="Was willst du sehen?"></textarea></div>
+            <div class="aiw-sug">${SUG.map(([e,t])=>`<button data-sug="${esc(t)}">${e} ${esc(t)}</button>`).join('')}</div>
+            <div class="aiw-opt"><span>Bewegung</span><div class="aiw-seg" data-g="live"><button data-v="0" class="${!aiLive?'on':''}">🖼️ Still</button><button data-v="1" class="${aiLive?'on':''}">✨ Live</button></div></div>
+            <div class="aiw-opt"><span>Aufwand</span><div class="aiw-seg" data-g="eff"><button data-v="low" class="${aiEff==='low'?'on':''}">⚡ Wenig</button><button data-v="high" class="${aiEff==='high'?'on':''}">💎 Viel</button></div></div>
+            <small class="aiw-hint">${aiEff==='high'?'Mehr Details – dauert länger (ca. '+aiEst()+' Sek.)':'Schnell fertig (ca. '+aiEst()+' Sek.)'}</small>
+            <button class="aiw-go" id="awGo">✨ Hintergrund generieren</button>
+            ${aiMsg?`<div class="aiw-msg">${esc(aiMsg)}</div>`:''}
+          </div>`;
+        const aiAll=`${aiHTML}${AIW.length?`<div class="slabel">Deine AI-Hintergründe</div><div class="wgrid">${AIW.map(atile).join('')}</div>`:''}`;
         c.innerHTML=`<div class="wcats">${['AI',...WCATS].map(k=>`<button data-wc="${k}" class="${k===wc?'on':''}">${CI[k]} ${k} <small>${k==='AI'?AIW.length:WALLS.filter((_,i)=>wallCat(i)===k).length}</small></button>`).join('')}</div>
-          ${wc==='AI'?aiHTML:`<div class="wgrid">${list.map(tile).join('')}</div>`}`;
-        if(wc==='AI'){
-          const P=$('#awP',c);if(P)P.value=drawW.p||'';if(P)P.oninput=()=>drawW.p=P.value;
-          $('#awL',c).onchange=e=>aiLive=e.target.checked;$('#awM',c).onchange=e=>aiMode=e.target.value;
-          $('#awGo',c).onclick=async()=>{const pr=(P.value||'').trim();if(!pr){aiMsg='Schreib erst, was du sehen willst.';drawW();return}
+          ${wc==='AI'?aiAll:`<div class="wgrid">${list.map(tile).join('')}</div>`}`;
+        if(wc==='AI'&&aiBusy){cancelAnimationFrame(aiRaf);const est=aiEst()*1000;
+          const tk=()=>{const bar=$('#awBar',c);if(!bar)return;const el=Date.now()-aiT0,f=Math.min(.96,1-Math.exp(-2.3*el/est));bar.style.width=(f*100).toFixed(1)+'%';
+            const l=Math.ceil((est-el)/1000),lf=$('#awLeft',c);if(lf)lf.textContent=l>0?`noch ca. ${l} Sek.`:'gleich fertig …';aiRaf=requestAnimationFrame(tk)};tk()}
+        if(wc==='AI'&&!aiBusy){
+          const P=$('#awP',c);P.value=drawW.p||'';P.oninput=()=>drawW.p=P.value;
+          $$('[data-sug]',c).forEach(b=>b.onclick=()=>{P.value=drawW.p=b.dataset.sug;haptic('select');P.focus()});
+          $$('.aiw-seg',c).forEach(g=>$$('button',g).forEach(b=>b.onclick=()=>{haptic('select');if(g.dataset.g==='live')aiLive=b.dataset.v==='1';else aiEff=b.dataset.v;drawW()}));
+          $('#awGo',c).onclick=async()=>{const pr=(P.value||'').trim();if(!pr){aiMsg='Schreib erst, was du sehen willst ✍️';drawW();return}
             if(!gemGet()){gemDialog();return}
-            aiBusy=true;aiMsg='Gufy AI legt los …';drawW();const t0=Date.now();
-            const step=t=>{aiMsg=t;const m=$('#awMsg',c);if(m)m.textContent=t};
-            try{const w=await aiWallMake(pr,aiLive,aiMode,step);S.aiWall=w.id;save();applyLook();drawW.p='';haptic('success');
-              aiMsg=`Fertig in ${Math.round((Date.now()-t0)/1000)} Sek. – ${w.type==='img'?'mit Bild-KI':'von Gufy AI gezeichnet'}${w.live?' · Live':''} ✨`;
+            aiBusy=true;aiMsg='Gufy AI legt los …';aiT0=Date.now();drawW.run=pr;drawW();
+            const step=t=>{aiMsg=t;const m=$('#awStep',c);if(m)m.textContent=t};
+            try{const w=await aiWallMake(pr,aiLive,'auto',step,aiEff);S.aiWall=w.id;
+              const ms=Date.now()-aiT0;S.awAvg??={};S.awAvg[aiEff]=Math.round(S.awAvg[aiEff]?S.awAvg[aiEff]*.5+ms*.5:ms);save();applyLook();drawW.p='';haptic('success');
+              const bar=$('#awBar',c);if(bar)bar.style.width='100%';
+              aiMsg=`✅ Fertig in ${Math.round(ms/1000)} Sek.${w.live?' · Live':''}`;
               notify('🤖','AI-Hintergrund fertig',pr.slice(0,60),'#7c5cff')}
             catch(e){aiMsg='⚠️ '+e.message;haptic('error')}
-            aiBusy=false;if(tab==='wall'&&c.isConnected)drawW()};
+            cancelAnimationFrame(aiRaf);await new Promise(r=>setTimeout(r,350));aiBusy=false;if(tab==='wall'&&c.isConnected)drawW()};
+        }
+        if(wc==='AI'){
           $$('[data-aw]',c).forEach(b=>{b.onclick=()=>{S.aiWall=b.dataset.aw;save();applyLook();haptic('select');$$('[data-aw],[data-w]',c).forEach(x=>x.classList.toggle('sel',x===b))};
             let lt=0;b.addEventListener('pointerdown',()=>{lt=setTimeout(()=>{askCode('AI-Hintergrund löschen',async()=>{await aiwDel(b.dataset.aw);AIW=AIW.filter(x=>x.id!==b.dataset.aw);if(S.aiWall===b.dataset.aw){S.aiWall=null;save();applyLook()}drawW()})},700)});
             ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(lt)))});
