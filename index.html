@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"8.4","notes":["Standort-App: „Nachtragen“ – Zeiten eintragen, in denen du weg (oder zu Hause) warst, z. B. 14:00–16:00 (mit Code)","Mitteilung „Seit wann bist du weg/zu Hause?“, wenn sich dein Ort geändert hat, während GufyUI zu war","Zeit korrigieren, Updates & Standort alle 30 Sek."]};
+window.GUFY={"v":"8.6","notes":["Neue App im Store: Geschwindigkeit – Tempo per GPS, Strecke, Zeit, Ø und Max., Tempo-Diagramm","Einheiten: km/h, mph, Knoten, m/s","Standort-App: Einmalige Frage & Nachtragen"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1092,8 +1092,25 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .lc-chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .lc-own{display:flex;align-items:center;gap:8px;margin-bottom:10px}.lc-own .input{flex:1}.lc-own span{color:var(--muted);font-weight:600}
 .lc-prev{padding:10px 12px;border-radius:12px;background:var(--hover);margin-bottom:10px;font-size:14px}
+.lask{box-shadow:inset 0 0 0 2px rgba(255,42,104,.55)}
 .lc-hint{display:block;margin-top:8px;font-size:12px;text-align:center}
 .lc-range{display:flex;gap:10px;margin-bottom:10px}.lc-range label{flex:1;display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:650;color:var(--muted)}.lc-range .tinput{width:100%}
+.spd{padding:14px 16px 20px;display:flex;flex-direction:column;gap:14px}
+.spd-u button{font-size:13px}
+.spd-gauge{position:relative;width:min(100%,300px);margin:0 auto;color:var(--text)}
+.spd-gauge svg{display:block;width:100%}
+.spd-gauge #spArc{transition:stroke-dasharray .5s ease}
+.spd-num{position:absolute;left:0;right:0;top:36%;text-align:center;display:flex;flex-direction:column;align-items:center}
+.spd-num b{font-size:64px;font-weight:800;letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums}
+.spd-num small{font-size:16px;font-weight:700;color:var(--muted)}
+.spd-st{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:12px;color:var(--muted)}
+.spd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spd-grid div{background:var(--panel-solid);border:1px solid var(--border);border-radius:16px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.spd-grid small,.spd-ch-h small{color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.spd-grid b{font-size:21px;font-variant-numeric:tabular-nums}
+.spd-chart{background:var(--panel-solid);border:1px solid var(--border);border-radius:18px;padding:10px 12px}
+.spd-ch-h{display:flex;justify-content:space-between;margin-bottom:6px}
+.spd-chart canvas{display:block;width:100%;height:130px}
 </style>
 </head>
 <body class="dark">
@@ -1706,18 +1723,22 @@ function corrCalc(min){
   S.boosts.filter(b=>b.t>t0).forEach(b=>a=Math.min(100,a+b.add));
   return{lv:a,at0,t0};
 }
-function corrRange(a,b,home){ // a..b (ms) war man „home“, danach das Gegenteil bis jetzt
+function corrSeg(a,b,home,after){ // a..b war man „home“; danach bis zum nächsten bekannten Eintrag „after“, dann echter Verlauf
   advance();const now=Date.now();if(b>now)b=now;if(a>=b)return null;
   const L=S.bsnap.filter(x=>x.t<=a),base=L[L.length-1];if(!base)return null;
-  const atA=batSim(base.lv,base.t,a,base.home),atB=batSim(atA,a,b,home);let lv=batSim(atB,b,now,!home);
+  const atA=batSim(base.lv,base.t,a,base.home),atB=batSim(atA,a,b,home);
+  let lv=atB,t=b,st=after;
+  S.bsnap.filter(x=>x.t>b).forEach(x=>{lv=batSim(lv,t,x.t,st);t=x.t;st=x.home});
+  lv=batSim(lv,t,now,t===b?after:!!S.loc.isHome);
   S.boosts.filter(x=>x.t>a).forEach(x=>lv=Math.min(100,lv+x.add));
-  return{lv,atA,atB,a,b,home};
+  return{lv,atA,atB,a,b,home,after};
 }
-function corrRangeApply(a,b,home){
-  const r=corrRange(a,b,home);if(!r)return false;
+function corrSegApply(a,b,home,after,why){
+  const r=corrSeg(a,b,home,after);if(!r)return false;
   S.battery.level=r.lv;S.battery.last=Date.now();
-  S.bsnap=S.bsnap.filter(x=>x.t<=r.a);S.bsnap.push({t:r.a,lv:+r.atA.toFixed(3),home},{t:r.b,lv:+r.atB.toFixed(3),home:!home});bsnap(true);
-  glog('Akku',`Nachgetragen: ${new Date(r.a).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}–${new Date(r.b).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} ${home?'zu Hause':'unterwegs'} → ${r.lv.toFixed(1)} %`);
+  S.bsnap=S.bsnap.filter(x=>x.t<=r.a);S.bsnap.push({t:r.a,lv:+r.atA.toFixed(3),home},{t:r.b,lv:+r.atB.toFixed(3),home:after});bsnap(true);
+  const f=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  glog('Akku',`${why||'Nachgetragen'}: ${f(r.a)}–${f(r.b)} ${home?'zu Hause':'unterwegs'} → ${r.lv.toFixed(1)} %`);
   save();renderBattery();updateCC();
   if(S.battery.level<=0&&!['empty','setup'].includes(current))batteryDead();
   return true;
@@ -1842,12 +1863,12 @@ addEventListener('visibilitychange',()=>{advance(document.visibilityState==='vis
 /* ---------- Zuhause / Unterwegs ---------- */
 let resumeAt=Date.now(),resumeGap=S.battery&&S.battery.last?Date.now()-S.battery.last:0,hiddenAt=0;
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')hiddenAt=Date.now();else if(hiddenAt){resumeGap=Date.now()-hiddenAt;resumeAt=Date.now()}});
-function openCorr(){openApp('standort');setTimeout(()=>{const e=$('#lCorr');if(e)e.scrollIntoView({behavior:'smooth',block:'center'})},450)}
+function openCorr(){openApp('standort')}
 function setHome(v,quiet){
   if(S.loc.isHome===v)return;
   const askAfter=!quiet&&S.loc.mode==='gps'&&Date.now()-resumeAt<180000&&resumeGap>10*60000;
   advance();bsnap(true);S.loc.isHome=v;bsnap(true);save();haptic();
-  if(askAfter){resumeAt=0;notify('📍',v?'Seit wann bist du zu Hause?':'Seit wann bist du weg?',`GufyUI war ${fmtLen(Math.round(resumeGap/60000)*60000)} zu – tippe hier und trag es in der Standort-App ein.`,'#ff2a68',openCorr)}
+  if(askAfter){resumeAt=0;S.locAsk={from:Date.now()-resumeGap,at:Date.now(),home:v};save();renderHome();notify('📍',v?'Seit wann bist du zu Hause?':'Seit wann bist du weg?',`GufyUI war ${fmtLen(Math.round(resumeGap/60000)*60000)} zu – tippe hier und trag es in der Standort-App ein.`,'#ff2a68',openCorr)}
   else if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 5 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
@@ -2445,7 +2466,7 @@ function itemHTML(id){
   if(isF(id)){const f=S.folders[id];if(!f)return'';
     return `<div class="hitem appicon folder${ph}" data-id="${id}"><span class="del" data-delid="${id}">−</span><div class="ic fic">${f.apps.slice(0,9).map(a=>`<i style="background:${APPS[a].bg}">${APPS[a].icon}</i>`).join('')}</div><span class="lbl">${esc(f.name)}</span></div>`}
   const a=APPS[id];
-  return `<div class="hitem appicon${ph}" data-id="${id}">${id==='settings'&&pendingUpdate()?'<span class="badge">1</span>':''}${CORE.includes(id)?'':`<span class="del" data-delid="${id}">−</span>`}<div class="ic" style="background:${a.bg}">${a.icon}</div><span class="lbl">${a.name}</span></div>`;
+  return `<div class="hitem appicon${ph}" data-id="${id}">${(id==='settings'&&pendingUpdate())||(id==='standort'&&S.locAsk)?'<span class="badge">1</span>':''}${CORE.includes(id)?'':`<span class="del" data-delid="${id}">−</span>`}<div class="ic" style="background:${a.bg}">${a.icon}</div><span class="lbl">${a.name}</span></div>`;
 }
 function renderHome(){
   measureGrid();normLayout();
@@ -3156,12 +3177,11 @@ render(body,ctx){
   function draw(){
     destroyMap();
     body.innerHTML=`<div id="lStat">${statusHTML()}</div>
-      <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
-      <div id="lGps">${gpsHTML()}</div>
-      <div class="slabel">Zeit korrigieren</div>
-      <div class="sgroup lcorr" id="lCorr"></div>
+      <div id="lAskW"></div>
       <div class="slabel">Nachtragen</div>
       <div class="sgroup lcorr" id="lAdd"></div>
+      <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
+      <div id="lGps">${gpsHTML()}</div>
       <div class="slabel">Schlafenszeit</div>
       <div class="sgroup">
         <div class="srow"><span class="sic" style="background:#5e5ce6">😴</span><span class="sl">Schlafen ab</span><input type="time" class="tinput" id="sF" value="${S.sleep.from}"></div>
@@ -3194,7 +3214,7 @@ render(body,ctx){
       <div class="lc-range"><label>Von<input type="time" class="tinput" id="laF" value="${aFrom}"></label><label>Bis<input type="time" class="tinput" id="laT" value="${aTo}"></label></div>
       <div class="lc-prev" id="laPrev"></div>
       <button class="btn primary" id="laOk" style="width:100%">Nachtragen 🔒</button>`;
-    const calc=()=>{const a=toTs(aFrom),b=toTs(aTo,a);return corrRange(a,b,aHome)};
+    const calc=()=>{const a=toTs(aFrom),b=toTs(aTo,a);return corrSeg(a,b,aHome,!aHome)};
     const prev=()=>{const pv=$('#laPrev',el),ok=$('#laOk',el),a=toTs(aFrom),b=toTs(aTo,a);
       if(b<=a){pv.textContent='„Bis“ muss nach „Von“ sein.';ok.disabled=true;return}
       const r=calc();if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf noch nicht zurück.';ok.disabled=true;return}
@@ -3202,25 +3222,32 @@ render(body,ctx){
     $$('[data-ah]',el).forEach(x=>x.onclick=()=>{aHome=x.dataset.ah==='1';haptic('select');addDraw()});
     $('#laF',el).onchange=e=>{if(e.target.value){aFrom=e.target.value;prev()}};
     $('#laT',el).onchange=e=>{if(e.target.value){aTo=e.target.value;prev()}};
-    $('#laOk',el).onclick=()=>{const a=toTs(aFrom),b=toTs(aTo,a),h=aHome;askCode('Zeit nachtragen',()=>{if(corrRangeApply(a,b,h)){haptic('success');notify('📍','Nachgetragen',`${hm(a)}–${hm(b)} ${h?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');aHome=aFrom=null;refresh();addDraw()}})};
+    $('#laOk',el).onclick=()=>{const a=toTs(aFrom),b=toTs(aTo,a),h=aHome;askCode('Zeit nachtragen',()=>{if(corrSegApply(a,b,h,!h)){haptic('success');notify('📍','Nachgetragen',`${hm(a)}–${hm(b)} ${h?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');aHome=aFrom=null;refresh();addDraw()}})};
     prev();
   }
   let cMin=0;
   function corrDraw(){
-    const el=$('#lCorr',body);if(!el)return;const h=!!S.loc.isHome;
-    const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']];
-    el.innerHTML=`<p class="lc-q">${h?'🏠 Wie lange bist du schon <b>zu Hause</b>?':'🚶 Wie lange bist du schon <b>weg</b>?'}</p>
-      <div class="lc-chips">${P.map(([m,t])=>`<button data-cm="${m}" class="${cMin===m?'on':''}">${t}</button>`).join('')}</div>
-      <div class="lc-own"><input class="input" id="lcIn" type="number" inputmode="numeric" min="1" max="2880" placeholder="Eigene Zeit" value="${cMin&&!P.some(p=>p[0]===cMin)?cMin:''}"><span>Min.</span></div>
+    const W=$('#lAskW',body);if(!W)return;const q=S.locAsk;
+    if(!q){W.innerHTML='';return}
+    const now=Date.now(),maxM=Math.max(1,Math.floor((now-q.from)/60000)),minM=Math.max(0,Math.ceil((now-q.at)/60000));
+    const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']].filter(([m])=>m<maxM&&m>=minM);
+    W.innerHTML=`<div class="slabel" style="color:#ff2a68">❗ Einmalige Frage</div><div class="sgroup lcorr lask">
+      <p class="lc-q">${q.home?'🏠 Du bist wieder <b>zu Hause</b>. Seit wann?':'🚶 Du bist <b>weg</b>. Seit wann schon?'}</p>
+      <small class="muted" style="display:block;margin:-4px 0 10px">GufyUI war ${fmtLen(Math.round((q.at-q.from)/60000)*60000)} zu (seit ${new Date(q.from).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr).</small>
+      <div class="lc-chips">${P.map(([m,t])=>`<button data-cm="${m}" class="${cMin===m?'on':''}">vor ${t}</button>`).join('')}<button data-cm="${maxM}" class="${cMin===maxM?'on':''}">die ganze Zeit</button></div>
+      <div class="lc-own"><input class="input" id="lcIn" type="number" inputmode="numeric" min="${minM}" max="${maxM}" placeholder="Eigene Zeit" value="${cMin&&cMin!==maxM&&!P.some(p=>p[0]===cMin)?cMin:''}"><span>Min.</span></div>
       <div class="lc-prev" id="lcPrev"></div>
-      <button class="btn primary" id="lcOk" style="width:100%" ${cMin?'':'disabled'}>Übernehmen 🔒</button>
-      <small class="muted lc-hint">Falls GufyUI zu war: so wird der Akku richtig nachgerechnet.</small>`;
-    const prev=()=>{const pv=$('#lcPrev',el),ok=$('#lcOk',el);if(!cMin){pv.innerHTML='Wähle eine Zeit';ok.disabled=true;return}
-      const r=corrCalc(cMin);if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf noch nicht zurück.';ok.disabled=true;return}
+      <button class="btn primary" id="lcOk" style="width:100%" ${cMin?'':'disabled'}>Bestätigen 🔒</button></div>`;
+    const el=W;
+    const seg=()=>{const a=Math.max(q.from,now-cMin*60000);return corrSeg(a,q.at,q.home,q.home)};
+    const prev=()=>{const pv=$('#lcPrev',el),ok=$('#lcOk',el);if(!cMin){pv.innerHTML='Wähle, seit wann';ok.disabled=true;return}
+      if(cMin>maxM||cMin<minM){pv.textContent=`Geht nur zwischen ${minM} und ${maxM} Min.`;ok.disabled=true;return}
+      const r=seg();if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf nicht zurück.';ok.disabled=true;return}
       ok.disabled=false;pv.innerHTML=`Akku jetzt <b>${dispPct()} %</b> → danach <b style="color:${r.lv<S.battery.level?'#ff9f0a':'#34c759'}">${r.lv<=0?0:Math.ceil(r.lv-1e-9)} %</b>`};
     $$('[data-cm]',el).forEach(b=>b.onclick=()=>{cMin=+b.dataset.cm;haptic('select');corrDraw()});
-    $('#lcIn',el).oninput=e=>{const v=Math.round(+e.target.value);cMin=v>0?Math.min(2880,v):0;$$('[data-cm]',el).forEach(x=>x.classList.remove('on'));prev()};
-    $('#lcOk',el).onclick=()=>{const m=cMin;if(!m)return;askCode('Zeit korrigieren',()=>{if(corrApply(m)){haptic('success');notify('⏱️','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${S.loc.isHome?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');cMin=0;refresh()}})};
+    $('#lcIn',el).oninput=e=>{const v=Math.round(+e.target.value);cMin=v>0?v:0;$$('[data-cm]',el).forEach(x=>x.classList.remove('on'));prev()};
+    $('#lcOk',el).onclick=()=>{const m=cMin;if(!m)return;askCode(q.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(q.from,Date.now()-m*60000);
+      if(corrSegApply(a,q.at,q.home,q.home,'Einmalige Frage')){S.locAsk=null;save();renderHome();haptic('success');notify('📍','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${q.home?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');cMin=0;corrDraw();refresh()}})};
     prev();
   }
   function bindGps(){
@@ -3302,7 +3329,7 @@ render(body,ctx){
     const s=$('#lStat',body);if(!s)return;
     if(!map&&S.loc.mode==='gps'&&$('#lMap iframe',body)===null&&!(window.L&&L.map)&&geoPos){const el=$('#lMap',body);if(el&&!el.dataset.tried){el.dataset.tried=1;initMap()}}
     s.innerHTML=statusHTML();
-    const lc=$('#lCorr',body);if(lc&&!lc.contains(document.activeElement))corrDraw();
+    const lc=$('#lAskW',body);if(lc&&!lc.contains(document.activeElement))corrDraw();
     if(S.loc.mode!=='gps'){$('#lGps',body).innerHTML=gpsHTML();bindGps();return}
     const inf=$('#lInfo',body);if(inf)inf.innerHTML=infoHTML();
     const st=$('#lSet',body);if(st)st.disabled=!geoPos;
@@ -4151,6 +4178,81 @@ render(body,ctx){
   ctx.cleanup.push(()=>clearInterval(iv));
 }}
 
+,
+/* ---------- Geschwindigkeit ---------- */
+speed:{name:'Geschwindigkeit',cat:'Werkzeuge',full:true,store:true,icon:'🏎️',bg:'linear-gradient(135deg,#00c6ff,#0072ff)',
+render(body,ctx){
+  const U={kmh:['km/h',3.6,'km',1/1000],mph:['mph',2.236936,'mi',1/1609.344],kn:['kn',1.943844,'sm',1/1852],ms:['m/s',1,'m',1]};
+  S.spdUnit??='kmh';
+  const SP=window.__SPD??=(window.__SPD={start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,acc:null,moving:0,lastT:Date.now()});
+  let watch=null,raf=0,err='';
+  const u=()=>U[S.spdUnit]||U.kmh;
+  const fmtT=ms=>{const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+pad(m):m)+':'+pad(s%60)};
+  const v=ms=>ms*u()[1];
+  body.innerHTML=`<div class="spd">
+    <div class="seg spd-u">${Object.entries(U).map(([k,x])=>`<button data-u="${k}" class="${S.spdUnit===k?'on':''}">${k==='kn'?'Knoten':x[0]}</button>`).join('')}</div>
+    <div class="spd-gauge"><svg viewBox="0 0 200 170"><defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="#34c759"/><stop offset=".55" stop-color="#ffd60a"/><stop offset="1" stop-color="#ff453a"/></linearGradient></defs>
+      <path d="M30 150 A85 85 0 1 1 170 150" fill="none" stroke="rgba(127,127,127,.2)" stroke-width="14" stroke-linecap="round"/>
+      <path id="spArc" d="M30 150 A85 85 0 1 1 170 150" fill="none" stroke="url(#sg)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+      <g id="spTicks"></g></svg>
+      <div class="spd-num"><b id="spV">0</b><small id="spU"></small></div><div class="spd-st" id="spSt">GPS wird gesucht …</div></div>
+    <div class="spd-grid">
+      <div><small>Strecke</small><b id="spD">0</b></div><div><small>Zeit</small><b id="spT">0:00</b></div>
+      <div><small>Ø Tempo</small><b id="spA">0</b></div><div><small>Max.</small><b id="spM">0</b></div></div>
+    <div class="spd-chart"><div class="spd-ch-h"><small>Tempo-Verlauf</small><small id="spCmax"></small></div><canvas id="spC"></canvas></div>
+    <button class="btn" id="spR" style="width:100%">↺ Neu starten</button>
+  </div>`;
+  const cv=$('#spC',body),g=cv.getContext('2d');
+  function scaleMax(){const mx=Math.max(v(SP.max),v(SP.cur));const st=S.spdUnit==='ms'?[10,20,40,80]:[30,60,100,160,250];return st.find(x=>x>=mx*1.1)||Math.ceil(mx/50)*50}
+  function ticks(){const M=scaleMax();let t='';for(let i=0;i<=4;i++){const a=(135+i*67.5)*Math.PI/180,x=100+Math.cos(a)*62,y=100+Math.sin(a)*62+8;t+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="10" fill="currentColor" opacity=".55">${Math.round(M*i/4)}</text>`}$('#spTicks',body).innerHTML=t;return M}
+  let gMax=0;
+  function draw(){
+    const M=scaleMax();if(M!==gMax){gMax=M;ticks()}
+    const cur=v(SP.cur),el=Date.now()-SP.start;
+    $('#spV',body).textContent=cur<10?cur.toFixed(1).replace('.',','):Math.round(cur);
+    $('#spU',body).textContent=u()[0];
+    $('#spArc',body).setAttribute('stroke-dasharray',`${Math.min(100,cur/M*100).toFixed(1)} 100`);
+    $('#spSt',body).textContent=err||(SP.acc==null?'GPS wird gesucht …':`GPS ±${Math.round(SP.acc)} m`);
+    const d=SP.dist*u()[3];$('#spD',body).textContent=(S.spdUnit==='ms'?Math.round(d):d.toFixed(d<10?2:1)).toString().replace('.',',')+' '+u()[2];
+    $('#spT',body).textContent=fmtT(el);
+    const avg=SP.moving>0?SP.dist/(SP.moving/1000):0;$('#spA',body).textContent=fmtN(v(avg))+' '+u()[0];
+    $('#spM',body).textContent=fmtN(v(SP.max))+' '+u()[0];
+    chart();
+  }
+  const fmtN=x=>(x<10?x.toFixed(1):Math.round(x)+'').replace('.',',');
+  function chart(){
+    const W=cv.clientWidth,H=cv.clientHeight,dpr=Math.min(3,devicePixelRatio||1);if(!W)return;
+    if(cv.width!==Math.round(W*dpr)){cv.width=W*dpr;cv.height=H*dpr}
+    g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+    const P=SP.pts;const mx=Math.max(1,...P.map(p=>v(p.s)));$('#spCmax',body).textContent=P.length?'max '+fmtN(mx)+' '+u()[0]:'';
+    g.strokeStyle='rgba(127,127,127,.18)';g.lineWidth=1;for(let i=1;i<4;i++){const y=H*i/4;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke()}
+    if(P.length<2){g.fillStyle='rgba(127,127,127,.6)';g.font='13px system-ui';g.textAlign='center';g.fillText('Fahr los – hier erscheint dein Tempo',W/2,H/2+4);return}
+    const t0=P[0].t,t1=Math.max(P[P.length-1].t,t0+1),X=t=>(t-t0)/(t1-t0)*W,Y=s=>H-4-(v(s)/mx)*(H-12);
+    const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'rgba(0,198,255,.45)');gr.addColorStop(1,'rgba(0,114,255,0)');
+    g.beginPath();g.moveTo(X(P[0].t),H);P.forEach(p=>g.lineTo(X(p.t),Y(p.s)));g.lineTo(X(P[P.length-1].t),H);g.closePath();g.fillStyle=gr;g.fill();
+    g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p.t),Y(p.s)):g.moveTo(X(p.t),Y(p.s)));g.strokeStyle='#0a84ff';g.lineWidth=2.5;g.lineJoin='round';g.stroke();
+  }
+  function onPos(p){
+    const c=p.coords,t=p.timestamp||Date.now(),acc=c.accuracy;SP.acc=acc;err='';
+    const pt={lat:c.latitude,lon:c.longitude,t};let sp=c.speed!=null&&c.speed>=0&&!isNaN(c.speed)?c.speed:null;
+    if(SP.last){const dt=(t-SP.last.t)/1000;const d=distM(SP.last,pt);
+      if(dt>0){if(sp===null)sp=d/dt;
+        if(acc<=50&&d>=Math.max(2,acc*.35)&&d/dt<90){SP.dist+=d;SP.last=pt}else if(dt>30)SP.last=pt;
+        if(sp>.6)SP.moving+=dt*1000}}
+    else SP.last=pt;
+    if(sp===null)sp=0;if(acc>80)sp=Math.min(sp,SP.cur||0);
+    SP.cur=sp<.4?0:sp;if(SP.cur>SP.max&&SP.cur<90)SP.max=SP.cur;
+    const P=SP.pts,l=P[P.length-1];if(!l||t-l.t>=2000){P.push({t,s:SP.cur});if(P.length>1800){for(let i=1;i<P.length;i+=2)P.splice(i,1)}}
+    draw();
+  }
+  function onErr(e){err=e.code===1?'Standort nicht erlaubt':'GPS nicht verfügbar';draw()}
+  function start(){if(!navigator.geolocation){err='Kein GPS';return}watch=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000})}
+  $$('[data-u]',body).forEach(b=>b.onclick=()=>{S.spdUnit=b.dataset.u;save();haptic('select');$$('[data-u]',body).forEach(x=>x.classList.toggle('on',x===b));gMax=0;draw()});
+  $('#spR',body).onclick=()=>{haptic();Object.assign(SP,{start:Date.now(),dist:0,max:0,pts:[],last:null,cur:0,moving:0});gMax=0;draw()};
+  start();draw();
+  const iv=setInterval(()=>{if(SP.pts.length&&Date.now()-SP.pts[SP.pts.length-1].t>5000){SP.cur=0;SP.pts.push({t:Date.now(),s:0})}draw()},1000);
+  ctx.cleanup.push(()=>{clearInterval(iv);if(watch!==null)navigator.geolocation.clearWatch(watch)});
+}}
 };
 
 /* =========================================================
