@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.0","notes":["AI-Hintergründe: neues, cleanes Menü mit Ideen-Vorschlägen","Live / Still und Aufwand (Wenig / Viel) als schöne Schalter – Stil ist jetzt immer automatisch","Beim Erstellen: Lade-Animation mit Fortschrittsbalken und „noch ca. X Sek.“","🤖 AI-Hintergründe: Einstellungen › Hintergrund › AI – beschreib deinen Wunsch-Hintergrund und Gufy AI erstellt ihn nur für dich, auch als Live-Hintergrund","7 neue Hintergründe: Leuchtturm, Nebula, Neon-Stadt, Pastell-Wellen, Glas-Kugeln und Live: Schneefall & Blubberblasen","Einrichtung: Hintergründe jetzt nach Kategorien sortiert"]};
+window.GUFY={"v":"11.1","notes":["Wetter: ✨ Gufy AI-Tipp ganz oben – kurz und passend zum Wetter","Gezeiten nur noch, wenn du am Meer bist (und kein Strand-Tipp im Binnenland)","Öfis: Frag Gufy AI – z. B. „Wie komm ich nach List zum Hafen?“ – mit Verbindungen und „Los in X Min.“","Beta: Öfis mit KI-Check – Gufy AI prüft die Abfahrten mit der Google-Suche und ergänzt fehlende"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1284,6 +1284,31 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 .qchip.qaichip{background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)!important;margin-left:4px}
 .qcard.qai{box-shadow:inset 0 0 0 1.5px rgba(167,139,250,.55)}
 .qcard.qpend b{opacity:.65;animation:aiDot 1.6s ease-in-out infinite}
+.ai-card{position:relative;border-radius:22px;padding:2px;margin-bottom:14px;background:conic-gradient(from var(--aia,0deg),#a78bfa,#60a5fa,#34d399,#f472b6,#a78bfa);animation:aiRing 6s linear infinite;box-shadow:0 6px 24px rgba(124,92,255,.25)}
+@property --aia{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes aiRing{to{--aia:360deg}}
+.ai-card-in{border-radius:20px;padding:13px 15px;background:var(--panel-solid)}
+body.dark .ai-card-in{background:rgba(20,20,30,.96)}
+.ai-card-h{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;background:linear-gradient(90deg,#a78bfa,#60a5fa,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:5px}
+.ai-card-h .ai-spark{-webkit-text-fill-color:initial;color:initial}
+.ai-card p{margin:0;font-size:15px;line-height:1.4;font-weight:550}
+.ai-sk{display:block;height:12px;border-radius:6px;margin:5px 0;background:linear-gradient(90deg,rgba(127,127,127,.15),rgba(127,127,127,.35),rgba(127,127,127,.15));background-size:200% 100%;animation:lbSh 1.2s linear infinite}
+.ai-sk.s2{width:65%}
+.oai-in{display:flex;gap:8px;align-items:center}
+.oai-in input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15px;color:var(--text);padding:4px 0}
+.oai-in button{flex:none;width:36px;height:36px;border-radius:50%;color:#fff;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#3b82f6)}
+.oai-res{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.oai-res:empty{display:none}
+.oai-it{border-radius:14px;padding:10px 12px;background:rgba(127,127,127,.1)}
+.oai-it .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.oai-it .t b{font-size:16px}.oai-it .t small{color:var(--muted)}
+.oai-legs{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:12.5px}
+.oai-legs span{padding:3px 7px;border-radius:8px;background:rgba(127,127,127,.16)}
+.oai-legs span.v{background:#ff7a00;color:#fff;font-weight:700}
+.oai-go{font-size:12.5px;font-weight:650;color:#34c759;margin-top:6px}
+.oai-msg{font-size:13px;color:var(--muted)}
+.o-aichk{margin:0 0 10px}
+.o-dep.aiadd{opacity:.85;background:repeating-linear-gradient(135deg,rgba(167,139,250,.08) 0 8px,transparent 8px 16px)}
+.o-dep.aiadd .o-dir::after{content:' · ✨ laut KI';color:#a78bfa;font-size:11px;font-weight:700}
 </style>
 </head>
 <body class="dark">
@@ -2278,7 +2303,7 @@ WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutz
     if(wait)await new Promise(r=>setTimeout(r,wait));
     if(busy&&onRetry)onRetry(busy);
     const gc={maxOutputTokens:opt.maxTok||800,temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
-    const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};
+    const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};if(opt.tools&&!/lite|2\.0/.test(m))body.tools=opt.tools;
     const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),opt.timeout||20000);   // hängt? nach 20 Sek. abbrechen
       try{return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal})}
       finally{clearTimeout(to)}};
@@ -3863,10 +3888,12 @@ render(body,ctx){
       c.innerHTML=`<div class="sgroup">
           <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:#5e5ce6">📐</span><span class="sl">Bildschirm bis ganz unten</span><label class="switch"><input type="checkbox" id="bDown" ${S.betaDown?'checked':''}><span></span></label></div>
+          <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#ffcc00,#ff7a00)">🚏</span><span class="sl">Öfis mit KI-Check<br><small class="muted">Gufy AI prüft die Abfahrten mit der Google-Suche und ergänzt fehlende</small></span><label class="switch"><input type="checkbox" id="bOAi" ${S.oefiAi?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)">✨</span><span class="sl">AI-Quests<br><small class="muted">Leichter Sport, eine andere Quest und eine verrückte AI-Quest (50 Coins)</small></span><label class="switch"><input type="checkbox" id="bAiQ" ${S.aiQuests?'checked':''}><span></span></label></div>
         </div>
         <p class="slabel" style="text-transform:none;letter-spacing:0;font-weight:500;line-height:1.5">${sup?(realBatt?`Gerät: ${Math.round(realBatt.level*100)} %${realBatt.charging?' · lädt':''}`:'Akku wird gelesen …'):'Dieser Browser gibt den Akku nicht frei (z. B. iPhone/Safari).'}</p>`;
       $('#bDown',c).onchange=e=>{S.betaDown=e.target.checked;save();detectPhone();haptic()};
+      $('#bOAi',c).onchange=e=>{S.oefiAi=e.target.checked;save();haptic();if(S.oefiAi&&!gemGet())notify('✨','Öfis KI-Check','Dafür brauchst du Gufy AI – sag dem Assistenten „API-Key“.','#7c5cff')};
       $('#bAiQ',c).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
         askCode(v?'AI-Quests einschalten':'AI-Quests ausschalten',()=>{S.aiQuests=v;save();ensureQuests();go('beta');haptic('success');
           notify('✨',v?'AI-Quests an':'AI-Quests aus',v?(gemGet()?'Deine offenen Quests von heute wurden neu gemischt – Gufy AI erfindet gerade deine AI-Quest.':'Für die AI-Quest brauchst du noch Gufy AI – sag dem Assistenten „API-Key“.'):'Du bekommst wieder die normalen Tagesquests.','#7c5cff')})};
@@ -4634,7 +4661,9 @@ render(body,ctx){
     const w=S.wx;
     if(!w||!w.d){body.innerHTML=`<div class="wx"><div class="wx-empty"><div class="gm-big">🌦️</div><b>${busy?'Wetter wird geladen …':'Noch keine Wetterdaten'}</b><p class="muted">${esc(wxErr||'')}</p>${busy?'':'<button class="btn primary" id="wR">Laden</button>'}</div>${cityHTML()}</div>`;bind();return}
     const c=w.d.current,H=wxHours(w.d,12),bf=beaufort(c.wind_speed_10m),cd=wxCode(c.weather_code,c.is_day),rs=rainSummary(w.d);
+    const ai=w.ai&&w.ai.txt;
     body.innerHTML=`<div class="wx">
+      ${gemGet()?`<div class="ai-card ${ai?'':'load'}" id="wAi"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> Gufy AI-Tipp</div><p id="wAiT">${ai?esc(w.ai.txt):'<span class="ai-sk"></span><span class="ai-sk s2"></span>'}</p></div></div>`:''}
       <div class="wx-hero" style="background:${cd.bg}"><small>📍 ${esc(w.place||'Mein Standort')}${w.d.elevation!=null?` · ⛰️ ${Math.round(w.d.elevation)} m ü. NN`:''}</small><div class="wx-now"><span>${cd.i}</span><b>${Math.round(c.temperature_2m)}°</b></div><div>${cd.t}</div>
         <div class="wx-rain ${rs.now?'yes':''}">${rs.now?'🌧️':'☂️'} ${rs.text}</div></div>
       <div class="wx-wind"><div class="wx-comp"><i style="transform:rotate(${c.wind_direction_10m+90}deg)">➤</i><small>${dirName(c.wind_direction_10m)}</small></div>
@@ -4644,11 +4673,12 @@ render(body,ctx){
       <div class="slabel">Nächste Stunden</div>
       <div class="wx-hours">${H.map(h=>{const b=beaufort(h.w),k=wxCode(h.code,h.day);return `<div class="wx-h ${h.rain?'rain':''}"><small>${h.label}</small><span class="i">${k.i}</span><b>${Math.round(h.temp)}°</b>
         <span class="r">${h.rain?'🌧️ ':'💧 '}${h.prob}%</span><span class="w">💨 ${Math.round(h.w)}</span><span class="bf" style="background:${b.c}">Bft ${b.n}</span></div>`}).join('')}</div>
-      <div class="slabel">🌊 Gezeiten</div>
-      ${tideHTML(w)}
+      ${wxCoast(w)?`<div class="slabel">🌊 Gezeiten</div>${tideHTML(w)}`:''}
       <div class="wx-foot"><small class="muted">Stand ${new Date(w.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} · Daten: Open-Meteo</small><button class="btn" id="wR">${busy?'…':'↻ Aktualisieren'}</button></div>
       ${cityHTML()}</div>`;
     bind();requestAnimationFrame(tideChart);
+    if(gemGet()&&!busy&&!(w.ai&&w.ai.for===w.t))wxAiTip().then(r=>{if(!body.isConnected)return;const e=$('#wAi',body),t=$('#wAiT',body);if(!e||!t)return;
+      if(r&&r.txt){e.classList.remove('load');t.textContent=r.txt;e.animate([{opacity:.4},{opacity:1}],{duration:400})}else if(r&&r.err){e.classList.remove('load');t.textContent='Gerade kein Tipp – '+r.err}});
   }
   const hmT=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   const mT=x=>(x>=0?'+':'−')+Math.abs(x).toFixed(2).replace('.',',')+' m';
@@ -4921,11 +4951,15 @@ render(body,ctx){
     if(map){map.remove();map=null;dots=null}
     const st=cur();
     body.innerHTML=`<div class="oefi">
+      ${gemGet()?`<div class="ai-card" style="margin-bottom:12px"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> Frag Gufy AI</div>
+        <form class="oai-in" id="oAiF"><input id="oAiQ" placeholder="z. B. Wie komm ich nach List zum Hafen?" autocomplete="off" enterkeyhint="go" value="${esc(aiQ)}"><button type="submit">→</button></form>
+        <div class="oai-res" id="oAiR">${aiRes}</div></div></div>`:''}
       <div class="seg"><button data-om="bus" class="${O.mode==='bus'?'on':''}">🚌 Bus</button><button data-om="bahn" class="${O.mode==='bahn'?'on':''}">🚆 Bahn</button></div>
       ${O.mode==='bus'?'<div class="lbus" id="lBus"></div>':''}
       <div class="o-search"><input class="input" id="oQ" placeholder="${O.mode==='bus'?'Bushaltestelle suchen …':'Bahnhof suchen …'}" autocomplete="off" enterkeyhint="search"><div id="oRes" class="o-res"></div></div>
       ${st?`<div class="o-stop"><div><b>${O.mode==='bus'?'🚏':'🚉'} ${esc(st.name)}</b><small>${esc(st.area||'')}</small></div>
         <div class="o-day"><button data-dd="-1" ${dayOff<=0?'disabled':''}>‹</button><span>${dayOff===0?'Heute':dayOff===1?'Morgen':new Date(Date.now()+dayOff*864e5).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'})}</span><button data-dd="1" ${dayOff>=6?'disabled':''}>›</button></div></div>
+        <div id="oAiChk"></div>
         <div class="o-list" id="oList"><div class="emptyinv">${loading?'⏳ Fahrplan wird geladen …':esc(errMsg)}</div></div>`
        :`<div class="emptyinv"><div>${O.mode==='bus'?'🚌':'🚆'}</div><b>${O.mode==='bus'?'Such eine Bushaltestelle':'Such einen Bahnhof'}</b><br><small>auf der ganzen Welt</small></div>`}
       <div class="slabel">🛰️ ${O.mode==='bus'?'Busradar':'Bahnradar'}</div>
@@ -4942,10 +4976,59 @@ render(body,ctx){
         $$('[data-i]',res).forEach(b=>b.onclick=()=>{O[O.mode]=L2[+b.dataset.i];save();haptic('success');dayOff=0;draw();load()});
       }catch(e){res.innerHTML='<div class="o-hit muted">⚠️ Fahrplandienst nicht erreichbar</div>'}},350)};
     if(st)renderDeps();
+    const af=$('#oAiF',body);if(af)af.onsubmit=e=>{e.preventDefault();const q=$('#oAiQ',body).value.trim();if(q)aiTrip(q)};
     if(busStop)busStop();busStop=O.mode==='bus'?busNearWidget(body):null;
     initMap();
   }
-  let busStop=null;
+  let busStop=null,aiQ='',aiRes='',aiChk='';
+  const setRes=h=>{aiRes=h;const e=$('#oAiR',body);if(e)e.innerHTML=h};
+  async function geoNow(){if(geoPos&&Date.now()-geoPos.t<120000)return geoPos;
+    return await new Promise(r=>{if(!navigator.geolocation)return r(geoPos);navigator.geolocation.getCurrentPosition(p=>{geoPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};r(geoPos)},()=>r(geoPos),{enableHighAccuracy:true,timeout:12000,maximumAge:60000})})}
+  async function findPlace(q,near){const r=await j(`${TT}/v1/geocode?text=${encodeURIComponent(q)}&numResults=5&language=de${near?`&place=${near.lat},${near.lon}`:''}`);const m=r&&r[0];return m?{name:m.name,lat:m.lat,lon:m.lon}:null}
+  async function aiTrip(q){
+    aiQ=q;haptic('select');setRes('<div class="oai-msg"><span class="ai-sk"></span><span class="ai-sk s2"></span></div>');
+    try{
+      const sys=`Du wandelst eine Frage zu Bus/Bahn in JSON um. Antworte NUR mit JSON: {"ziel":"<Ort oder Haltestelle, so genau wie möglich, inkl. Stadt>","start":null oder "<Ort>","zeit":null oder "HH:MM","morgen":true/false,"ankunft":true/false}. "ankunft" ist true, wenn man zu einer Uhrzeit DA sein will. "start" nur, wenn der Nutzer einen anderen Start nennt als seinen Standort. Heute ist ${new Date().toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}.${S.wxCity?'':''}`;
+      const t=await gemAsk(q,null,{sys,temp:.1,raw:true,maxTok:200});
+      let o;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
+      if(!o||!o.ziel)throw new Error('Ich hab das Ziel nicht verstanden.');
+      setRes(`<div class="oai-msg">🔎 Suche Verbindung nach <b>${esc(o.ziel)}</b> …</div>`);
+      const me=await geoNow();
+      const from=o.start?await findPlace(o.start,me):me;if(!from)throw new Error('Ich weiß nicht, wo du bist – erlaube den Standort.');
+      const to=await findPlace(o.ziel,from);if(!to)throw new Error(`„${o.ziel}“ hab ich nicht gefunden.`);
+      const d=new Date();if(o.morgen)d.setDate(d.getDate()+1);if(o.zeit&&/^\d{1,2}:\d{2}$/.test(o.zeit)){const[h,mi]=o.zeit.split(':').map(Number);d.setHours(h,mi,0,0)}
+      let r;const qs=`fromPlace=${from.lat},${from.lon}&toPlace=${to.lat},${to.lon}&time=${d.toISOString()}&numItineraries=4${o.ankunft?'&arriveBy=true':''}`;
+      try{r=await j(`${TT}/v6/plan?${qs}`)}catch(e){if(/404/.test(e.message))r=await j(`${TT}/v5/plan?${qs}`);else throw e}
+      const its=(r.itineraries||[]).filter(it=>it.legs.some(l=>l.mode!=='WALK')).slice(0,3);
+      glog('Öfis',`KI-Suche „${q}“ → ${o.ziel}: ${its.length} Verbindungen`);
+      if(!its.length){setRes(r.direct&&r.direct.length?`<div class="oai-msg">🚶 Kein Bus/Bahn nötig – zu Fuß ca. ${Math.round(r.direct[0].duration/60)} Min. bis ${esc(to.name)}.</div>`:`<div class="oai-msg">😕 Keine Verbindung nach ${esc(to.name)} gefunden.</div>`);return}
+      const hm2=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      setRes(`<div class="oai-msg">📍 ${esc(o.start?from.name:'Dein Standort')} → <b>${esc(to.name)}</b></div>`+its.map(it=>{const dur=Math.round((new Date(it.endTime)-new Date(it.startTime))/60000),go=Math.round((new Date(it.startTime)-Date.now())/60000);
+        return `<div class="oai-it"><div class="t"><b>${hm2(it.startTime)} → ${hm2(it.endTime)}</b><small>${dur} Min.${it.transfers?' · '+it.transfers+'× umsteigen':''}</small></div>
+          <div class="oai-legs">${it.legs.map(l=>l.mode==='WALK'?`<span>🚶 ${Math.max(1,Math.round(l.duration/60))} Min.</span>`:`<span class="v">${ICON[l.mode]||'🚌'} ${esc(l.displayName||l.routeShortName||'')}</span><span>ab ${esc(l.from.name)} ${hm2(l.startTime)}</span>`).join('')}</div>
+          ${!o.morgen&&go>=0&&go<120?`<div class="oai-go">${go<=1?'🏃 Jetzt los!':'🚶 Los in '+go+' Min.'}</div>`:''}</div>`}).join(''));
+    }catch(e){setRes(`<div class="oai-msg">⚠️ ${esc(e.message)}</div>`)}
+  }
+  /* Beta: Abfahrten zusätzlich von Gufy AI prüfen lassen (mit Google-Suche) */
+  async function aiCheck(st){
+    if(!S.oefiAi||!gemGet()||dayOff!==0||!st)return;
+    const box=$('#oAiChk',body);if(box)box.innerHTML=`<div class="ai-card o-aichk"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> KI-Check</div><p><span class="ai-sk"></span><span class="ai-sk s2"></span></p></div></div>`;
+    const now=Date.now(),soon=deps.filter(x=>!x.ai&&new Date(x.t)>=now-60000&&new Date(x.t)<=now+3*3600000);
+    const by={};soon.forEach(x=>{const k=x.line+' → '+x.dir;(by[k]??=[]).push(hm(x.t))});
+    const sys=`Du prüfst Abfahrtsdaten einer Haltestelle für GufyUI. Nutze die Google-Suche (offizielle Fahrpläne, Verkehrsbetrieb, Störungsmeldungen), um zu prüfen, ob in den nächsten 3 Stunden Abfahrten fehlen oder es Störungen gibt. Antworte NUR mit JSON: {"status":"ok"|"fehlt"|"stoerung","hinweis":"<1 kurzer Satz, Deutsch, mit Emoji>","extra":[{"zeit":"HH:MM","linie":"…","richtung":"…"}]}. "extra" nur mit Abfahrten, bei denen du dir laut offiziellem Fahrplan sicher bist (höchstens 12), sonst leer. Erfinde nichts.`;
+    const msg=`Haltestelle: ${st.name}${st.area?' ('+st.area+')':''}\nJetzt: ${new Date().toLocaleString('de-DE',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}\nVerkehrsmittel: ${O.mode==='bus'?'Bus':'Bahn'}\nGeladene Abfahrten (nächste 3 Std.):\n${Object.entries(by).map(([k,v])=>k+': '+v.join(', ')).join('\n')||'keine'}`;
+    try{
+      const t=await gemAsk(msg,null,{sys,temp:.2,raw:true,maxTok:900,timeout:45000,tools:[{google_search:{}}]});
+      let o;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
+      if(!o)throw new Error('keine Antwort');
+      const add=(o.extra||[]).slice(0,12).map(e=>{if(!/^\d{1,2}:\d{2}$/.test(e.zeit||''))return null;const d=new Date();const[h,mi]=e.zeit.split(':').map(Number);d.setHours(h,mi,0,0);
+        return{mode:'',t:d.toISOString(),p:d.toISOString(),line:String(e.linie||'?'),dir:String(e.richtung||''),ic:O.mode==='bus'?'🚌':'🚆',ai:true}}).filter(Boolean)
+        .filter(x=>!deps.some(y=>Math.abs(new Date(y.t)-new Date(x.t))<120000&&String(y.line).replace(/\D/g,'')===x.line.replace(/\D/g,'')));
+      if(add.length){deps=deps.concat(add).sort((a,b)=>new Date(a.t)-new Date(b.t));renderDeps()}
+      glog('Öfis',`KI-Check ${st.name}: ${o.status} · +${add.length}`);
+      const b2=$('#oAiChk',body);if(b2)b2.innerHTML=`<div class="ai-card o-aichk"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> KI-Check ${o.status==='ok'?'· alles passt':o.status==='stoerung'?'· Störung':'· ergänzt'}</div><p>${esc(o.hinweis||'')}${add.length?` <small class="muted">(+${add.length} Abfahrten laut KI)</small>`:''}</p></div></div>`;
+    }catch(e){glog('Öfis','KI-Check: '+e.message);const b2=$('#oAiChk',body);if(b2)b2.innerHTML=''}
+  }
   function renderDeps(){
     const el=$('#oList',body);if(!el)return;
     if(loading||!deps.length){el.innerHTML=`<div class="emptyinv">${loading?'⏳ Fahrplan wird geladen …':esc(errMsg||'Keine Abfahrten an diesem Tag')}</div>`;return}
@@ -4954,7 +5037,7 @@ render(body,ctx){
       if(!nowDone&&+t>=now){html+=`<div class="o-now" id="oNow"><span>Jetzt ${hm(now)}</span></div>`;nowDone=true}
       if(hh!==h){h=hh;html+=`<div class="o-hour">${pad(hh)}:00</div>`}
       const delay=Math.round((new Date(d.t)-new Date(d.p))/60000);
-      html+=`<div class="o-dep ${+t<now?'past':''} ${d.cancel?'cxl':''}"><span class="o-t">${hm(d.t)}${delay>0?`<i>+${delay}</i>`:''}</span><span class="o-line" style="${d.col?`background:#${d.col.replace('#','')}`:''}">${d.ic||''} ${esc(d.line)}</span><span class="o-dir">${esc(d.dir)}${d.cancel?' · <b>fällt aus</b>':''}</span>${d.track?`<span class="o-tr">Gl. ${esc(d.track)}</span>`:''}</div>`});
+      html+=`<div class="o-dep ${+t<now?'past':''} ${d.cancel?'cxl':''} ${d.ai?'aiadd':''}"><span class="o-t">${hm(d.t)}${delay>0?`<i>+${delay}</i>`:''}</span><span class="o-line" style="${d.col?`background:#${d.col.replace('#','')}`:''}">${d.ic||''} ${esc(d.line)}</span><span class="o-dir">${esc(d.dir)}${d.cancel?' · <b>fällt aus</b>':''}</span>${d.track?`<span class="o-tr">Gl. ${esc(d.track)}</span>`:''}</div>`});
     el.innerHTML=html;
     const n=$('#oNow',el);if(n)setTimeout(()=>{el.scrollTop=n.offsetTop-el.offsetTop-40},30);
   }
@@ -4962,7 +5045,7 @@ render(body,ctx){
     const st=cur();if(!st)return;loading=true;errMsg='';renderDeps();
     try{deps=await departures(st,O.mode);deps.sort((a,b)=>new Date(a.t)-new Date(b.t))}
     catch(e){deps=[];errMsg='⚠️ Fahrplan nicht erreichbar ('+e.message+')';glog('Öfis','Abfahrten: '+e.message)}
-    loading=false;renderDeps();
+    loading=false;renderDeps();aiCheck(st);
   }
   draw();load();
   radarIv=setInterval(()=>{if(body.isConnected)radarLoad()},45000);
@@ -5132,6 +5215,33 @@ function tideInfo(T){
   const next=ev.filter(e=>e.t>now),prev=ev.filter(e=>e.t<=now).pop();
   return{cur,rising,next,prev,pts:P.filter(p=>Math.abs(p.t-now)<=13*3600000),sst:a.sst,wave:a.wave,min:Math.min(...P.map(p=>p.h)),max:Math.max(...P.map(p=>p.h))};
 }
+function wxCoast(w){ // liegt der Ort am Meer? (Meeresdaten vorhanden UND Meeres-Gitterpunkt in der Nähe)
+  if(!w||!w.tide||!tideInfo(w.tide))return false;
+  const T=w.tide,P=w.pos||(w.d&&{lat:w.d.latitude,lon:w.d.longitude});
+  if(P&&T.latitude!=null&&distM(P,{lat:T.latitude,lon:T.longitude})>25000)return false;
+  return true;
+}
+let wxAiP=null;
+async function wxAiTip(force){
+  const w=S.wx;if(!w||!w.d||!gemGet())return null;
+  if(!force&&w.ai&&w.ai.for===w.t&&w.ai.txt)return w.ai;
+  if(!force&&w.ai&&w.ai.txt&&Date.now()-w.ai.at<45*60000)return w.ai;
+  if(wxAiP)return wxAiP;
+  wxAiP=(async()=>{
+    const c=w.d.current,H=wxHours(w.d,12),rs=rainSummary(w.d),bf=beaufort(c.wind_speed_10m),coast=wxCoast(w),ti=coast?tideInfo(w.tide):null;
+    const L=[`Ort: ${w.place||'Standort'}`,`Jetzt: ${new Date().toLocaleString('de-DE',{weekday:'long',hour:'2-digit',minute:'2-digit'})}`,
+      `Aktuell: ${Math.round(c.temperature_2m)} °C, ${wxCode(c.weather_code,c.is_day).t}, Wind ${Math.round(c.wind_speed_10m)} km/h (Bft ${bf.n}, ${bf.t}) aus ${dirName(c.wind_direction_10m)}, Böen ${Math.round(c.wind_gusts_10m)} km/h`,
+      `Regen: ${rs.text}`,`Stunden: ${H.map(h=>`${h.label} ${Math.round(h.temp)}° ${wxCode(h.code,h.day).t} Regen ${h.prob}% Wind ${Math.round(h.w)}`).join('; ')}`];
+    if(coast&&ti){L.push(`Am Meer: ja. Wasserstand ${ti.rising?'steigt (Flut)':'fällt (Ebbe)'}; nächste Gezeiten: ${ti.next.slice(0,3).map(e=>(e.high?'Hochwasser ':'Niedrigwasser ')+new Date(e.t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})).join(', ')}${ti.sst!=null?`; Wasser ${Math.round(ti.sst)} °C`:''}${ti.wave!=null?`; Wellen ${ti.wave.toFixed(1)} m`:''}`)}
+    else L.push('Am Meer: NEIN – der Ort liegt im Binnenland. Erwähne auf KEINEN Fall Strand, Meer, Baden im Meer, Ebbe, Flut oder Gezeiten.');
+    const sys=`Du bist Gufy AI in der Wetter-App von GufyUI. Gib EINEN kurzen, praktischen Tipp für heute auf Deutsch, locker, mit 1–2 passenden Emojis. Genau 1–2 kurze Sätze, höchstens 170 Zeichen. Zum Beispiel was man anziehen soll, ob Regenjacke nötig ist, wann es trocken ist, ob Rad/Longboard bei dem Wind gut geht${'' }. Erfinde nichts, nutze nur die Daten. Kein Markdown.`;
+    try{const t=(await gemAsk(L.join('\n'),null,{sys,temp:.6,raw:true,maxTok:200})).replace(/\*+/g,'').trim();
+      w.ai={txt:t,at:Date.now(),for:w.t};save();return w.ai}
+    catch(e){glog('Wetter','KI-Tipp: '+e.message);return w.ai||{err:e.message}}
+    finally{wxAiP=null}
+  })();
+  return wxAiP;
+}
 function wxLoad(force){
   if(!force&&S.wx&&Date.now()-S.wx.t<10*60000)return Promise.resolve(S.wx);
   if(wxP)return wxP;
@@ -5142,7 +5252,7 @@ function wxLoad(force){
       const d=await fetch(u).then(r=>{if(!r.ok)throw new Error('Wetterdienst nicht erreichbar');return r.json()});
       let tide=null;
       try{tide=await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${p.lat.toFixed(3)}&longitude=${p.lon.toFixed(3)}&hourly=sea_level_height_msl,sea_surface_temperature,wave_height&past_days=1&forecast_days=3&timezone=auto`).then(r=>r.ok?r.json():null)}catch(e){glog('Wetter','Gezeiten: '+e.message)}
-      S.wx={t:Date.now(),d,place:S.wxCity||'Mein Standort',tide};wxErr='';save();
+      S.wx={t:Date.now(),d,place:S.wxCity||'Mein Standort',tide,pos:{lat:p.lat,lon:p.lon}};wxErr='';save();
       if(typeof updateWidgets==='function'&&current==='desktop')updateWidgets($('#track'));
     }catch(e){wxErr=e.message&&!/fetch/i.test(e.message)?e.message:'Keine Verbindung zum Wetterdienst'}
     wxP=null;return S.wx;
