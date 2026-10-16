@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.5","notes":["🧪 Beta: KI-Mini-Apps – Gufy AI baut dir eigene Apps (Einstellungen › Beta)","Neues KI-Studio: App beschreiben, bauen lassen, ändern oder löschen","Oder einfach zum Assistenten: „Bau mir eine App, die meine Liegestütze zählt“","Bessere Zeit-Schätzung bei Gufy AI, lange Listen & Rezepte gehen jetzt komplett"]};
+window.GUFY={"v":"11.6","notes":["🧪 Beta: KI-Apps mit Internet – KI-Apps dürfen ins Internet, Standort & Kamera anfragen und deine Coins, Akku, Wetter & Quests lesen","🧪 Beta: KI-Mini-Apps – Gufy AI baut dir eigene Apps (Einstellungen › Beta)","Neues KI-Studio: App beschreiben, bauen lassen, ändern oder löschen","Oder einfach zum Assistenten: „Bau mir eine App, die meine Liegestütze zählt“","Bessere Zeit-Schätzung bei Gufy AI, lange Listen & Rezepte gehen jetzt komplett"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -3938,6 +3938,7 @@ render(body,ctx){
           <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:#5e5ce6">📐</span><span class="sl">Bildschirm bis ganz unten</span><label class="switch"><input type="checkbox" id="bDown" ${S.betaDown?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#8b5cf6,#3b82f6,#ec4899)">🧩</span><span class="sl">KI-Mini-Apps<br><small class="muted">Gufy AI baut dir eigene Apps – im KI-Studio oder per Assistent</small></span><label class="switch"><input type="checkbox" id="bMini" ${S.miniBeta?'checked':''}><span></span></label></div>
+          <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#0ea5e9,#6366f1)">🌐</span><span class="sl">KI-Apps mit Internet<br><small class="muted">KI-Apps dürfen ins Internet, Standort & Kamera nutzen und Coins/Akku/Wetter/Quests lesen</small></span><label class="switch"><input type="checkbox" id="bMiniNet" ${S.miniNet?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#ffcc00,#ff7a00)">🚏</span><span class="sl">Öfis mit KI-Check<br><small class="muted">Gufy AI prüft die Abfahrten mit der Google-Suche und ergänzt fehlende</small></span><label class="switch"><input type="checkbox" id="bOAi" ${S.oefiAi?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)">✨</span><span class="sl">AI-Quests<br><small class="muted">Leichter Sport, eine andere Quest und eine verrückte AI-Quest (50 Coins)</small></span><label class="switch"><input type="checkbox" id="bAiQ" ${S.aiQuests?'checked':''}><span></span></label></div>
         </div>
@@ -3946,6 +3947,8 @@ render(body,ctx){
       $('#bMini',c).onchange=e=>{S.miniBeta=e.target.checked;
         if(S.miniBeta){if(!S.installed.includes('aistudio'))S.installed.push('aistudio')}else S.installed=S.installed.filter(x=>x!=='aistudio');
         save();renderHome();haptic('success');notify('🧩',S.miniBeta?'KI-Mini-Apps an':'KI-Mini-Apps aus',S.miniBeta?(gemGet()?'Das KI-Studio liegt jetzt auf deinem Home-Bildschirm – oder sag dem Assistenten „Bau mir eine App, die …“':'Du brauchst noch Gufy AI – sag dem Assistenten „API-Key“.'):'Deine KI-Apps bleiben gespeichert.','#7c5cff')};
+      $('#bMiniNet',c).onchange=e=>{const v=e.target.checked;e.target.checked=!v;askCode(v?'KI-Apps: Internet erlauben':'KI-Apps: Internet sperren',()=>{S.miniNet=v;save();go('beta');haptic('success');
+        notify('🌐',v?'KI-Apps mit Internet':'KI-Apps offline',v?'Neue KI-Apps dürfen jetzt Internet nutzen. Alte Apps: im KI-Studio mit ✏️ „nutze Internet für …“ erweitern.':'KI-Apps sind wieder abgeschirmt.','#0ea5e9')})};
       $('#bOAi',c).onchange=e=>{S.oefiAi=e.target.checked;save();haptic();if(S.oefiAi&&!gemGet())notify('✨','Öfis KI-Check','Dafür brauchst du Gufy AI – sag dem Assistenten „API-Key“.','#7c5cff')};
       $('#bAiQ',c).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
         askCode(v?'AI-Quests einschalten':'AI-Quests ausschalten',()=>{S.aiQuests=v;save();ensureQuests();go('beta');haptic('success');
@@ -4877,7 +4880,7 @@ render(body,ctx){
         ${msg?`<div class="aiw-msg">${esc(msg)}</div>`:''}</div>`)+
       (S.miniList.length?`<div class="slabel">Deine KI-Apps</div><div class="sgroup">${S.miniList.map(m=>`<div class="srow ms-row"><span class="sic" style="background:linear-gradient(135deg,${m.color},#1e1b4b)">${esc(m.icon)}</span><span class="sl">${esc(m.name)}<br><small class="muted">${esc((m.desc||'').slice(0,50))}</small></span>
         <button class="btn" data-mo="${m.id}">Öffnen</button><button class="ms-b" data-me="${m.id}">✏️</button><button class="ms-b" data-md="${m.id}">🗑️</button></div>`).join('')}</div>`:'')+
-      `<p class="muted" style="font-size:12px;text-align:center;margin-top:14px">🔒 KI-Apps laufen abgeschirmt: kein Internet, kein Zugriff auf deine Coins oder Daten.</p>`;
+      `<p class="muted" style="font-size:12px;text-align:center;margin-top:14px">${S.miniNet?'🌐 Internet an: KI-Apps dürfen ins Internet, Standort/Kamera anfragen und deine Coins, Akku, Wetter & Quests lesen (nicht ändern).':'🔒 KI-Apps laufen abgeschirmt: kein Internet, kein Zugriff auf deine Coins oder Daten.'}</p>`;
     if(busy){const E=(S.miniAvg||45000);const tk=()=>{const b=$('#msBar',body);if(!b)return;const el=Date.now()-t0,f=Math.min(.96,1-Math.exp(-2.3*el/E));b.style.width=(f*100).toFixed(1)+'%';
       const l=Math.ceil((E-el)/1000),lf=$('#msLeft',body);if(lf)lf.textContent=l>0?`noch ca. ${l} Sek.`:'gleich fertig …';raf=requestAnimationFrame(tk)};tk();return}
     const P=$('#msP',body);P.oninput=()=>want=P.value;
@@ -5665,8 +5668,11 @@ async function miniPut(o){const db=await miniDB();await new Promise((r,j)=>{cons
 async function miniDel(id){try{const db=await miniDB();await new Promise(r=>{const t=db.transaction('a','readwrite');t.objectStore('a').delete(id);t.oncomplete=r;t.onerror=r})}catch(e){}}
 const miniData=id=>{try{return JSON.parse(localStorage.getItem('gufyui_mini_'+id)||'null')}catch(e){return null}};
 function miniDoc(m,html){
-  const csp=`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:">`;
-  const bridge=`<script>(function(){var D=${JSON.stringify(miniData(m.id)).replace(/</g,'\\u003c')};window.gufy={name:${JSON.stringify(S.name||'')},dark:${S.theme==='dark'},load:function(){return D},save:function(d){D=d;parent.postMessage({gufyMini:${JSON.stringify(m.id)},save:d},'*')}};
+  const csp=S.miniNet  // Beta „KI-Apps mit Internet“: Netz, CDNs, Bilder & Schriften aus dem Internet erlaubt
+    ?`<meta http-equiv="Content-Security-Policy" content="default-src https: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'unsafe-inline' https:; img-src https: http: data: blob:; font-src https: data:; media-src https: data: blob:; connect-src https: wss:; frame-src https:">`
+    :`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:">`;
+  let info={};try{info={coins:S.coins,akku:dispPct(),zuHause:!!S.loc.isHome,wetter:S.wx&&S.wx.d?{temp:Math.round(S.wx.d.current.temperature_2m),wind:Math.round(S.wx.d.current.wind_speed_10m),ort:S.wx.place}:null,quests:S.daily?S.daily.list.map(q=>({titel:q.title,coins:q.coins,erledigt:q.done})):[]}}catch(e){}
+  const bridge=`<script>(function(){var D=${JSON.stringify(miniData(m.id)).replace(/</g,'\\u003c')};window.gufy={name:${JSON.stringify(S.name||'')},dark:${S.theme==='dark'},online:${!!S.miniNet},info:${S.miniNet?JSON.stringify(info).replace(/</g,'\\u003c'):'null'},load:function(){return D},save:function(d){D=d;parent.postMessage({gufyMini:${JSON.stringify(m.id)},save:d},'*')}};
     window.alert=function(t){console.log(t)};window.confirm=function(){return true};window.prompt=function(){return ''};})()<\/script>`;
   const meta=`<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">`;
   if(/<head[^>]*>/i.test(html))return html.replace(/<head[^>]*>/i,x=>x+csp+meta+bridge);
@@ -5679,7 +5685,8 @@ function miniRegister(m){
     render(body,ctx){body.style.padding='0';body.style.position='relative';body.style.overflow='hidden';
       body.innerHTML=`<div class="web-load"><div class="sd-spin" style="border-color:rgba(127,127,127,.25);border-top-color:var(--accent)"></div></div>`;
       miniGet(m.id).then(a=>{if(!body.isConnected)return;if(!a){body.innerHTML='<div class="emptyinv"><div>🧩</div><b>App nicht gefunden</b></div>';return}
-        body.innerHTML='';const f=document.createElement('iframe');f.id='miniF';f.setAttribute('sandbox','allow-scripts allow-forms');
+        body.innerHTML='';const f=document.createElement('iframe');f.id='miniF';f.setAttribute('sandbox','allow-scripts allow-forms'+(S.miniNet?' allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals':''));
+        if(S.miniNet)f.setAttribute('allow','geolocation; camera; microphone; clipboard-write; fullscreen; autoplay');
         f.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;background:#0f0f14';f.srcdoc=miniDoc(m,a.html);body.appendChild(f)})}};
 }
 S.miniList.forEach(miniRegister);
@@ -5705,7 +5712,8 @@ async function miniCreate(desc,editId,onRetry){
   if(editId){const old=await miniGet(editId),m=S.miniList.find(x=>x.id===editId);if(!old||!m)throw new Error('App nicht gefunden');
     q=`Hier ist die bestehende App „${m.name}“ (${m.icon}). Ändere sie so: ${desc}\nBehalte alles andere bei und gib die KOMPLETTE neue Datei aus (gleiches Format, gleicher Name und Icon, außer der Nutzer will es anders). Gespeicherte Daten (gufy.load) müssen weiter funktionieren.\n\`\`\`html\n${old.html}\n\`\`\``}
   const t0=Date.now();
-  const t=await gemAsk(q,onRetry,{sys:MINI_SYS,temp:.6,raw:true,maxTok:24000,timeout:180000});
+  const sys=S.miniNet?MINI_SYS.replace(/KEINE externen Dateien[^.]*\./,'Internet ist ERLAUBT: Du darfst fetch() auf öffentliche APIs ohne Schlüssel nutzen (z. B. api.open-meteo.com, wikipedia, restcountries.com), Bilder/Schriften/Bibliotheken von https-CDNs (cdn.jsdelivr.net, unpkg.com) laden und Standort/Kamera per Browser-API anfragen. Zeig bei Netzfehlern eine freundliche Meldung.')+' Zusätzlich gibt es window.gufy.info (nur lesen): {coins, akku, zuHause, wetter:{temp,wind,ort}, quests:[{titel,coins,erledigt}]}.':MINI_SYS;
+  const t=await gemAsk(q,onRetry,{sys,temp:.6,raw:true,maxTok:24000,timeout:180000});
   const r=miniParse(t);
   const id=editId||('mini_'+Date.now().toString(36));
   let m=S.miniList.find(x=>x.id===id);
