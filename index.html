@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.2","notes":["Quests: sauberer Rand an allen Quest-Karten","Neuer Tab „✨ KI“: Wunsch eingeben, Gufy AI erfindet eine Quest – mit „Zu heute hinzufügen“ (mit Code)","Assistent: „Erstell eine Quest für meinen Freund“ geht jetzt an Gufy AI – mit Knopf zum Hinzufügen"]};
+window.GUFY={"v":"11.3","notes":["Neue Coin-Regel: Quests mit den Eltern geben höchstens 50 Coins – draußen und mit fremden Leuten gibt es mehr","Quest-Karten mit dickerem Rand","Assistent: Wissensfragen wie „Was ist ein Bett?“ gehen jetzt an Gufy AI – kein falsches Rechnen oder Hintergrund-Wechseln mehr"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1282,8 +1282,8 @@ body.phone.livebg.appfull #desktop>.wall{visibility:hidden}
 @keyframes aiBar{to{background-position:-200% 0}}
 .ai-prog span{font-size:11.5px;color:rgba(255,255,255,.6);white-space:nowrap;min-width:84px;text-align:right}
 .qchip.qaichip{background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)!important;margin-left:4px}
-.qcard{position:relative;overflow:hidden;border:1px solid var(--border)!important;padding-left:19px!important;border-radius:18px}
-.qcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--dc)}
+.qcard{position:relative;overflow:hidden;border:2px solid color-mix(in srgb,var(--dc) 45%,var(--border))!important;padding-left:21px!important;border-radius:18px}
+.qcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--dc)}
 .qcard.qai{border-color:rgba(167,139,250,.55)!important}
 .qcard.qai::before{background:linear-gradient(180deg,#a78bfa,#60a5fa,#f472b6)}
 .qcard.qpend b{opacity:.65;animation:aiDot 1.6s ease-in-out infinite}
@@ -2298,7 +2298,7 @@ async function gemAsk(q,onRetry,opt={}){
   if(Date.now()-gemHistT>10*60000)gemHist=[];
   const sys=opt.sys||`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
 WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutzer etwas TUN will, schreib für jede Aktion eine eigene Zeile genau so: [[BEFEHL: <einfacher deutscher Befehl>]] und danach höchstens einen kurzen Satz. Beispiele für Befehle, die GufyUI versteht: „Timer 5 Minuten“, „Wecker 7:30“, „Erinnere mich in 10 Minuten an Hausaufgaben“, „Taschenlampe an“, „Taschenlampe aus“, „Öffne Wetter“ (oder jede andere App), „Akku“, „Coins“, „Quests“, „Notiz Milch kaufen“, „Helligkeit 50 Prozent“, „Dunkelmodus an“, „Hintergrund wechseln“, „Würfeln“, „Neustart“, „Abmelden“, „Ausschalten“. Erfinde keine anderen Aktionen; wenn etwas nicht geht, sag das kurz.
-QUESTS: Wenn der Nutzer eine Quest erstellt/erfunden haben will (auch für seinen Freund), erfinde sie selbst (witzig, konkret, ungefährlich, legal, kostenlos) und schreib zusätzlich eine Zeile genau so: [[QUEST: <1 Emoji> | <Quest-Text> | <mittel|schwer|extrem> | <Coins: 25/50/100/200>]]. GufyUI zeigt dann einen Knopf zum Hinzufügen.\n\nInfos:\n${gemContext()}`;
+QUESTS: Wenn der Nutzer eine Quest erstellt/erfunden haben will (auch für seinen Freund), erfinde sie selbst (witzig, konkret, ungefährlich, legal, kostenlos) und schreib zusätzlich eine Zeile genau so: [[QUEST: <1 Emoji> | <Quest-Text> | <mittel|schwer|extrem> | <Coins: 25/50/100/200>]]. Coin-Regel: zu Hause/mit Eltern höchstens 50, draußen/mit Fremden mehr. GufyUI zeigt dann einen Knopf zum Hinzufügen.\n\nInfos:\n${gemContext()}`;
   const contents=opt.sys?[{role:'user',parts:[{text:q}]}]:[...gemHist,{role:'user',parts:[{text:q}]}];
   let last;
   let busy=0;
@@ -3349,6 +3349,10 @@ const QF={
 const snapCoins=(raw,diff)=>COINSTEPS[diff].reduce((b,v)=>Math.abs(v-raw)<Math.abs(b-raw)?v:b);
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const nice=n=>n<20?n:n<100?Math.round(n/5)*5:n<1000?Math.round(n/10)*10:Math.round(n/500)*500;
+function questRule(q){ // Mit Eltern höchstens 50 Coins – draußen / mit Fremden mindestens 50
+  if(q.tag==='parents')q.coins=Math.min(q.coins,50);
+  else if(q.tag==='fun'&&q.coins<50)q.coins=50;
+  return q}
 function genQuest(diff,avoid,kind){
   let q;
   const own=(S.customQ||[]).filter(x=>x.diff===diff);
@@ -3371,6 +3375,7 @@ function genQuest(diff,avoid,kind){
     if(!avoid.some(x=>x.title===q.title||x.i===q.i))break;
   }
   if(q.tag!=='own'&&q.tag!=='ai')q.coins=QUEST_PAY(q.coins);
+  questRule(q);
   q.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);q.diff=diff;q.done=false;q.kind=kind||'';
   return q;
 }
@@ -3391,12 +3396,13 @@ const QT_LIGHT=[
 ];
 let aiQBusy=false;
 async function aiQuestMake(wish){
-  const sys=`Du erfindest für GufyUI genau EINE Quest auf Deutsch für einen Jugendlichen (oft zusammen mit seinem besten Freund). Halte dich an den Wunsch des Nutzers. Wenn nichts anderes gesagt wird: witzig, kreativ, sehr konkret, eher draußen. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, heute machbar. Höchstens 2 Sätze. Schwierigkeit: "mittel", "schwer" oder "extrem"; Coins passend: mittel 25 oder 50, schwer 50 oder 100, extrem 100 oder 200. Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>","diff":"mittel|schwer|extrem","coins":<Zahl>}`;
+  const sys=`Du erfindest für GufyUI genau EINE Quest auf Deutsch für einen Jugendlichen (oft zusammen mit seinem besten Freund). Halte dich an den Wunsch des Nutzers. Wenn nichts anderes gesagt wird: witzig, kreativ, sehr konkret, eher draußen. Regeln: ungefährlich, legal, kostet kein Geld, niemanden beleidigen, belästigen oder erschrecken, nichts Ekliges, heute machbar. Höchstens 2 Sätze. Schwierigkeit: "mittel", "schwer" oder "extrem"; Coins passend: mittel 25 oder 50, schwer 50 oder 100, extrem 100 oder 200. COIN-REGEL: Quests zu Hause oder mit den Eltern bringen HÖCHSTENS 50 Coins. Quests draußen, in der Öffentlichkeit oder mit fremden Leuten bringen mehr (mind. 50). Antworte NUR als JSON: {"emoji":"<1 Emoji>","quest":"<Text>","diff":"mittel|schwer|extrem","coins":<Zahl>,"eltern":true/false}`;
   const t=await gemAsk(`Wunsch: ${wish||'irgendeine lustige Quest'}`,null,{sys,temp:1,raw:true,maxTok:300});
   let o=null;try{o=JSON.parse((t.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){}
   if(!o||!o.quest)throw new Error('Gufy AI hat keine Quest geliefert – nochmal versuchen.');
   const diff=['mittel','schwer','extrem'].includes(o.diff)?o.diff:'schwer';
-  return{i:(o.emoji||'✨').slice(0,4),title:String(o.quest).trim().slice(0,260),diff,coins:roundPay(+o.coins||COINSTEPS[diff][0])};
+  let coins=roundPay(+o.coins||COINSTEPS[diff][0]);if(o.eltern===true)coins=Math.min(coins,50);
+  return{i:(o.emoji||'✨').slice(0,4),title:String(o.quest).trim().slice(0,260),diff,coins};
 }
 function aiQuestAdd(q,done){askCode(`KI-Quest hinzufügen (+${q.coins} Coins)`,()=>{ensureQuests();
   const nq={i:q.i,title:q.title,coins:q.coins,diff:q.diff,tag:'ai',kind:'aiExtra',extra:true,done:false,id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)};
@@ -3456,6 +3462,7 @@ function ensureQuests(){
     const SL=dailySlots(),X=S.daily.list.filter(q=>q.extra),L=S.daily.list.filter(q=>!q.extra);SL.forEach(([d,k],i)=>{if(!L[i]||!L[i].done)L[i]=genQuest(d,L.filter((_,j)=>j!==i),k)});L.length=SL.length;S.daily.list=L.concat(X);S.daily.ai=!!S.aiQuests;save()}
   if(S.daily&&S.daily.ai===undefined)S.daily.ai=!!S.aiQuests;
   setTimeout(aiQuestFill,50);
+  if(S.daily&&!S.daily.rule50){S.daily.list.forEach(q=>{if(!q.done)questRule(q)});S.daily.rule50=true;save()}
   // Reparatur: „erledigt“ ohne Eintrag im Verlauf (= ohne Coins) → wieder offen
   if(S.daily&&S.histClr!==dayKey()){
     const h=(S.questDone||[]).filter(e=>dayKey(new Date(e.t))===S.daily.day);let fix=0;
@@ -5323,6 +5330,14 @@ setInterval(timerTick,500);
    GUFY ASSISTENT – Home-Taste 2 Sek. halten
    ========================================================= */
 const NUMW={null:0,ein:1,eins:1,eine:1,einen:1,einer:1,zwei:2,drei:3,vier:4,fünf:5,fuenf:5,sechs:6,sieben:7,acht:8,neun:9,zehn:10,elf:11,zwölf:12,zwoelf:12,dreizehn:13,vierzehn:14,fünfzehn:15,sechzehn:16,siebzehn:17,achtzehn:18,neunzehn:19,zwanzig:20,dreißig:30,dreissig:30,vierzig:40,fünfzig:50,sechzig:60,neunzig:90,hundert:100};
+function isMathQ(s){ // nur echte Rechnungen: jedes Wort muss Zahl oder Rechenzeichen sein
+  const m=s.match(/(?:was ist|rechne|wie viel ist|wieviel ist|was macht|was ergibt)\s+(.+?)[?.!]*$/);if(!m)return false;
+  const OPS=/^(plus|minus|mal|x|×|geteilt|durch|÷|hoch|und|[+\-*/()^]|=)$/;let nums=0,ops=0;
+  const toks=m[1].replace(/([+\-*/()×÷])/g,' $1 ').split(/\s+/).filter(Boolean);
+  for(const t of toks){if(/^\d+([.,]\d+)?$/.test(t)){nums++;continue}if(OPS.test(t)){ops++;continue}
+    if(t!=='ein'&&t!=='eine'&&t!=='einen'&&wordNum(t)!==null){nums++;continue}return false}
+  return nums>=2&&ops>=1||(nums>=1&&/^[\d\s+\-*/().,]+$/.test(m[1])&&/[+\-*/]/.test(m[1]));
+}
 function wordNum(w){
   w=w.toLowerCase();if(/^\d+([.,]\d+)?$/.test(w))return parseFloat(w.replace(',','.'));
   if(w in NUMW)return NUMW[w];
@@ -5352,6 +5367,10 @@ function planCmd(raw){
   const s=raw.toLowerCase().replace(/[„“"]/g,'').trim();
   const on=/\b(an|ein|einschalten|anschalten|anmachen|aktivier\w*)\b/.test(s),off=/\b(aus|ausschalten|ausmachen|deaktivier\w*|stopp\w*|beende\w*)\b/.test(s);
   let m;
+  // Wissensfragen („Was ist ein Bett?“, „Wer war Einstein?“) → Gufy AI, nicht Rechnen / Hintergrund / Apps
+  const isQ=/^(und |aber |sag mal,? |hey,? )?(was|wer|wie|warum|wieso|weshalb|wann|wo|woher|wohin|welche\w*|erklär\w*|definier\w*|kannst du mir (sagen|erklären)|weißt du|was bedeutet|was heißt|wofür)\b/.test(s);
+  const localQ=/wetter|regen|wind|akku|batterie|coins|münzen|floni|uhrzeit|wie spät|datum|welcher tag|quest|tage bis|wie lange noch|timer|wecker|welcher hintergrund|herzen|leben|geschafft|vsf|schulden|powerbank|standort|zu hause|bus|bahn|abfahrt|wer bist du|was kannst du|wie heißt du/.test(s);
+  if(isQ&&!localQ&&!isMathQ(s)&&gemGet())return{ic:'✨',unknown:true,raw,err:''};
   // Smalltalk & Hilfe
   if(/^(hallo|hi|hey|servus|moin|guten (tag|abend))\b/.test(s))return{ic:'👋',txt:'Hallo',run:()=>`Hallo ${S.name||''}! Was kann ich für dich tun?`};
   if(/^danke|dankeschön/.test(s))return{ic:'😊',txt:'Bitte',run:()=>'Gern geschehen!'};
@@ -5463,10 +5482,10 @@ function planCmd(raw){
   if(/witz/.test(s))return{ic:'😂',txt:'Witz',run:()=>JOKES[Math.floor(Math.random()*JOKES.length)]};
   if(/würfel/.test(s))return{ic:'🎲',txt:'Würfeln',run:()=>`Gewürfelt: ${1+Math.floor(Math.random()*6)} 🎲`};
   if(/münze|kopf oder zahl/.test(s))return{ic:'🪙',txt:'Münzwurf',run:()=>Math.random()<.5?'Kopf! 👑':'Zahl! 🔢'};
-  if(/hintergrund/.test(s)){const i=WALLNAMES.findIndex(n=>s.includes(n.toLowerCase()));const k=i>=0?i:Math.floor(Math.random()*WALLS.length);
+  if(/hintergrund/.test(s)&&(!isQ||/wechsel|änder|ander|neu|setz|mach/.test(s))){const i=WALLNAMES.findIndex(n=>s.includes(n.toLowerCase()));const k=i>=0?i:Math.floor(Math.random()*WALLS.length);
     return{ic:'🖼️',txt:'Hintergrund: '+WALLNAMES[k],run:()=>{S.wall=k;S.aiWall=null;applyLook();save();return `Hintergrund: ${WALLNAMES[k]}.`}}}
   if(/home|startbildschirm|schließ|schliess|zurück/.test(s))return{ic:'🏠',txt:'Home',run:()=>{goHome();return 'Zurück zum Home-Bildschirm.'}};
-  if((m=s.match(/(?:was ist|rechne|wie viel ist|wieviel ist)\s+(.+)/))){
+  if((m=s.match(/(?:was ist|rechne|wie viel ist|wieviel ist)\s+(.+)/))&&isMathQ(s)){
     const ex=m[1].replace(/plus/g,'+').replace(/minus/g,'-').replace(/mal|x|×/g,'*').replace(/geteilt durch|durch|÷/g,'/').replace(/,/g,'.').replace(/\b([a-zäöüß]+)\b/g,w=>{const n=wordNum(w);return n===null?'':n});
     if(/^[\d\s+\-*/().]+$/.test(ex)&&/\d/.test(ex)){try{const v=Function('return ('+ex+')')();if(isFinite(v))return{ic:'🧮',txt:'Rechnen',run:()=>`${m[1].trim()} = ${String(+v.toFixed(6)).replace('.',',')}`}}catch(e){}}
   }
