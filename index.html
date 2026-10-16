@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.3","notes":["Neue Coin-Regel: Quests mit den Eltern geben höchstens 50 Coins – draußen und mit fremden Leuten gibt es mehr","Quest-Karten mit dickerem Rand","Assistent: Wissensfragen wie „Was ist ein Bett?“ gehen jetzt an Gufy AI – kein falsches Rechnen oder Hintergrund-Wechseln mehr"]};
+window.GUFY={"v":"11.5","notes":["🧪 Beta: KI-Mini-Apps – Gufy AI baut dir eigene Apps (Einstellungen › Beta)","Neues KI-Studio: App beschreiben, bauen lassen, ändern oder löschen","Oder einfach zum Assistenten: „Bau mir eine App, die meine Liegestütze zählt“","Bessere Zeit-Schätzung bei Gufy AI, lange Listen & Rezepte gehen jetzt komplett"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1316,6 +1316,7 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
 .kq-btns{display:flex;gap:10px;margin-top:4px}.kq-btns .btn{flex:1}
 .tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 .as-qadd{margin-top:8px;padding:7px 12px;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:linear-gradient(135deg,#8b5cf6,#3b82f6)}
+.ms-row .btn{padding:7px 12px;font-size:13px}.ms-row .sl{min-width:0}.ms-row .sl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ms-b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--hover);font-size:15px;margin-left:6px}
 </style>
 </head>
 <body class="dark">
@@ -2282,7 +2283,8 @@ function gemFormHTML(val){
     <small class="muted gem-note">Der Schlüssel bleibt nur auf diesem Gerät. Frag Gufy AI nichts Privates.</small>`;
 }
 function gemFormBind(c){const i=$('#gemIn',c),e=$('#gemEye',c);if(e)e.onclick=()=>{i.type=i.type==='password'?'text':'password'}}
-let gemHist=[],gemHistT=0;   // Gesprächsverlauf (für Nachfragen), nach 10 Min. vergessen
+let gemHist=[],gemHistT=0;
+if(!S.gemAvgV2){S.gemAvg=0;S.gemAvgL=0;S.gemAvgV2=true}   // Gesprächsverlauf (für Nachfragen), nach 10 Min. vergessen
 function gemContext(){
   const d=new Date(),L=[];
   L.push(`Datum/Uhrzeit: ${d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}, ${d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr.`);
@@ -2293,10 +2295,15 @@ function gemContext(){
   if(typeof geoPos!=='undefined'&&geoPos)L.push(`Standort ungefähr: ${geoPos.lat.toFixed(2)}, ${geoPos.lon.toFixed(2)}.`);
   return L.join('\n');
 }
+const gemLong=q=>/\b(liste|auflist|\d{2,}\s|zehn|zwanzig|hundert|rezept|anleitung|schritt für schritt|ausführlich|genau erklär|erklär.*genau|detail|aufsatz|geschichte|story|lang(e|en)? (text|antwort|nachricht)|alle\b)/i.test(q);
+function gemEstimate(q){ // geschätzte Dauer: gelernte Zeit + Länge der Frage + lange Antwort erwartet?
+  const long=gemLong(q),base=long?(S.gemAvgL||Math.max(9000,(S.gemAvg||3500)*3)):(S.gemAvg||3500);
+  return Math.round(Math.min(long?60000:15000,Math.max(1500,base+Math.min(4000,q.length*12))));
+}
 async function gemAsk(q,onRetry,opt={}){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
   if(Date.now()-gemHistT>10*60000)gemHist=[];
-  const sys=opt.sys||`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Fass dich KURZ: komm sofort zum Punkt, meist 1–3 kurze Sätze, keine langen Erklärungen, keine Einleitung, keine Wiederholung der Frage. Nur wenn wirklich nötig (z. B. Rezept, Anleitung) eine knappe Liste mit • und höchstens 5 Punkten. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
+  const sys=opt.sys||`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Komm IMMER sofort zum Punkt: keine Einleitung, keine Wiederholung der Frage, kein Gelaber. Normale Fragen: kurz (1–3 Sätze). ABER wenn der Nutzer ausdrücklich viel will (z. B. „nenn mir 100 Apps“, eine lange Liste, ein Rezept, eine Anleitung, eine Geschichte, ausführlich) oder wenn es wichtig ist, dann liefere es VOLLSTÄNDIG und so lang wie nötig – sag nie, dass etwas zu lang ist oder ein Limit sprengt. Listen mit • und je Punkt kurz. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
 WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutzer etwas TUN will, schreib für jede Aktion eine eigene Zeile genau so: [[BEFEHL: <einfacher deutscher Befehl>]] und danach höchstens einen kurzen Satz. Beispiele für Befehle, die GufyUI versteht: „Timer 5 Minuten“, „Wecker 7:30“, „Erinnere mich in 10 Minuten an Hausaufgaben“, „Taschenlampe an“, „Taschenlampe aus“, „Öffne Wetter“ (oder jede andere App), „Akku“, „Coins“, „Quests“, „Notiz Milch kaufen“, „Helligkeit 50 Prozent“, „Dunkelmodus an“, „Hintergrund wechseln“, „Würfeln“, „Neustart“, „Abmelden“, „Ausschalten“. Erfinde keine anderen Aktionen; wenn etwas nicht geht, sag das kurz.
 QUESTS: Wenn der Nutzer eine Quest erstellt/erfunden haben will (auch für seinen Freund), erfinde sie selbst (witzig, konkret, ungefährlich, legal, kostenlos) und schreib zusätzlich eine Zeile genau so: [[QUEST: <1 Emoji> | <Quest-Text> | <mittel|schwer|extrem> | <Coins: 25/50/100/200>]]. Coin-Regel: zu Hause/mit Eltern höchstens 50, draußen/mit Fremden mehr. GufyUI zeigt dann einen Knopf zum Hinzufügen.\n\nInfos:\n${gemContext()}`;
   const contents=opt.sys?[{role:'user',parts:[{text:q}]}]:[...gemHist,{role:'user',parts:[{text:q}]}];
@@ -2310,7 +2317,7 @@ QUESTS: Wenn der Nutzer eine Quest erstellt/erfunden haben will (auch für seine
   for(const [m,think,wait] of ML){
     if(wait)await new Promise(r=>setTimeout(r,wait));
     if(busy&&onRetry)onRetry(busy);
-    const gc={maxOutputTokens:opt.maxTok||800,temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
+    const gc={maxOutputTokens:opt.maxTok||(gemLong(q)?8000:1500),temperature:opt.temp||.7};if(think)gc.thinkingConfig={thinkingBudget:0};
     const body={systemInstruction:{parts:[{text:sys}]},contents,generationConfig:gc};if(opt.tools&&!/lite|2\.0/.test(m))body.tools=opt.tools;
     const call=async()=>{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),opt.timeout||20000);   // hängt? nach 20 Sek. abbrechen
       try{return await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body),signal:ac.signal})}
@@ -2331,7 +2338,7 @@ QUESTS: Wenn der Nutzer eine Quest erstellt/erfunden haben will (auch für seine
     if(!opt.raw){t=t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[*-]\s+/gm,'• ').replace(/[*_#]{1,3}/g,'');
     if(c.finishReason==='MAX_TOKENS')t+=' …'}
     if(!t)return 'Gufy AI hat keine Antwort gegeben.';
-    const ms=Date.now()-t0;S.gemAvg=Math.round(S.gemAvg?S.gemAvg*.6+ms*.4:ms);   // für den Fortschrittsbalken
+    const ms=Date.now()-t0;if(!opt.sys&&!busy){const k=gemLong(q)?'gemAvgL':'gemAvg';S[k]=Math.round(S[k]?S[k]*.6+ms*.4:ms)}   // nur Chat-Fragen lernen (nicht Hintergründe)
     if(m!==(S.gemModel&&S.gemModel.day===dayKey(new Date())?S.gemModel.m:'gemini-flash-latest')){S.gemModel={day:dayKey(new Date()),m};glog('Gemini','Heute weiter mit '+m)}
     save();
     if(!opt.sys)gemHist.push({role:'user',parts:[{text:q}]},{role:'model',parts:[{text:t}]});if(gemHist.length>12)gemHist=gemHist.slice(-12);gemHistT=Date.now();
@@ -3930,11 +3937,15 @@ render(body,ctx){
       c.innerHTML=`<div class="sgroup">
           <div class="srow"><span class="sic" style="background:#34c759">🔋</span><span class="sl">Echter Geräte-Akku</span><label class="switch"><input type="checkbox" id="bReal" ${S.betaBatt?'checked':''} ${sup?'':'disabled'}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:#5e5ce6">📐</span><span class="sl">Bildschirm bis ganz unten</span><label class="switch"><input type="checkbox" id="bDown" ${S.betaDown?'checked':''}><span></span></label></div>
+          <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#8b5cf6,#3b82f6,#ec4899)">🧩</span><span class="sl">KI-Mini-Apps<br><small class="muted">Gufy AI baut dir eigene Apps – im KI-Studio oder per Assistent</small></span><label class="switch"><input type="checkbox" id="bMini" ${S.miniBeta?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#ffcc00,#ff7a00)">🚏</span><span class="sl">Öfis mit KI-Check<br><small class="muted">Gufy AI prüft die Abfahrten mit der Google-Suche und ergänzt fehlende</small></span><label class="switch"><input type="checkbox" id="bOAi" ${S.oefiAi?'checked':''}><span></span></label></div>
           <div class="srow"><span class="sic" style="background:linear-gradient(135deg,#a78bfa,#60a5fa,#f472b6)">✨</span><span class="sl">AI-Quests<br><small class="muted">Leichter Sport, eine andere Quest und eine verrückte AI-Quest (50 Coins)</small></span><label class="switch"><input type="checkbox" id="bAiQ" ${S.aiQuests?'checked':''}><span></span></label></div>
         </div>
         <p class="slabel" style="text-transform:none;letter-spacing:0;font-weight:500;line-height:1.5">${sup?(realBatt?`Gerät: ${Math.round(realBatt.level*100)} %${realBatt.charging?' · lädt':''}`:'Akku wird gelesen …'):'Dieser Browser gibt den Akku nicht frei (z. B. iPhone/Safari).'}</p>`;
       $('#bDown',c).onchange=e=>{S.betaDown=e.target.checked;save();detectPhone();haptic()};
+      $('#bMini',c).onchange=e=>{S.miniBeta=e.target.checked;
+        if(S.miniBeta){if(!S.installed.includes('aistudio'))S.installed.push('aistudio')}else S.installed=S.installed.filter(x=>x!=='aistudio');
+        save();renderHome();haptic('success');notify('🧩',S.miniBeta?'KI-Mini-Apps an':'KI-Mini-Apps aus',S.miniBeta?(gemGet()?'Das KI-Studio liegt jetzt auf deinem Home-Bildschirm – oder sag dem Assistenten „Bau mir eine App, die …“':'Du brauchst noch Gufy AI – sag dem Assistenten „API-Key“.'):'Deine KI-Apps bleiben gespeichert.','#7c5cff')};
       $('#bOAi',c).onchange=e=>{S.oefiAi=e.target.checked;save();haptic();if(S.oefiAi&&!gemGet())notify('✨','Öfis KI-Check','Dafür brauchst du Gufy AI – sag dem Assistenten „API-Key“.','#7c5cff')};
       $('#bAiQ',c).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
         askCode(v?'AI-Quests einschalten':'AI-Quests ausschalten',()=>{S.aiQuests=v;save();ensureQuests();go('beta');haptic('success');
@@ -3999,7 +4010,7 @@ render(body,ctx){
       const drawW=()=>{
         const list=WALLS.map((_,i)=>i).filter(i=>wallCat(i)===wc);
         const SUG=[['🌅','Sylt bei Sonnenuntergang'],['🌌','Galaxie mit Nebel'],['🌃','Neon-Stadt bei Regen'],['🌊','Türkises Meer von oben'],['🐉','Drache über Bergen'],['🍭','Süßigkeiten-Land']];
-        const aiEst=()=>Math.round(((S.awAvg&&S.awAvg[aiEff])||(aiEff==='high'?45000:18000))/1000);
+        const aiEst=()=>{const A=S.awAvg||{};let lo=A.low||18000,hi=A.high||45000;if(lo>hi)[lo,hi]=[hi,lo];hi=Math.max(hi,lo*1.6);return Math.round((aiEff==='high'?hi:lo)/1000)};
         const aiHTML=aiBusy?`<div class="aiw-box aiw-run">
             <div class="aiw-orb"><i></i></div>
             <b class="aiw-rt">Dein Hintergrund entsteht …</b>
@@ -4847,6 +4858,44 @@ render(body,ctx){
   ctx.cleanup.push(()=>{clearInterval(iv);if(watch!==null)navigator.geolocation.clearWatch(watch)});
 }}
 ,
+/* ---------- KI-Studio: Mini-Apps bauen (Beta) ---------- */
+aistudio:{name:'KI-Studio',cat:'KI-Apps',full:false,icon:'🧩',bg:'linear-gradient(135deg,#8b5cf6,#3b82f6 60%,#ec4899)',
+render(body,ctx){
+  let busy=false,msg='',want='',editId=null,t0=0,raf=0;
+  const IDEAS=[['💧','Wasser-Zähler: wie viele Gläser ich heute getrunken hab'],['🏀','Punkte-Zähler für 2 Teams'],['📅','Countdown bis zu meinem Geburtstag'],['🎯','Glücksrad mit eigenen Feldern'],['🏋️','Liegestütz-Tracker mit Rekord'],['💰','Taschengeld-Rechner']];
+  function draw(){
+    cancelAnimationFrame(raf);
+    if(!S.miniBeta){body.innerHTML=`<div class="emptyinv"><div>🧪</div><b>KI-Mini-Apps sind aus</b><br><small>Einstellungen › Beta › KI-Mini-Apps</small></div>`;return}
+    const est=Math.round((S.miniAvg||45000)/1000),em=editId&&S.miniList.find(x=>x.id===editId);
+    body.innerHTML=(busy?`<div class="aiw-box aiw-run"><div class="aiw-orb"><i></i></div><b class="aiw-rt">${em?'Gufy AI ändert deine App …':'Gufy AI baut deine App …'}</b><small class="aiw-rp">„${esc(want)}“</small>
+        <div class="aiw-bar"><i id="msBar"></i></div><div class="aiw-rs"><span id="msStep">${esc(msg||'✏️ Programmiert …')}</span><span id="msLeft"></span></div></div>`
+      :`<div class="aiw-box"><div class="aiw-hd"><span class="aiw-ic">🧩</span><div><b>${em?`„${esc(em.name)}“ ändern`:'Neue App bauen'}</b><small>${em?'Beschreib, was anders werden soll.':'Beschreib deine App – Gufy AI programmiert sie für dich.'}</small></div></div>
+        <div class="aiw-in"><textarea id="msP" rows="3" placeholder="${em?'z. B. Mach die Knöpfe größer und füg einen Reset-Knopf hinzu':'z. B. Eine App, die zählt, wie oft ich heute Wasser getrunken hab'}">${esc(want)}</textarea></div>
+        ${em?'':`<div class="aiw-sug">${IDEAS.map(([e,t])=>`<button data-sug="${esc(t)}">${e} ${esc(t.split(':')[0])}</button>`).join('')}</div>`}
+        <small class="aiw-hint">Dauert ca. ${est} Sek.</small>
+        <button class="aiw-go" id="msGo">${em?'✏️ App ändern':'🧩 App bauen'}</button>${em?'<button class="btn" id="msX" style="width:100%">Abbrechen</button>':''}
+        ${msg?`<div class="aiw-msg">${esc(msg)}</div>`:''}</div>`)+
+      (S.miniList.length?`<div class="slabel">Deine KI-Apps</div><div class="sgroup">${S.miniList.map(m=>`<div class="srow ms-row"><span class="sic" style="background:linear-gradient(135deg,${m.color},#1e1b4b)">${esc(m.icon)}</span><span class="sl">${esc(m.name)}<br><small class="muted">${esc((m.desc||'').slice(0,50))}</small></span>
+        <button class="btn" data-mo="${m.id}">Öffnen</button><button class="ms-b" data-me="${m.id}">✏️</button><button class="ms-b" data-md="${m.id}">🗑️</button></div>`).join('')}</div>`:'')+
+      `<p class="muted" style="font-size:12px;text-align:center;margin-top:14px">🔒 KI-Apps laufen abgeschirmt: kein Internet, kein Zugriff auf deine Coins oder Daten.</p>`;
+    if(busy){const E=(S.miniAvg||45000);const tk=()=>{const b=$('#msBar',body);if(!b)return;const el=Date.now()-t0,f=Math.min(.96,1-Math.exp(-2.3*el/E));b.style.width=(f*100).toFixed(1)+'%';
+      const l=Math.ceil((E-el)/1000),lf=$('#msLeft',body);if(lf)lf.textContent=l>0?`noch ca. ${l} Sek.`:'gleich fertig …';raf=requestAnimationFrame(tk)};tk();return}
+    const P=$('#msP',body);P.oninput=()=>want=P.value;
+    $$('[data-sug]',body).forEach(b=>b.onclick=()=>{want=P.value=b.dataset.sug;haptic('select')});
+    const x=$('#msX',body);if(x)x.onclick=()=>{editId=null;want='';msg='';draw()};
+    $('#msGo',body).onclick=()=>{const d=P.value.trim();if(!d){msg='Beschreib erst deine App ✍️';draw();return}build(d)};
+    $$('[data-mo]',body).forEach(b=>b.onclick=()=>openApp(b.dataset.mo));
+    $$('[data-me]',body).forEach(b=>b.onclick=()=>{editId=b.dataset.me;want='';msg='';draw();body.scrollTop=0});
+    $$('[data-md]',body).forEach(b=>b.onclick=()=>askCode('KI-App löschen',async()=>{await miniRemove(b.dataset.md);draw()}));
+  }
+  async function build(d){if(!gemGet()){gemDialog();return}
+    want=d;busy=true;msg='';t0=Date.now();draw();
+    try{const m=await miniCreate(d,editId,n=>{const e=$('#msStep',body);if(e)e.textContent='⚠️ Neuer Versuch ('+n+') …'});
+      haptic('success');msg=`✅ „${m.name}“ ist ${editId?'geändert':'fertig'} – liegt auf deinem Home-Bildschirm.`;notify(m.icon,'KI-App fertig',m.name,'#7c5cff');editId=null;want=''}
+    catch(e){msg='⚠️ '+e.message;haptic('error')}
+    busy=false;if(body.isConnected)draw()}
+  draw();ctx.cleanup.push(()=>cancelAnimationFrame(raf));
+}},
 /* ---------- MathEdits (Website in einer App) ---------- */
 mathedits:{name:'MathEdits',cat:'Lernen',full:true,store:true,icon:'➗',bg:'linear-gradient(135deg,#58cc02,#1cb0f6)',
 render(body,ctx){
@@ -5421,6 +5470,12 @@ function planCmd(raw){
   if(/coins|münzen|geld/.test(s)&&!/floni|brauche|fehlen|kauf/.test(s))return{ic:'🪙',txt:'Coins',run:()=>`Du hast ${fmtNum(S.coins)} Coins.`};
   if(/floni/.test(s))return{ic:'🟣',txt:'Floni Coins',run:()=>`Du hast ${fmtNum((S.vsf||{}).floni||0)} Floni Coins.`};
   if(/\bleben\b|herzen/.test(s)){const h=(S.vsf||{half:6}).half;return{ic:'❤️',txt:'VSF Leben',run:()=>`VSF hat ${h/2} von 3 Herzen.`}}
+  if(/\bapps?\b/.test(s)&&/(erstell|bau|mach|programmier|entwickl|generier|kreier)\w*/.test(s)&&!/hintergrund|quest/.test(s)&&/(eine|ne|n|neue|mir|uns)\b.*\bapp\b|\bapp\b.*\b(die|für|mit|zum|zur)\b/.test(s)){
+    if(!S.miniBeta)return{ic:'🧩',err:'Eigene Apps bauen geht mit der Beta: Einstellungen › Beta › KI-Mini-Apps.'};
+    if(!gemGet())return{ic:'🧩',err:'Dafür brauchst du Gufy AI – sag „API-Key“.'};
+    const d=raw.replace(/^.*?\b(erstell|bau|mach|programmier|entwickl|generier|kreier)\w*\s*(mir|uns)?\s*(bitte)?\s*/i,'').trim()||raw;
+    return{ic:'🧩',txt:'KI-App bauen',run:async()=>{const m=await miniCreate(d);notify(m.icon,'KI-App fertig',m.name+' liegt auf deinem Home-Bildschirm','#7c5cff');return `Fertig! ${m.icon} „${m.name}“ liegt jetzt auf deinem Home-Bildschirm.`}};
+  }
   if(/quest/.test(s)&&/erstell|erfind|ausdenk|denk\w*.*aus|generier|mach\w* (mir |uns |ihm |ihr )?(eine|ne|n|neue)|schreib|kreier|bau|für (meinen|meine|den|die|uns|ihn)|neue quest/.test(s))
     return gemGet()?{ic:'✨',unknown:true,raw,err:''}:{ic:'✨',err:'Quests erfinden kann Gufy AI – sag „API-Key“, um sie einzurichten.'};
   if(/quest/.test(s)&&!/öffne|zeig|starte|gib mir|vorschlag|soll ich/.test(s))return{ic:'⚔️',txt:'Quests',run:()=>{ensureQuests();const L=S.daily.list;const o=L.filter(q=>!q.done);return o.length?`Noch ${o.length} offen: ${o.map(q=>q.title).join(' · ')}`:'Alle Quests für heute geschafft! 🎉'}};
@@ -5527,12 +5582,12 @@ async function runAssistant(text){
       row.classList.add('gem','think');$('.ic',row).innerHTML='<i class="ai-orb"></i>';$('.st',row).textContent='';
       $('small',row).innerHTML='<span class="ai-dots"><i></i><i></i><i></i></span>';
       const pb=document.createElement('div');pb.className='ai-prog';pb.innerHTML='<div class="ai-bar"><i></i></div><span>noch ca. 5 Sek.</span>';$('div',row).appendChild(pb);
-      let est=Math.min(20000,Math.max(2500,S.gemAvg||5000)),ps=Date.now(),pf=0,praf=0;
+      let est=gemEstimate(p.q),ps=Date.now(),pf=0,praf=0;
       const ptick=()=>{const el=Date.now()-ps,f=Math.min(.96,1-Math.exp(-2.3*el/est));pf=Math.max(pf,f);$('i',pb).style.width=(pf*100).toFixed(1)+'%';
         const left=Math.ceil((est-el)/1000);$('span',pb).textContent=left>0?`noch ca. ${left} Sek.`:'gleich fertig …';praf=requestAnimationFrame(ptick)};ptick();
       let res2='',bad2=false;
       try{res2=await gemAsk(p.q,n=>{let w=$('.ai-retry',row);if(!w){w=document.createElement('div');w.className='ai-retry';$('div',row).appendChild(w)}w.innerHTML=`<b>!</b> Neuer Versuch${n>1?' ('+n+')':''} <span class="ai-dots sm"><i></i><i></i><i></i></span>`;
-        est=(Date.now()-ps)+Math.min(20000,Math.max(2500,S.gemAvg||5000))})}
+        est=(Date.now()-ps)+gemEstimate(p.q)})}
       catch(e){res2=e.message;bad2=true}
       cancelAnimationFrame(praf);$('i',pb).style.width='100%';$('span',pb).textContent='fertig';
       await new Promise(r=>setTimeout(r,250));pb.classList.add('done');setTimeout(()=>pb.remove(),300);
@@ -5556,7 +5611,7 @@ async function runAssistant(text){
         if(r2){$('small',r2).textContent=o2||'';$('.st',r2).textContent='✅'}said.push(o2);haptic('success')}
       said.push(res2);if(!bad2)haptic('success');requestAnimationFrame(()=>{box.scrollTop=row.offsetHeight>box.clientHeight?row.offsetTop-box.offsetTop-8:box.scrollHeight});
       continue}
-    let res='',bad=false;try{res=await p.run()}catch(e){res='Fehler';bad=true}
+    let res='',bad=false;try{res=await p.run()}catch(e){res=p.ic==='🧩'?e.message:'Fehler';bad=true}
     if(row){$('small',row).textContent=res;$('.st',row).textContent=bad?'⚠️':'✅'}
     requestAnimationFrame(()=>box.scrollTop=box.scrollHeight);
     said.push(res);haptic('success');
@@ -5598,6 +5653,71 @@ function closeAssistant(quick){const a=$('#asst');if(!a||!a.classList.contains('
   setTimeout(()=>asHideOld(a),quick?0:220);
   if(quick){a.classList.remove('open');return}
   $('.as-sheet',a).animate([{opacity:1},{transform:'translateY(-40px)',opacity:0}],{duration:200,easing:'ease-in'}).onfinish=()=>a.classList.remove('open')}
+
+/* =========================================================
+   KI-MINI-APPS (Beta): Gufy AI baut kleine Apps – sicher in einer Sandbox
+   Daten nur über window.gufy.load()/save(), kein Internet für die Apps
+   ========================================================= */
+S.miniList??=[];
+const miniDB=()=>new Promise((res,rej)=>{try{const q=indexedDB.open('gufyui_apps',1);q.onupgradeneeded=()=>q.result.createObjectStore('a',{keyPath:'id'});q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}catch(e){rej(e)}});
+async function miniGet(id){try{const db=await miniDB();return await new Promise(r=>{const t=db.transaction('a').objectStore('a').get(id);t.onsuccess=()=>r(t.result||null);t.onerror=()=>r(null)})}catch(e){return null}}
+async function miniPut(o){const db=await miniDB();await new Promise((r,j)=>{const t=db.transaction('a','readwrite');t.objectStore('a').put(o);t.oncomplete=r;t.onerror=()=>j(t.error)})}
+async function miniDel(id){try{const db=await miniDB();await new Promise(r=>{const t=db.transaction('a','readwrite');t.objectStore('a').delete(id);t.oncomplete=r;t.onerror=r})}catch(e){}}
+const miniData=id=>{try{return JSON.parse(localStorage.getItem('gufyui_mini_'+id)||'null')}catch(e){return null}};
+function miniDoc(m,html){
+  const csp=`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:">`;
+  const bridge=`<script>(function(){var D=${JSON.stringify(miniData(m.id)).replace(/</g,'\\u003c')};window.gufy={name:${JSON.stringify(S.name||'')},dark:${S.theme==='dark'},load:function(){return D},save:function(d){D=d;parent.postMessage({gufyMini:${JSON.stringify(m.id)},save:d},'*')}};
+    window.alert=function(t){console.log(t)};window.confirm=function(){return true};window.prompt=function(){return ''};})()<\/script>`;
+  const meta=`<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">`;
+  if(/<head[^>]*>/i.test(html))return html.replace(/<head[^>]*>/i,x=>x+csp+meta+bridge);
+  return `<!doctype html><html><head><meta charset="utf-8">${csp}${meta}${bridge}</head><body>${html}</body></html>`;
+}
+addEventListener('message',e=>{const d=e.data;if(!d||!d.gufyMini)return;const f=$('#miniF');if(!f||e.source!==f.contentWindow)return;
+  try{const j=JSON.stringify(d.save);if(j.length>300000)return;localStorage.setItem('gufyui_mini_'+d.gufyMini,j)}catch(err){glog('KI-App','Speichern: '+err.message)}});
+function miniRegister(m){
+  APPS[m.id]={name:m.name,icon:m.icon||'🧩',bg:`linear-gradient(135deg,${m.color||'#7c5cff'},#1e1b4b)`,cat:'KI-Apps',full:true,mini:true,
+    render(body,ctx){body.style.padding='0';body.style.position='relative';body.style.overflow='hidden';
+      body.innerHTML=`<div class="web-load"><div class="sd-spin" style="border-color:rgba(127,127,127,.25);border-top-color:var(--accent)"></div></div>`;
+      miniGet(m.id).then(a=>{if(!body.isConnected)return;if(!a){body.innerHTML='<div class="emptyinv"><div>🧩</div><b>App nicht gefunden</b></div>';return}
+        body.innerHTML='';const f=document.createElement('iframe');f.id='miniF';f.setAttribute('sandbox','allow-scripts allow-forms');
+        f.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0;background:#0f0f14';f.srcdoc=miniDoc(m,a.html);body.appendChild(f)})}};
+}
+S.miniList.forEach(miniRegister);
+const MINI_SYS=`Du baust für GufyUI (ein Handy-System im Browser) eine kleine, voll funktionsfähige Web-App. Antworte GENAU in diesem Format:
+NAME: <App-Name, höchstens 14 Zeichen>
+ICON: <genau 1 Emoji>
+FARBE: <Hex-Farbe wie #7c5cff>
+\`\`\`html
+<!doctype html> … komplette App …
+\`\`\`
+Regeln: EINE HTML-Datei, CSS und JavaScript inline. KEINE externen Dateien, Links, Schriften, CDNs, Bilder aus dem Netz und KEINE Netzwerkanfragen (fetch/XHR) – das ist gesperrt. Kein alert/confirm/prompt – baue eigene schöne Dialoge. Handy-Hochformat, modernes, sauberes Design mit abgerundeten Karten, großen Touch-Buttons, dunklem Hintergrund (#0f0f14) und der Akzentfarbe, Schrift system-ui, Abstand zu den Rändern (env(safe-area-inset-*)). Texte auf Deutsch, gern mit Emojis. Daten dauerhaft speichern geht NUR so: window.gufy.load() (gibt das gespeicherte Objekt oder null zurück) und window.gufy.save(objekt) – localStorage, Cookies und IndexedDB funktionieren NICHT. window.gufy.name ist der Name des Nutzers. Schreibe den Code vollständig ohne Platzhalter, ohne Erklärtext außerhalb des Formats.`;
+function miniParse(t){
+  const name=((t.match(/NAME:\s*(.+)/i)||[])[1]||'KI-App').replace(/[*`"]/g,'').trim().slice(0,16);
+  const icon=((t.match(/ICON:\s*(\S+)/i)||[])[1]||'🧩').slice(0,4);
+  const color=((t.match(/FARBE:\s*(#[0-9a-f]{3,8})/i)||[])[1]||'#7c5cff');
+  let html=(t.match(/```html\s*([\s\S]*?)```/i)||[])[1]||(t.match(/<!doctype[\s\S]*<\/html>/i)||[])[0]||'';
+  if(!/<(body|div|main|script)/i.test(html))throw new Error('Gufy AI hat keine fertige App geliefert – versuch es nochmal.');
+  return{name,icon,color,html};
+}
+async function miniCreate(desc,editId,onRetry){
+  if(!gemGet())throw new Error('Du brauchst zuerst Gufy AI – sag „API-Key“.');
+  let q=`Baue diese App: ${desc}`;
+  if(editId){const old=await miniGet(editId),m=S.miniList.find(x=>x.id===editId);if(!old||!m)throw new Error('App nicht gefunden');
+    q=`Hier ist die bestehende App „${m.name}“ (${m.icon}). Ändere sie so: ${desc}\nBehalte alles andere bei und gib die KOMPLETTE neue Datei aus (gleiches Format, gleicher Name und Icon, außer der Nutzer will es anders). Gespeicherte Daten (gufy.load) müssen weiter funktionieren.\n\`\`\`html\n${old.html}\n\`\`\``}
+  const t0=Date.now();
+  const t=await gemAsk(q,onRetry,{sys:MINI_SYS,temp:.6,raw:true,maxTok:24000,timeout:180000});
+  const r=miniParse(t);
+  const id=editId||('mini_'+Date.now().toString(36));
+  let m=S.miniList.find(x=>x.id===id);
+  if(!m){m={id};S.miniList.push(m)}
+  Object.assign(m,{name:r.name,icon:r.icon,color:r.color,desc:editId?(m.desc||desc):desc,t:Date.now()});
+  await miniPut({id,html:r.html,prompt:desc,t:Date.now()});
+  miniRegister(m);if(!S.installed.includes(id))S.installed.push(id);
+  const ms=Date.now()-t0;S.miniAvg=Math.round(S.miniAvg?S.miniAvg*.5+ms*.5:ms);save();renderHome();
+  glog('KI-App',`${editId?'geändert':'gebaut'}: ${r.name} (${Math.round(r.html.length/1024)} KB, ${Math.round(ms/1000)} s)`);
+  return m;
+}
+async function miniRemove(id){S.miniList=S.miniList.filter(x=>x.id!==id);S.installed=S.installed.filter(x=>x!==id);delete APPS[id];await miniDel(id);try{localStorage.removeItem('gufyui_mini_'+id)}catch(e){}save();renderHome()}
 
 /* =========================================================
    START
