@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.6","notes":["🧪 Beta: KI-Apps mit Internet – KI-Apps dürfen ins Internet, Standort & Kamera anfragen und deine Coins, Akku, Wetter & Quests lesen","🧪 Beta: KI-Mini-Apps – Gufy AI baut dir eigene Apps (Einstellungen › Beta)","Neues KI-Studio: App beschreiben, bauen lassen, ändern oder löschen","Oder einfach zum Assistenten: „Bau mir eine App, die meine Liegestütze zählt“","Bessere Zeit-Schätzung bei Gufy AI, lange Listen & Rezepte gehen jetzt komplett"]};
+window.GUFY={"v":"11.7","notes":["Neu im Gufy Store: 🗺️ Gufy Maps – Orte suchen, Favoriten wie H&M immer auf der Karte, Route mit Google Maps","Neu im Gufy Store: 🎵 Gufy Music – Songs suchen, Playlists, ganze Songs über YouTube abspielen, eigene Musikdateien offline hören"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1317,6 +1317,44 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
 .tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 .as-qadd{margin-top:8px;padding:7px 12px;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:linear-gradient(135deg,#8b5cf6,#3b82f6)}
 .ms-row .btn{padding:7px 12px;font-size:13px}.ms-row .sl{min-width:0}.ms-row .sl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ms-b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--hover);font-size:15px;margin-left:6px}
+.mp-wrap{position:absolute;inset:0;overflow:hidden}
+.mp-map{position:absolute;inset:0}
+.mp-top{position:absolute;left:12px;right:12px;top:10px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.mp-search{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;background:var(--panel-solid);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.mp-search input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:var(--text)}
+.mp-x{width:28px;height:28px;border-radius:50%;background:var(--hover);font-size:13px}
+.mp-res{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--panel-solid);box-shadow:0 6px 20px rgba(0,0,0,.25);max-height:46vh;overflow-y:auto}
+.mp-res:empty{display:none}
+.mp-r{display:block;text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);width:100%}.mp-r b{display:block;font-size:15px}.mp-r small{color:var(--muted);font-size:12.5px}
+.mp-rfav{color:#ff9f0a;font-weight:700}
+.mp-favs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.mp-favs::-webkit-scrollbar{display:none}
+.mp-chip{flex:none;padding:7px 12px;border-radius:999px;background:var(--panel-solid);border:1px solid var(--border);font-weight:650;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.mp-chip small{opacity:.6}.mp-chip.off{opacity:.45;text-decoration:line-through}
+.mp-hint{font-size:12px;padding:6px 10px;border-radius:12px;background:var(--panel-solid);color:var(--muted)}
+.mp-pin{display:flex;flex-direction:column;align-items:center;transform:translateY(-4px)}.mp-pin span{font-size:24px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.mp-pin b{font-size:10px;padding:1px 5px;border-radius:6px;background:rgba(0,0,0,.7);color:#fff;white-space:nowrap}
+.mp-pin.sel span{font-size:32px}
+.mp-me{position:absolute;right:14px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:500;width:46px;height:46px;border-radius:50%;background:var(--panel-solid);border:1px solid var(--border);font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.mp-card{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:600;padding:14px;border-radius:20px;background:var(--panel-solid);border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.35);transform:translateY(140%);transition:transform .3s cubic-bezier(.2,.9,.22,1)}
+.mp-card.on{transform:none}.mp-ch{display:flex;gap:10px;justify-content:space-between}.mp-ch b{display:block;font-size:17px}.mp-ch small{color:var(--muted)}
+.mp-cb{display:flex;gap:8px;margin-top:12px}.mp-cb .btn{flex:1;text-align:center;text-decoration:none}
+.mu{padding:12px 14px 200px}.mu .tabs{margin-bottom:12px}
+.mu-search{margin-bottom:10px}.mu-list{display:flex;flex-direction:column;gap:8px}
+.mu-song{display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;background:var(--panel-solid);border:1px solid var(--border)}
+.mu-song.on{border-color:#ff2d55;box-shadow:inset 0 0 0 1px #ff2d55}
+.mu-song img,.mu-ph img{width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none;background:var(--hover)}
+.mu-t{flex:1;min-width:0}.mu-t b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mu-t small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mu-b{flex:none;width:38px;height:38px;border-radius:50%;background:var(--hover);font-size:15px}
+.mu-pl{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:var(--panel-solid);border:1px solid var(--border);text-align:left;width:100%}
+.mu-pl span{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#ff2d55,#af52de);overflow:hidden}.mu-pl span img{width:100%;height:100%;object-fit:cover}
+.mu-pl b{display:block}.mu-pl small{color:var(--muted)}
+.mu-plh{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin-bottom:12px}.mu-plh b{font-size:20px}.mu-plh small{color:var(--muted)}
+.mu-back{color:var(--accent);font-weight:650;margin-bottom:6px}
+.mu-pick{display:block;width:100%;padding:12px;border-radius:12px;background:var(--hover);margin-bottom:6px;font-weight:650}
+.mu-player{position:fixed;left:10px;right:10px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:900;padding:10px;border-radius:20px;background:rgba(28,28,34,.96);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1)}
+.mu-ph{display:flex;align-items:center;gap:10px}.mu-player .mu-t small{color:rgba(255,255,255,.6)}.mu-player .mu-b{background:rgba(255,255,255,.12);color:#fff}
+.mu-player.hide{display:none}.mu-yt{margin-top:8px;border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#000}.mu-yt.hide{display:none}.mu-yt iframe{width:100%;height:100%;border:0}
+.mu-ytl{display:block;text-align:center;margin-top:8px;font-size:13px;color:#ff6b8a}
 </style>
 </head>
 <body class="dark">
@@ -4861,6 +4899,147 @@ render(body,ctx){
   ctx.cleanup.push(()=>{clearInterval(iv);if(watch!==null)navigator.geolocation.clearWatch(watch)});
 }}
 ,
+/* ---------- Gufy Maps: Orte suchen, Favoriten auf der Karte, Route in Google Maps ---------- */
+gmaps:{name:'Gufy Maps',cat:'Werkzeuge',full:true,store:true,icon:'🗺️',bg:'linear-gradient(135deg,#34c759,#0a84ff)',
+render(body,ctx){
+  S.maps??={favs:[]};const M=S.maps;
+  body.style.padding='0';body.style.position='relative';body.style.overflow='hidden';body.style.height='100%';
+  let map=null,me=null,lay=null,selM=null,sel=null,qT=0,favHits={},center=null;
+  const FI=['📍','🛍️','🍔','☕','🏪','⛽','💊','🏦','🍕','🛒'];
+  const gm=(a,b)=>`https://www.google.com/maps/dir/?api=1&destination=${a},${b}`;
+  const reEsc=t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/"/g,'\\"');
+  const fmtD=d=>d<1000?Math.round(d)+' m':(d/1000).toFixed(1).replace('.',',')+' km';
+  body.innerHTML=`<div class="mp-wrap"><div id="gmMap" class="mp-map"><div class="mapload">Karte wird geladen …</div></div>
+    <div class="mp-top"><div class="mp-search"><span>🔎</span><input id="gmQ" placeholder="Suchen, z. B. H&M, Bäcker, Strand" autocomplete="off" enterkeyhint="search"><button id="gmX" class="mp-x">✕</button></div>
+      <div class="mp-res" id="gmRes"></div><div class="mp-favs" id="gmFavs"></div></div>
+    <button class="mp-me" id="gmMe">◎</button><div class="mp-card" id="gmCard"></div></div>`;
+  const Q=$('#gmQ',body),RES=$('#gmRes',body);
+  function favChips(){$('#gmFavs',body).innerHTML=M.favs.map((f,i)=>`<button class="mp-chip ${f.off?'off':''}" data-fi="${i}">${f.ic} ${esc(f.q)}${favHits[f.q]!=null?` <small>${favHits[f.q]}</small>`:''}</button>`).join('')+(M.favs.length?'':'<span class="mp-hint">⭐ Suche etwas und speichere es als Favorit – dann siehst du es immer auf der Karte</span>');
+    $$('[data-fi]',body).forEach(b=>{b.onclick=()=>{const f=M.favs[+b.dataset.fi];f.off=!f.off;save();haptic('select');favChips();loadFavs()};
+      let lt=0;b.addEventListener('pointerdown',()=>{lt=setTimeout(()=>{const f=M.favs[+b.dataset.fi];if(f){M.favs.splice(+b.dataset.fi,1);save();haptic('heavy');notify('⭐','Favorit entfernt',f.q,'#8e8e93');favChips();loadFavs()}},700)});['pointerup','pointerleave'].forEach(e=>b.addEventListener(e,()=>clearTimeout(lt)))})}
+  function pin(ic,label,cls=''){return L.divIcon({className:'',html:`<div class="mp-pin ${cls}"><span>${ic}</span>${label?`<b>${esc(label.slice(0,18))}</b>`:''}</div>`,iconSize:[36,36],iconAnchor:[18,34]})}
+  function card(p){sel=p;const c=$('#gmCard',body);if(!p){c.classList.remove('on');return}
+    const d=me?distM(me,p):null,isFav=M.favs.some(f=>f.q.toLowerCase()===(p.fq||p.name).toLowerCase());
+    c.innerHTML=`<div class="mp-ch"><div><b>${esc(p.name)}</b><small>${esc(p.addr||'')}${d!=null?' · '+fmtD(d):''}</small></div><button class="mp-x" id="gmCX">✕</button></div>
+      <div class="mp-cb"><a class="btn primary" href="${gm(p.lat,p.lon)}" target="_blank" rel="noopener">🧭 Route</a><button class="btn" id="gmFav">${isFav?'⭐ Ist Favorit':'☆ Als Favorit'}</button></div>`;
+    c.classList.add('on');$('#gmCX',body).onclick=()=>{card(null);if(selM){selM.remove();selM=null}};
+    $('#gmFav',body).onclick=()=>{if(isFav)return;const q=(p.fq||p.name).trim();M.favs.push({q,ic:FI[M.favs.length%FI.length]});save();haptic('success');notify('⭐','Favorit gespeichert',`„${q}“ – alle Filialen in der Nähe siehst du jetzt auf der Karte`,'#ffcc00');favChips();loadFavs();card(p)}}
+  async function search(q){
+    const c=center||me||(S.loc.home)||{lat:54.9,lon:8.33};
+    RES.innerHTML='<div class="mp-r muted">Suche …</div>';
+    try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lon}&limit=8&lang=de`).then(x=>x.json());
+      const L2=(r.features||[]).map(f=>{const pr=f.properties,[lon,lat]=f.geometry.coordinates;return{name:pr.name||[pr.street,pr.housenumber].filter(Boolean).join(' ')||q,lat,lon,addr:[pr.street&&(pr.street+(pr.housenumber?' '+pr.housenumber:'')),pr.city||pr.town||pr.village].filter(Boolean).join(', '),fq:pr.name}});
+      RES.innerHTML=`<button class="mp-r mp-rfav" data-sf="1">⭐ Alle „${esc(q)}“ in der Nähe als Favorit zeigen</button>`+(L2.length?L2.map((x,i)=>`<button class="mp-r" data-ri="${i}"><b>${esc(x.name)}</b><small>${esc(x.addr)}${me?' · '+fmtD(distM(me,x)):''}</small></button>`).join(''):'<div class="mp-r muted">Nichts gefunden</div>');
+      $$('[data-ri]',RES).forEach(b=>b.onclick=()=>{const x=L2[+b.dataset.ri];RES.innerHTML='';Q.blur();if(selM)selM.remove();selM=L.marker([x.lat,x.lon],{icon:pin('📍','', 'sel')}).addTo(map);map.setView([x.lat,x.lon],16);card(x)});
+      $('[data-sf]',RES).onclick=()=>{if(!M.favs.some(f=>f.q.toLowerCase()===q.toLowerCase())){M.favs.push({q,ic:FI[M.favs.length%FI.length]});save();haptic('success')}RES.innerHTML='';Q.value='';Q.blur();favChips();loadFavs(true)};
+    }catch(e){RES.innerHTML='<div class="mp-r muted">⚠️ Suche gerade nicht erreichbar</div>'}}
+  async function loadFavs(fit){
+    if(!map)return;lay.clearLayers();const c=center||me;if(!c)return;const on=M.favs.filter(f=>!f.off);if(!on.length){favChips();return}
+    const all=[];
+    await Promise.all(on.map(async f=>{const re=reEsc(f.q);
+      const ql=`[out:json][timeout:20];(nwr["name"~"^${re}$",i](around:25000,${c.lat},${c.lon});nwr["brand"~"^${re}$",i](around:25000,${c.lat},${c.lon}););out center 80;`;
+      try{const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(ql),headers:{'Content-Type':'application/x-www-form-urlencoded'}}).then(x=>x.json());
+        const seen=new Set();(r.elements||[]).forEach(e=>{const lat=e.lat||e.center&&e.center.lat,lon=e.lon||e.center&&e.center.lon;if(!lat)return;const k=lat.toFixed(4)+lon.toFixed(4);if(seen.has(k))return;seen.add(k);
+          const t=e.tags||{},p={name:t.name||f.q,lat,lon,fq:f.q,addr:[t['addr:street']&&(t['addr:street']+(t['addr:housenumber']?' '+t['addr:housenumber']:'')),t['addr:city']].filter(Boolean).join(', ')};
+          all.push(p);L.marker([lat,lon],{icon:pin(f.ic,f.q,'fav')}).on('click',()=>card(p)).addTo(lay)});favHits[f.q]=seen.size}
+      catch(e){favHits[f.q]='?';glog('Maps','Favorit '+f.q+': '+e.message)}}));
+    favChips();if(fit&&all.length){map.fitBounds(L.latLngBounds(all.map(p=>[p.lat,p.lon]).concat(me?[[me.lat,me.lon]]:[])),{padding:[60,60],maxZoom:15})}
+  }
+  async function init(){
+    try{await loadLeaflet()}catch(e){$('#gmMap',body).innerHTML='<div class="mapload">Karte braucht Internet</div>';return}
+    const el=$('#gmMap',body);if(!el)return;el.innerHTML='';
+    const st=geoPos||S.loc.home||{lat:54.9,lon:8.33};
+    map=L.map(el,{zoomControl:false,attributionControl:true}).setView([st.lat,st.lon],13);map.attributionControl.setPrefix('');
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(S.theme==='dark'?'dark_all':'rvoyager')+'/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+    lay=L.layerGroup().addTo(map);center={lat:st.lat,lon:st.lon};
+    map.on('moveend',()=>{const c=map.getCenter();const n={lat:c.lat,lon:c.lng};if(distM(n,center)>15000){center=n;loadFavs()}});
+    setTimeout(()=>map&&map.invalidateSize(),350);
+    const setMe=p=>{me=p;if(!map)return;if(!me.m)me.m=L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:'<div class="mdot"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);else me.m.setLatLng([p.lat,p.lon])};
+    if(geoPos)setMe({lat:geoPos.lat,lon:geoPos.lon});
+    if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{const first=!me;setMe({lat:p.coords.latitude,lon:p.coords.longitude});if(first){map.setView([me.lat,me.lon],14);center={lat:me.lat,lon:me.lon};loadFavs()}},()=>{},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+    loadFavs();
+  }
+  Q.oninput=()=>{clearTimeout(qT);const v=Q.value.trim();if(v.length<2){RES.innerHTML='';return}qT=setTimeout(()=>search(v),400)};
+  Q.onkeydown=e=>{if(e.key==='Enter'){clearTimeout(qT);const v=Q.value.trim();if(v)search(v)}};
+  $('#gmX',body).onclick=()=>{Q.value='';RES.innerHTML='';Q.blur()};
+  $('#gmMe',body).onclick=()=>{if(me&&map)map.setView([me.lat,me.lon],15);haptic('select')};
+  favChips();init();
+  ctx.cleanup.push(()=>{if(map){map.remove();map=null}});
+}},
+/* ---------- Gufy Music: Songs suchen, Playlists, ganzer Song über YouTube, eigene Dateien offline ---------- */
+gmusic:{name:'Gufy Music',cat:'Unterhaltung',full:true,store:true,icon:'🎵',bg:'linear-gradient(135deg,#ff2d55,#af52de)',
+render(body,ctx){
+  S.music??={pl:[{id:'fav',name:'❤️ Lieblingssongs',songs:[]}]};const MU=S.music;
+  let tab='search',res=[],q='',plOpen=null,files=[];
+  const P=window.__GMP??=(window.__GMP={queue:[],i:-1,yt:null,audio:null,cur:null,mode:''});
+  const DB=()=>new Promise((r,j)=>{const o=indexedDB.open('gufyui_music',1);o.onupgradeneeded=()=>o.result.createObjectStore('f',{keyPath:'id'});o.onsuccess=()=>r(o.result);o.onerror=()=>j(o.error)});
+  const dbAll=async()=>{try{const db=await DB();return await new Promise(r=>{const t=db.transaction('f').objectStore('f').getAll();t.onsuccess=()=>r(t.result||[]);t.onerror=()=>r([])})}catch(e){return[]}};
+  const dbPut=async o=>{const db=await DB();await new Promise((r,j)=>{const t=db.transaction('f','readwrite');t.objectStore('f').put(o);t.oncomplete=r;t.onerror=()=>j(t.error)})};
+  const dbDel=async id=>{const db=await DB();await new Promise(r=>{const t=db.transaction('f','readwrite');t.objectStore('f').delete(id);t.oncomplete=r;t.onerror=r})};
+  const key=x=>x.local?'f:'+x.local:(x.a+'|'+x.t).toLowerCase();
+  const songHTML=(x,i,ctxName)=>`<div class="mu-song ${P.cur&&key(P.cur)===key(x)?'on':''}"><img src="${x.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(x.t)}</b><small>${esc(x.a||'')}${x.local?' · 📥 offline':''}</small></div>
+      <button class="mu-b" data-play="${ctxName}:${i}">▶</button><button class="mu-b" data-add="${ctxName}:${i}">${ctxName==='pl'?'🗑️':'＋'}</button></div>`;
+  function list(ctxName){return ctxName==='res'?res:ctxName==='files'?files:ctxName==='pl'?(MU.pl.find(p=>p.id===plOpen)||{songs:[]}).songs:[]}
+  function draw(){
+    let h=`<div class="mu"><div class="tabs"><button data-mt="search" class="${tab==='search'?'on':''}">🔎 Suchen</button><button data-mt="pl" class="${tab==='pl'?'on':''}">📃 Playlists</button><button data-mt="files" class="${tab==='files'?'on':''}">📥 Offline</button></div>`;
+    if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="Song oder Künstler suchen" value="${esc(q)}" enterkeyhint="search"></div>
+      <div class="mu-list">${res.length?res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>🎵</div><b>Such einen Song</b><br><small>Bekannte Lieder aus den Charts &amp; Co.</small></div>`}</div>`;
+    else if(tab==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);
+      h+=pl?`<button class="mu-back" id="muBack">‹ Playlists</button><div class="mu-plh"><b>${esc(pl.name)}</b><small>${pl.songs.length} Songs</small><button class="btn primary" id="muPlay" ${pl.songs.length?'':'disabled'}>▶ Abspielen</button></div><div class="mu-list">${pl.songs.map((x,i)=>songHTML(x,i,'pl')).join('')||'<p class="muted" style="text-align:center">Noch leer – füg Songs mit ＋ hinzu.</p>'}</div>`
+        :`<div class="mu-list">${MU.pl.map(p=>`<button class="mu-pl" data-pl="${p.id}"><span>${p.songs[0]&&p.songs[0].img?`<img src="${p.songs[0].img}">`:'🎶'}</span><div><b>${esc(p.name)}</b><small>${p.songs.length} Songs</small></div></button>`).join('')}</div><button class="btn" id="muNewPl" style="width:100%;margin-top:10px">＋ Neue Playlist</button>`}
+    else h+=`<div class="mu-plh"><b>📥 Offline-Musik</b><small>Eigene Musikdateien – laufen auch ohne Internet</small><label class="btn primary" style="cursor:pointer">＋ Dateien hinzufügen<input type="file" id="muFile" accept="audio/*" multiple hidden></label></div>
+      <div class="mu-list">${files.map((x,i)=>songHTML(x,i,'files')).join('')||'<p class="muted" style="text-align:center">Noch keine Dateien.</p>'}</div>`;
+    h+=`</div>`;if(!$('#muC',body))body.innerHTML='<div id="muC"></div><div class="mu-player hide" id="muPl"><div id="muPH"></div><div id="muYT" class="mu-yt hide"></div><div id="muPL"></div></div>';
+    $('#muC',body).innerHTML=h;drawPlayer();bind();
+  }
+  function drawPlayer(){const c=P.cur,pl=$('#muPl',body);if(!pl)return;pl.classList.toggle('hide',!c);if(!c)return;
+    $('#muPH',body).innerHTML=`<div class="mu-ph"><img src="${c.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(c.t)}</b><small>${esc(c.a||'')} · ${P.mode==='yt'?'YouTube':P.mode==='prev'?'Vorschau 30 Sek.':'Offline'}</small></div>
+      <button class="mu-b" id="muPrev">⏮</button><button class="mu-b" id="muNext">⏭</button></div>`;
+    $('#muYT',body).classList.toggle('hide',P.mode!=='yt');
+    $('#muPL',body).innerHTML=P.mode==='prev'?`<a class="mu-ytl" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.a+' '+c.t)}" target="_blank" rel="noopener">Ganzen Song auf YouTube öffnen ↗</a>`:'';
+    $('#muPrev',body).onclick=()=>next(-1);$('#muNext',body).onclick=()=>next(1)}
+  async function ytId(x){if(x.yt)return x.yt;const qq=encodeURIComponent(x.a+' '+x.t);
+    for(const b of['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee']){try{const r=await fetch(`${b}/search?q=${qq}&filter=music_songs`).then(z=>z.json());const u=r.items&&r.items.find(i=>i.url&&/watch/.test(i.url));if(u){x.yt=u.url.split('v=')[1].split('&')[0];return x.yt}}catch(e){}}
+    for(const b of['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be']){try{const r=await fetch(`${b}/api/v1/search?q=${qq}&type=video`).then(z=>z.json());if(r[0]&&r[0].videoId){x.yt=r[0].videoId;return x.yt}}catch(e){}}
+    return null}
+  function stopAll(){try{P.audio&&P.audio.pause()}catch(e){}try{P.yt&&P.yt.destroy&&P.yt.destroy()}catch(e){}P.yt=null}
+  function loadYTApi(){return new Promise(r=>{if(window.YT&&YT.Player)return r();const s2=document.createElement('script');s2.src='https://www.youtube.com/iframe_api';document.head.append(s2);window.onYouTubeIframeAPIReady=()=>r();setTimeout(r,6000)})}
+  async function play(queue,i){
+    stopAll();P.queue=queue;P.i=i;const x=queue[i];if(!x)return;P.cur=x;haptic('select');
+    if(x.local){const f=(await dbAll()).find(z=>z.id===x.local);if(!f)return;P.mode='file';P.audio=P.audio||new Audio();P.audio.src=URL.createObjectURL(f.blob);P.audio.onended=()=>next(1);P.audio.play().catch(()=>{});draw();return}
+    P.mode='yt';draw();const id=await ytId(x);save();
+    if(!id||!body.isConnected){P.mode='prev';draw();if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
+    await loadYTApi();const el=$('#muYT',body);if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
+    el.innerHTML='<div id="muYTp"></div>';
+    P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0},events:{onStateChange:e=>{if(e.data===0)next(1)}}});
+  }
+  function next(d){const n=P.i+d;if(n>=0&&n<P.queue.length)play(P.queue,n)}
+  function bind(){
+    $$('[data-mt]',body).forEach(b=>b.onclick=()=>{tab=b.dataset.mt;plOpen=null;haptic('select');draw()});
+    const qi=$('#muQ',body);if(qi)qi.onkeydown=async e=>{if(e.key!=='Enter')return;q=qi.value.trim();if(!q)return;qi.blur();
+      try{const r=await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=DE&limit=30`).then(z=>z.json());
+        res=(r.results||[]).map(z=>({t:z.trackName,a:z.artistName,img:(z.artworkUrl100||'').replace('100x100','200x200'),prev:z.previewUrl}))}catch(err){res=[];notify('🎵','Gufy Music','Suche gerade nicht erreichbar','#ff2d55')}
+      draw()};
+    $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
+    $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
+      if(c==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);pl.songs.splice(+i,1);save();draw();return}
+      const opts=MU.pl.map(p=>`<button class="mu-pick" data-pk="${p.id}">${esc(p.name)}</button>`).join('');
+      const sh=h(`<div class="gem-dlg"><div class="gem-card"><h2 style="font-size:18px">Zu Playlist hinzufügen</h2><p class="muted" style="margin:0 0 12px">${esc(x.t)}</p>${opts}<button class="btn" style="width:100%;margin-top:8px" data-pk="">Abbrechen</button></div></div>`);
+      document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('open'));
+      $$('[data-pk]',sh).forEach(k=>k.onclick=()=>{const pl=MU.pl.find(p=>p.id===k.dataset.pk);if(pl&&!pl.songs.some(z=>key(z)===key(x))){pl.songs.push({...x});save();haptic('success');notify('🎵','Hinzugefügt',`${x.t} → ${pl.name}`,'#ff2d55')}sh.remove()})});
+    $$('[data-pl]',body).forEach(b=>b.onclick=()=>{plOpen=b.dataset.pl;draw()});
+    const bk=$('#muBack',body);if(bk)bk.onclick=()=>{plOpen=null;draw()};
+    const pp=$('#muPlay',body);if(pp)pp.onclick=()=>{const pl=MU.pl.find(p=>p.id===plOpen);play(pl.songs,0)};
+    const np=$('#muNewPl',body);if(np)np.onclick=()=>{const sh=h(`<div class="gem-dlg"><div class="gem-card"><h2 style="font-size:18px">Neue Playlist</h2><input class="input" id="muPN" placeholder="Name" style="margin:10px 0"><div class="gem-btns"><button class="btn" id="muPC">Abbrechen</button><button class="btn primary" id="muPO">Erstellen</button></div></div></div>`);
+      document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('open'));$('#muPN',sh).focus();$('#muPC',sh).onclick=()=>sh.remove();
+      $('#muPO',sh).onclick=()=>{const n=$('#muPN',sh).value.trim();if(!n)return;MU.pl.push({id:'p'+Date.now().toString(36),name:n,songs:[]});save();sh.remove();draw()}};
+    const fi=$('#muFile',body);if(fi)fi.onchange=async()=>{for(const f of fi.files){const id='m'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);await dbPut({id,name:f.name.replace(/\.[^.]+$/,''),blob:f})}await loadFiles();draw()};
+  }
+  async function loadFiles(){files=(await dbAll()).map(f=>({t:f.name,a:'Eigene Datei',local:f.id}))}
+  loadFiles().then(()=>{if(body.isConnected&&tab==='files')draw()});
+  draw();
+  ctx.cleanup.push(()=>{stopAll()});
+}},
 /* ---------- KI-Studio: Mini-Apps bauen (Beta) ---------- */
 aistudio:{name:'KI-Studio',cat:'KI-Apps',full:false,icon:'🧩',bg:'linear-gradient(135deg,#8b5cf6,#3b82f6 60%,#ec4899)',
 render(body,ctx){
