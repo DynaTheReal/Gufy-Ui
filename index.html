@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.8","notes":["Gufy Music: Suche repariert (mit Ersatz-Suche, falls eine nicht geht)","Gufy Maps: Satellitenkarte ist jetzt Standard – mit 🗺️/🛰️ umschalten"]};
+window.GUFY={"v":"11.9","notes":["Gufy Maps: Suche findet jetzt Geschäfte wie H&M – auch weiter weg (bis 250 km), mit mehreren Ersatz-Servern","Gufy Music: neuer, cleaner Player mit Cover, Play/Pause und Fortschrittsbalken – nur noch ein kleines Video in der Ecke","Gufy Music: Songs starten schneller (werden schon beim Suchen vorbereitet)"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1353,9 +1353,15 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
 .mu-pick{display:block;width:100%;padding:12px;border-radius:12px;background:var(--hover);margin-bottom:6px;font-weight:650}
 .mu-player{position:fixed;left:10px;right:10px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:900;padding:10px;border-radius:20px;background:rgba(28,28,34,.96);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1)}
 .mu-ph{display:flex;align-items:center;gap:10px}.mu-player .mu-t small{color:rgba(255,255,255,.6)}.mu-player .mu-b{background:rgba(255,255,255,.12);color:#fff}
-.mu-player.hide{display:none}.mu-yt{margin-top:8px;border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#000}.mu-yt.hide{display:none}.mu-yt iframe{width:100%;height:100%;border:0}
+.mu-player.hide{display:none}.mu-yt{position:absolute;right:12px;top:-58px;width:96px;height:54px;border-radius:10px;overflow:hidden;background:#000;box-shadow:0 4px 14px rgba(0,0,0,.5);opacity:.95}.mu-yt.hide{display:none}.mu-yt iframe{width:100%;height:100%;border:0}
 .mu-ytl{display:block;text-align:center;margin-top:8px;font-size:13px;color:#ff6b8a}
 .mp-lay{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+.mu-player{padding:12px 12px 10px!important}
+.mu-ph img{width:52px;height:52px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.mu-pp{width:46px!important;height:46px!important;font-size:18px!important;background:#fff!important;color:#000!important;display:grid;place-items:center}
+.mu-spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(0,0,0,.2);border-top-color:#000;animation:pwSpin .7s linear infinite;display:block}
+.mu-prog{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums}
+.mu-bar{flex:1;height:5px;border-radius:5px;background:rgba(255,255,255,.18);overflow:hidden;cursor:pointer}.mu-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2d55,#af52de);border-radius:5px}
 </style>
 </head>
 <body class="dark">
@@ -4925,26 +4931,47 @@ render(body,ctx){
       <div class="mp-cb"><a class="btn primary" href="${gm(p.lat,p.lon)}" target="_blank" rel="noopener">🧭 Route</a><button class="btn" id="gmFav">${isFav?'⭐ Ist Favorit':'☆ Als Favorit'}</button></div>`;
     c.classList.add('on');$('#gmCX',body).onclick=()=>{card(null);if(selM){selM.remove();selM=null}};
     $('#gmFav',body).onclick=()=>{if(isFav)return;const q=(p.fq||p.name).trim();M.favs.push({q,ic:FI[M.favs.length%FI.length]});save();haptic('success');notify('⭐','Favorit gespeichert',`„${q}“ – alle Filialen in der Nähe siehst du jetzt auf der Karte`,'#ffcc00');favChips();loadFavs();card(p)}}
+  const OVP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://lz4.overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+  async function ovp(ql){let last;
+    for(const u of OVP){try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);
+      const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(ql),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ac.signal});clearTimeout(to);
+      if(!r.ok){last='HTTP '+r.status;continue}return await r.json()}catch(e){last=e.message}}
+    throw new Error(last||'Overpass nicht erreichbar')}
+  const toP=(e,fq)=>{const lat=e.lat||e.center&&e.center.lat,lon=e.lon||e.center&&e.center.lon;if(!lat)return null;const t=e.tags||{};
+    return{name:t.name||t.brand||fq,lat,lon,fq,addr:[t['addr:street']&&(t['addr:street']+(t['addr:housenumber']?' '+t['addr:housenumber']:'')),t['addr:city']||t['addr:place']].filter(Boolean).join(', ')}};
+  async function findPOI(q,c,exact){ // Namen/Marken in wachsendem Umkreis suchen
+    const re=reEsc(q),m=exact?`^${re}$`:re;
+    for(const rad of[30000,90000,250000]){
+      const ql=`[out:json][timeout:25];(nwr["name"~"${m}",i](around:${rad},${c.lat},${c.lon});nwr["brand"~"${m}",i](around:${rad},${c.lat},${c.lon}););out center 120;`;
+      const r=await ovp(ql);const seen=new Set(),L2=[];
+      (r.elements||[]).forEach(e=>{const p=toP(e,q);if(!p)return;const k=p.lat.toFixed(4)+','+p.lon.toFixed(4);if(seen.has(k))return;seen.add(k);p.d=distM(c,p);L2.push(p)});
+      glog('Maps',`„${q}“ im Umkreis ${rad/1000} km: ${L2.length}`);
+      if(L2.length)return L2.sort((a,b)=>a.d-b.d);
+    }
+    return[];
+  }
   async function search(q){
-    const c=center||me||(S.loc.home)||{lat:54.9,lon:8.33};
-    RES.innerHTML='<div class="mp-r muted">Suche …</div>';
-    try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lon}&limit=8&lang=de`).then(x=>x.json());
-      const L2=(r.features||[]).map(f=>{const pr=f.properties,[lon,lat]=f.geometry.coordinates;return{name:pr.name||[pr.street,pr.housenumber].filter(Boolean).join(' ')||q,lat,lon,addr:[pr.street&&(pr.street+(pr.housenumber?' '+pr.housenumber:'')),pr.city||pr.town||pr.village].filter(Boolean).join(', '),fq:pr.name}});
-      RES.innerHTML=`<button class="mp-r mp-rfav" data-sf="1">⭐ Alle „${esc(q)}“ in der Nähe als Favorit zeigen</button>`+(L2.length?L2.map((x,i)=>`<button class="mp-r" data-ri="${i}"><b>${esc(x.name)}</b><small>${esc(x.addr)}${me?' · '+fmtD(distM(me,x)):''}</small></button>`).join(''):'<div class="mp-r muted">Nichts gefunden</div>');
-      $$('[data-ri]',RES).forEach(b=>b.onclick=()=>{const x=L2[+b.dataset.ri];RES.innerHTML='';Q.blur();if(selM)selM.remove();selM=L.marker([x.lat,x.lon],{icon:pin('📍','', 'sel')}).addTo(map);map.setView([x.lat,x.lon],16);card(x)});
-      $('[data-sf]',RES).onclick=()=>{if(!M.favs.some(f=>f.q.toLowerCase()===q.toLowerCase())){M.favs.push({q,ic:FI[M.favs.length%FI.length]});save();haptic('success')}RES.innerHTML='';Q.value='';Q.blur();favChips();loadFavs(true)};
-    }catch(e){RES.innerHTML='<div class="mp-r muted">⚠️ Suche gerade nicht erreichbar</div>'}}
+    const c=me||center||(S.loc.home)||{lat:54.9,lon:8.33};
+    RES.innerHTML='<div class="mp-r muted">🔎 Suche …</div>';
+    const [poi,geo]=await Promise.all([
+      findPOI(q,c,false).catch(e=>{glog('Maps','POI: '+e.message);return[]}),
+      fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lon}&limit=6&lang=de`).then(x=>x.json()).then(r=>(r.features||[]).map(f=>{const pr=f.properties,[lon,lat]=f.geometry.coordinates;
+        return{name:pr.name||[pr.street,pr.housenumber].filter(Boolean).join(' ')||q,lat,lon,fq:pr.name,addr:[pr.street&&(pr.street+(pr.housenumber?' '+pr.housenumber:'')),pr.city||pr.town||pr.village].filter(Boolean).join(', ')}}))
+        .catch(()=>fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=6&accept-language=de`).then(x=>x.json()).then(r=>r.map(z=>({name:z.name||z.display_name.split(',')[0],lat:+z.lat,lon:+z.lon,fq:z.name,addr:z.display_name.split(',').slice(1,3).join(',')}))).catch(()=>[]))]);
+    const seen=new Set(),L2=[];poi.slice(0,12).concat(geo).forEach(p=>{const k=p.lat.toFixed(3)+','+p.lon.toFixed(3);if(seen.has(k))return;seen.add(k);L2.push(p)});
+    if(!RES.isConnected)return;
+    RES.innerHTML=(poi.length?`<button class="mp-r mp-rfav" data-sf="1">⭐ „${esc(q)}“ als Favorit – ${poi.length} ${poi.length===1?'Ort':'Orte'} auf der Karte</button>`:'')+(L2.length?L2.map((x,i)=>`<button class="mp-r" data-ri="${i}"><b>${esc(x.name)}</b><small>${esc(x.addr||'')}${' · '+fmtD(distM(c,x))}</small></button>`).join(''):'<div class="mp-r muted">😕 Nichts gefunden – versuch einen anderen Namen</div>');
+    $$('[data-ri]',RES).forEach(b=>b.onclick=()=>{const x=L2[+b.dataset.ri];RES.innerHTML='';Q.blur();if(selM)selM.remove();selM=L.marker([x.lat,x.lon],{icon:pin('📍','','sel')}).addTo(map);map.setView([x.lat,x.lon],16);card(x)});
+    const sf=$('[data-sf]',RES);if(sf)sf.onclick=()=>{if(!M.favs.some(f=>f.q.toLowerCase()===q.toLowerCase())){M.favs.push({q,ic:FI[M.favs.length%FI.length]});save();haptic('success')}RES.innerHTML='';Q.value='';Q.blur();favChips();loadFavs(true)};
+  }
   async function loadFavs(fit){
-    if(!map)return;lay.clearLayers();const c=center||me;if(!c)return;const on=M.favs.filter(f=>!f.off);if(!on.length){favChips();return}
+    if(!map)return;lay.clearLayers();const c=me||center;if(!c)return;const on=M.favs.filter(f=>!f.off);if(!on.length){favChips();return}
     const all=[];
-    await Promise.all(on.map(async f=>{const re=reEsc(f.q);
-      const ql=`[out:json][timeout:20];(nwr["name"~"^${re}$",i](around:25000,${c.lat},${c.lon});nwr["brand"~"^${re}$",i](around:25000,${c.lat},${c.lon}););out center 80;`;
-      try{const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(ql),headers:{'Content-Type':'application/x-www-form-urlencoded'}}).then(x=>x.json());
-        const seen=new Set();(r.elements||[]).forEach(e=>{const lat=e.lat||e.center&&e.center.lat,lon=e.lon||e.center&&e.center.lon;if(!lat)return;const k=lat.toFixed(4)+lon.toFixed(4);if(seen.has(k))return;seen.add(k);
-          const t=e.tags||{},p={name:t.name||f.q,lat,lon,fq:f.q,addr:[t['addr:street']&&(t['addr:street']+(t['addr:housenumber']?' '+t['addr:housenumber']:'')),t['addr:city']].filter(Boolean).join(', ')};
-          all.push(p);L.marker([lat,lon],{icon:pin(f.ic,f.q,'fav')}).on('click',()=>card(p)).addTo(lay)});favHits[f.q]=seen.size}
+    await Promise.all(on.map(async f=>{try{const L2=await findPOI(f.q,c,false);favHits[f.q]=L2.length;
+        L2.slice(0,80).forEach(p=>{all.push(p);L.marker([p.lat,p.lon],{icon:pin(f.ic,f.q,'fav')}).on('click',()=>card(p)).addTo(lay)})}
       catch(e){favHits[f.q]='?';glog('Maps','Favorit '+f.q+': '+e.message)}}));
-    favChips();if(fit&&all.length){map.fitBounds(L.latLngBounds(all.map(p=>[p.lat,p.lon]).concat(me?[[me.lat,me.lon]]:[])),{padding:[60,60],maxZoom:15})}
+    favChips();
+    if(fit&&all.length){const near=all.slice().sort((a,b)=>distM(c,a)-distM(c,b)).slice(0,5);map.fitBounds(L.latLngBounds(near.map(p=>[p.lat,p.lon]).concat(me?[[me.lat,me.lon]]:[])),{padding:[70,70],maxZoom:15})}
   }
   async function init(){
     try{await loadLeaflet()}catch(e){$('#gmMap',body).innerHTML='<div class="mapload">Karte braucht Internet</div>';return}
@@ -4999,26 +5026,43 @@ render(body,ctx){
     h+=`</div>`;if(!$('#muC',body))body.innerHTML='<div id="muC"></div><div class="mu-player hide" id="muPl"><div id="muPH"></div><div id="muYT" class="mu-yt hide"></div><div id="muPL"></div></div>';
     $('#muC',body).innerHTML=h;drawPlayer();bind();
   }
+  const fmtS=t=>!isFinite(t)||t<0?'0:00':Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
   function drawPlayer(){const c=P.cur,pl=$('#muPl',body);if(!pl)return;pl.classList.toggle('hide',!c);if(!c)return;
-    $('#muPH',body).innerHTML=`<div class="mu-ph"><img src="${c.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(c.t)}</b><small>${esc(c.a||'')} · ${P.mode==='yt'?'YouTube':P.mode==='prev'?'Vorschau 30 Sek.':'Offline'}</small></div>
-      <button class="mu-b" id="muPrev">⏮</button><button class="mu-b" id="muNext">⏭</button></div>`;
+    $('#muPH',body).innerHTML=`<div class="mu-ph"><img src="${c.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(c.t)}</b><small>${esc(c.a||'')}${P.mode==='prev'?' · Vorschau':P.mode==='file'?' · Offline':''}</small></div>
+      <button class="mu-b" id="muPrev">⏮</button><button class="mu-b mu-pp" id="muPP">${P.loading?'<i class="mu-spin"></i>':P.paused?'▶':'⏸'}</button><button class="mu-b" id="muNext">⏭</button></div>
+      <div class="mu-prog"><span id="muCt">0:00</span><div class="mu-bar" id="muBar"><i id="muBi"></i></div><span id="muDu">0:00</span></div>`;
     $('#muYT',body).classList.toggle('hide',P.mode!=='yt');
     $('#muPL',body).innerHTML=P.mode==='prev'?`<a class="mu-ytl" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.a+' '+c.t)}" target="_blank" rel="noopener">Ganzen Song auf YouTube öffnen ↗</a>`:'';
-    $('#muPrev',body).onclick=()=>next(-1);$('#muNext',body).onclick=()=>next(1)}
-  async function ytId(x){if(x.yt)return x.yt;const qq=encodeURIComponent(x.a+' '+x.t);
-    for(const b of['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee']){try{const r=await fetch(`${b}/search?q=${qq}&filter=music_songs`).then(z=>z.json());const u=r.items&&r.items.find(i=>i.url&&/watch/.test(i.url));if(u){x.yt=u.url.split('v=')[1].split('&')[0];return x.yt}}catch(e){}}
-    for(const b of['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be']){try{const r=await fetch(`${b}/api/v1/search?q=${qq}&type=video`).then(z=>z.json());if(r[0]&&r[0].videoId){x.yt=r[0].videoId;return x.yt}}catch(e){}}
-    return null}
+    $('#muPrev',body).onclick=()=>next(-1);$('#muNext',body).onclick=()=>next(1);
+    $('#muPP',body).onclick=()=>{haptic('select');if(P.mode==='yt'&&P.yt&&P.yt.getPlayerState){P.yt.getPlayerState()===1?P.yt.pauseVideo():P.yt.playVideo()}else if(P.audio){P.audio.paused?P.audio.play():P.audio.pause()}};
+    $('#muBar',body).onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;if(P.mode==='yt'&&P.yt&&P.yt.getDuration)P.yt.seekTo(P.yt.getDuration()*f,true);else if(P.audio&&P.audio.duration)P.audio.currentTime=P.audio.duration*f}}
+  const progIv=setInterval(()=>{if(!body.isConnected||!P.cur)return;let ct=0,du=0,paused=false;
+    if(P.mode==='yt'&&P.yt&&P.yt.getCurrentTime){try{ct=P.yt.getCurrentTime();du=P.yt.getDuration();paused=P.yt.getPlayerState()!==1}catch(e){}}else if(P.audio){ct=P.audio.currentTime;du=P.audio.duration;paused=P.audio.paused}
+    const a=$('#muCt',body),b=$('#muDu',body),i=$('#muBi',body),pp=$('#muPP',body);if(a)a.textContent=fmtS(ct);if(b)b.textContent=fmtS(du);if(i)i.style.width=(du?ct/du*100:0)+'%';
+    if(pp&&!P.loading&&P.paused!==paused){P.paused=paused;pp.textContent=paused?'▶':'⏸'}},400);
+  MU.ytc??={};
+  async function ytId(x){if(x.yt)return x.yt;const ck=key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
+    return x._p=(async()=>{const id=await ytFind(x);if(id){x.yt=id;MU.ytc[ck]=id;const ks=Object.keys(MU.ytc);if(ks.length>400)delete MU.ytc[ks[0]];save()}delete x._p;return id})()}
+  async function ytFind(x){const qq=encodeURIComponent(x.a+' '+x.t);
+    const tm=(u,ms=6000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>z.json())};
+    const any=ps=>new Promise(res=>{let n=ps.length;if(!n)res(null);ps.forEach(p=>p.then(v=>{if(v)res(v);else if(--n===0)res(null)},()=>{if(--n===0)res(null)}))});
+    const id=await any([   // alle Suchdienste gleichzeitig – der schnellste gewinnt
+      ...['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee'].map(b=>tm(`${b}/search?q=${qq}&filter=music_songs`).then(r=>{const u=r.items&&r.items.find(i=>i.url&&/watch/.test(i.url));return u?u.url.split('v=')[1].split('&')[0]:null})),
+      ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video`).then(r=>r[0]&&r[0].videoId||null))]);
+    if(!id)glog('Music','Kein YouTube-Treffer für '+x.a+' – '+x.t);
+    return id}
   function stopAll(){try{P.audio&&P.audio.pause()}catch(e){}try{P.yt&&P.yt.destroy&&P.yt.destroy()}catch(e){}P.yt=null}
   function loadYTApi(){return new Promise(r=>{if(window.YT&&YT.Player)return r();const s2=document.createElement('script');s2.src='https://www.youtube.com/iframe_api';document.head.append(s2);window.onYouTubeIframeAPIReady=()=>r();setTimeout(r,6000)})}
   async function play(queue,i){
     stopAll();P.queue=queue;P.i=i;const x=queue[i];if(!x)return;P.cur=x;haptic('select');
     if(x.local){const f=(await dbAll()).find(z=>z.id===x.local);if(!f)return;P.mode='file';P.audio=P.audio||new Audio();P.audio.src=URL.createObjectURL(f.blob);P.audio.onended=()=>next(1);P.audio.play().catch(()=>{});draw();return}
-    P.mode='yt';draw();const id=await ytId(x);save();
+    P.mode='yt';P.loading=true;draw();const id=await ytId(x);P.loading=false;
+    if(P.cur!==x)return;
     if(!id||!body.isConnected){P.mode='prev';draw();if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
     await loadYTApi();const el=$('#muYT',body);if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
     el.innerHTML='<div id="muYTp"></div>';
-    P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0},events:{onStateChange:e=>{if(e.data===0)next(1)}}});
+    P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0,controls:0,modestbranding:1},events:{onReady:e=>{try{e.target.playVideo()}catch(_){}},onStateChange:e=>{if(e.data===0)next(1)}}});
+    drawPlayer();
   }
   function next(d){const n=P.i+d;if(n>=0&&n<P.queue.length)play(P.queue,n)}
   function bind(){
@@ -5033,6 +5077,7 @@ render(body,ctx){
       if(!res.length)try{const r=await jsonp(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=30&output=jsonp`);
         res=(r.data||[]).map(z=>({t:z.title,a:z.artist&&z.artist.name||'',img:z.album&&(z.album.cover_medium||z.album.cover)||'',prev:z.preview}))}catch(err){glog('Music','Deezer: '+err.message)}
       if(!res.length)notify('🎵','Gufy Music','Nichts gefunden oder Suche gerade nicht erreichbar','#ff2d55');
+      res.slice(0,5).forEach(x=>ytId(x));   // die ersten Songs schon mal vorbereiten → startet schneller
       draw()};
     $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
     $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
@@ -5051,8 +5096,9 @@ render(body,ctx){
   }
   async function loadFiles(){files=(await dbAll()).map(f=>({t:f.name,a:'Eigene Datei',local:f.id}))}
   loadFiles().then(()=>{if(body.isConnected&&tab==='files')draw()});
+  loadYTApi();
   draw();
-  ctx.cleanup.push(()=>{stopAll()});
+  ctx.cleanup.push(()=>{stopAll();clearInterval(progIv)});
 }},
 /* ---------- KI-Studio: Mini-Apps bauen (Beta) ---------- */
 aistudio:{name:'KI-Studio',cat:'KI-Apps',full:false,icon:'🧩',bg:'linear-gradient(135deg,#8b5cf6,#3b82f6 60%,#ec4899)',
