@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.7","notes":["Neu im Gufy Store: 🗺️ Gufy Maps – Orte suchen, Favoriten wie H&M immer auf der Karte, Route mit Google Maps","Neu im Gufy Store: 🎵 Gufy Music – Songs suchen, Playlists, ganze Songs über YouTube abspielen, eigene Musikdateien offline hören"]};
+window.GUFY={"v":"11.8","notes":["Gufy Music: Suche repariert (mit Ersatz-Suche, falls eine nicht geht)","Gufy Maps: Satellitenkarte ist jetzt Standard – mit 🗺️/🛰️ umschalten"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1355,6 +1355,7 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
 .mu-ph{display:flex;align-items:center;gap:10px}.mu-player .mu-t small{color:rgba(255,255,255,.6)}.mu-player .mu-b{background:rgba(255,255,255,.12);color:#fff}
 .mu-player.hide{display:none}.mu-yt{margin-top:8px;border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#000}.mu-yt.hide{display:none}.mu-yt iframe{width:100%;height:100%;border:0}
 .mu-ytl{display:block;text-align:center;margin-top:8px;font-size:13px;color:#ff6b8a}
+.mp-lay{bottom:calc(76px + env(safe-area-inset-bottom))!important}
 </style>
 </head>
 <body class="dark">
@@ -4904,7 +4905,7 @@ gmaps:{name:'Gufy Maps',cat:'Werkzeuge',full:true,store:true,icon:'🗺️',bg:'
 render(body,ctx){
   S.maps??={favs:[]};const M=S.maps;
   body.style.padding='0';body.style.position='relative';body.style.overflow='hidden';body.style.height='100%';
-  let map=null,me=null,lay=null,selM=null,sel=null,qT=0,favHits={},center=null;
+  let map=null,me=null,lay=null,selM=null,sel=null,qT=0,favHits={},center=null,tl=null;
   const FI=['📍','🛍️','🍔','☕','🏪','⛽','💊','🏦','🍕','🛒'];
   const gm=(a,b)=>`https://www.google.com/maps/dir/?api=1&destination=${a},${b}`;
   const reEsc=t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/"/g,'\\"');
@@ -4912,7 +4913,7 @@ render(body,ctx){
   body.innerHTML=`<div class="mp-wrap"><div id="gmMap" class="mp-map"><div class="mapload">Karte wird geladen …</div></div>
     <div class="mp-top"><div class="mp-search"><span>🔎</span><input id="gmQ" placeholder="Suchen, z. B. H&M, Bäcker, Strand" autocomplete="off" enterkeyhint="search"><button id="gmX" class="mp-x">✕</button></div>
       <div class="mp-res" id="gmRes"></div><div class="mp-favs" id="gmFavs"></div></div>
-    <button class="mp-me" id="gmMe">◎</button><div class="mp-card" id="gmCard"></div></div>`;
+    <button class="mp-me" id="gmMe">◎</button><button class="mp-me mp-lay" id="gmL">🗺️</button><div class="mp-card" id="gmCard"></div></div>`;
   const Q=$('#gmQ',body),RES=$('#gmRes',body);
   function favChips(){$('#gmFavs',body).innerHTML=M.favs.map((f,i)=>`<button class="mp-chip ${f.off?'off':''}" data-fi="${i}">${f.ic} ${esc(f.q)}${favHits[f.q]!=null?` <small>${favHits[f.q]}</small>`:''}</button>`).join('')+(M.favs.length?'':'<span class="mp-hint">⭐ Suche etwas und speichere es als Favorit – dann siehst du es immer auf der Karte</span>');
     $$('[data-fi]',body).forEach(b=>{b.onclick=()=>{const f=M.favs[+b.dataset.fi];f.off=!f.off;save();haptic('select');favChips();loadFavs()};
@@ -4950,7 +4951,13 @@ render(body,ctx){
     const el=$('#gmMap',body);if(!el)return;el.innerHTML='';
     const st=geoPos||S.loc.home||{lat:54.9,lon:8.33};
     map=L.map(el,{zoomControl:false,attributionControl:true}).setView([st.lat,st.lon],13);map.attributionControl.setPrefix('');
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(S.theme==='dark'?'dark_all':'rvoyager')+'/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
+    M.sat??=true;
+    const base=()=>{if(tl)tl.forEach(t=>t.remove());tl=M.sat?[L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'}),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:.9}),
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:.7})]
+      :[L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(S.theme==='dark'?'dark_all':'rastertiles/voyager')+'/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap · © CARTO'})];
+      tl.forEach(t=>t.addTo(map));const b=$('#gmL',body);if(b)b.textContent=M.sat?'🗺️':'🛰️'};
+    base();$('#gmL',body).onclick=()=>{M.sat=!M.sat;save();haptic('select');base()};
     lay=L.layerGroup().addTo(map);center={lat:st.lat,lon:st.lon};
     map.on('moveend',()=>{const c=map.getCenter();const n={lat:c.lat,lon:c.lng};if(distM(n,center)>15000){center=n;loadFavs()}});
     setTimeout(()=>map&&map.invalidateSize(),350);
@@ -5017,8 +5024,15 @@ render(body,ctx){
   function bind(){
     $$('[data-mt]',body).forEach(b=>b.onclick=()=>{tab=b.dataset.mt;plOpen=null;haptic('select');draw()});
     const qi=$('#muQ',body);if(qi)qi.onkeydown=async e=>{if(e.key!=='Enter')return;q=qi.value.trim();if(!q)return;qi.blur();
-      try{const r=await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=DE&limit=30`).then(z=>z.json());
-        res=(r.results||[]).map(z=>({t:z.trackName,a:z.artistName,img:(z.artworkUrl100||'').replace('100x100','200x200'),prev:z.previewUrl}))}catch(err){res=[];notify('🎵','Gufy Music','Suche gerade nicht erreichbar','#ff2d55')}
+      const jsonp=(u,cb='callback')=>new Promise((ok,no)=>{const fn='__gmj'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sc=document.createElement('script');
+        const t=setTimeout(()=>{cleanup();no(new Error('Zeit abgelaufen'))},9000),cleanup=()=>{clearTimeout(t);delete window[fn];sc.remove()};
+        window[fn]=d=>{cleanup();ok(d)};sc.onerror=()=>{cleanup();no(new Error('nicht erreichbar'))};sc.src=u+(u.includes('?')?'&':'?')+cb+'='+fn;document.head.append(sc)});
+      res=[];
+      try{const r=await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=DE&limit=30`);
+        res=(r.results||[]).map(z=>({t:z.trackName,a:z.artistName,img:(z.artworkUrl100||'').replace('100x100','200x200'),prev:z.previewUrl}))}catch(err){glog('Music','iTunes: '+err.message)}
+      if(!res.length)try{const r=await jsonp(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=30&output=jsonp`);
+        res=(r.data||[]).map(z=>({t:z.title,a:z.artist&&z.artist.name||'',img:z.album&&(z.album.cover_medium||z.album.cover)||'',prev:z.preview}))}catch(err){glog('Music','Deezer: '+err.message)}
+      if(!res.length)notify('🎵','Gufy Music','Nichts gefunden oder Suche gerade nicht erreichbar','#ff2d55');
       draw()};
     $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
     $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
