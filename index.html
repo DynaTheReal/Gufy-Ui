@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"12.4","notes":["Standort-Frage: Schnelltasten 10 / 20 / 30 Min., 1 / 2 / 4 Std. sind wieder da (mit Uhrzeit) – plus „✕ Ignorieren“","Start nach dem Ausschalten dauert jetzt ca. 20 Sek.","Kein Code mehr zum Einschalten"]};
+window.GUFY={"v":"12.5","notes":["KI-Studio: Du kannst die App schließen, während Gufy AI baut – es läuft im Hintergrund weiter und meldet sich","KI-Apps löschen geht jetzt auch während des Bauens (🗑️)","Apps bauen kostet Coins: kleine Apps ca. 5–10, große bis 100 – ändern kostet die Hälfte. Klappt es nicht, gibt es die Coins zurück"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1384,6 +1384,8 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
 .off-warn{margin:-8px 0 0;font-size:11.5px;color:rgba(255,255,255,.28)}
 .lc-chips button small{opacity:.6;font-weight:500;margin-left:3px}
 .lc-btns{display:flex;gap:8px}.lc-btns .btn{flex:1}
+.ms-bg{display:block;margin-top:12px;font-size:12px;opacity:.75;line-height:1.35;text-align:center}
+.aiw-go:disabled{opacity:.45;filter:grayscale(.6)}.ms-b:disabled{opacity:.3}
 </style>
 </head>
 <body class="dark">
@@ -5173,39 +5175,39 @@ render(body,ctx){
 /* ---------- KI-Studio: Mini-Apps bauen (Beta) ---------- */
 aistudio:{name:'KI-Studio',cat:'KI-Apps',full:false,icon:'🧩',bg:'linear-gradient(135deg,#8b5cf6,#3b82f6 60%,#ec4899)',
 render(body,ctx){
-  let busy=false,msg='',want='',editId=null,t0=0,raf=0;
+  const J=()=>window.MS_JOB;let msg=MS_MSG||'',want='',editId=null,raf=0;MS_MSG='';
+  const onJob=()=>{if(body.isConnected){msg=MS_MSG;MS_MSG='';draw()}};MS_LIS.add(onJob);ctx.cleanup.push(()=>MS_LIS.delete(onJob));
   const IDEAS=[['💧','Wasser-Zähler: wie viele Gläser ich heute getrunken hab'],['🏀','Punkte-Zähler für 2 Teams'],['📅','Countdown bis zu meinem Geburtstag'],['🎯','Glücksrad mit eigenen Feldern'],['🏋️','Liegestütz-Tracker mit Rekord'],['💰','Taschengeld-Rechner']];
   function draw(){
     cancelAnimationFrame(raf);
     if(!S.miniBeta){body.innerHTML=`<div class="emptyinv"><div>🧪</div><b>KI-Mini-Apps sind aus</b><br><small>Einstellungen › Beta › KI-Mini-Apps</small></div>`;return}
-    const est=Math.round((S.miniAvg||45000)/1000),em=editId&&S.miniList.find(x=>x.id===editId);
-    body.innerHTML=(busy?`<div class="aiw-box aiw-run"><div class="aiw-orb"><i></i></div><b class="aiw-rt">${em?'Gufy AI ändert deine App …':'Gufy AI baut deine App …'}</b><small class="aiw-rp">„${esc(want)}“</small>
-        <div class="aiw-bar"><i id="msBar"></i></div><div class="aiw-rs"><span id="msStep">${esc(msg||'✏️ Programmiert …')}</span><span id="msLeft"></span></div></div>`
+    const job=J(),busy=!!job,est=Math.round((S.miniAvg||45000)/1000),em=busy?(job.editId&&S.miniList.find(x=>x.id===job.editId)):(editId&&S.miniList.find(x=>x.id===editId));
+    const cost=miniCost(want,!!em),poor=(S.coins||0)<cost;
+    body.innerHTML=(busy?`<div class="aiw-box aiw-run"><div class="aiw-orb"><i></i></div><b class="aiw-rt">${em?'Gufy AI ändert deine App …':'Gufy AI baut deine App …'}</b><small class="aiw-rp">„${esc(job.desc)}“</small>
+        <div class="aiw-bar"><i id="msBar"></i></div><div class="aiw-rs"><span id="msStep">${esc(job.step||'✏️ Programmiert …')}</span><span id="msLeft"></span></div>
+        <small class="ms-bg">🪙 ${job.cost} Coins bezahlt · Du kannst die App schließen – Gufy AI baut im Hintergrund weiter und meldet sich, wenn sie fertig ist.</small></div>`
       :`<div class="aiw-box"><div class="aiw-hd"><span class="aiw-ic">🧩</span><div><b>${em?`„${esc(em.name)}“ ändern`:'Neue App bauen'}</b><small>${em?'Beschreib, was anders werden soll.':'Beschreib deine App – Gufy AI programmiert sie für dich.'}</small></div></div>
         <div class="aiw-in"><textarea id="msP" rows="3" placeholder="${em?'z. B. Mach die Knöpfe größer und füg einen Reset-Knopf hinzu':'z. B. Eine App, die zählt, wie oft ich heute Wasser getrunken hab'}">${esc(want)}</textarea></div>
         ${em?'':`<div class="aiw-sug">${IDEAS.map(([e,t])=>`<button data-sug="${esc(t)}">${e} ${esc(t.split(':')[0])}</button>`).join('')}</div>`}
-        <small class="aiw-hint">Dauert ca. ${est} Sek.</small>
-        <button class="aiw-go" id="msGo">${em?'✏️ App ändern':'🧩 App bauen'}</button>${em?'<button class="btn" id="msX" style="width:100%">Abbrechen</button>':''}
+        <small class="aiw-hint">Dauert ca. ${est} Sek. · <span id="msCost">${costTxt(cost,poor)}</span></small>
+        <button class="aiw-go" id="msGo" ${poor?'disabled':''}>${em?'✏️ App ändern':'🧩 App bauen'} · 🪙 <span id="msCb">${cost}</span></button>${em?'<button class="btn" id="msX" style="width:100%">Abbrechen</button>':''}
         ${msg?`<div class="aiw-msg">${esc(msg)}</div>`:''}</div>`)+
       (S.miniList.length?`<div class="slabel">Deine KI-Apps</div><div class="sgroup">${S.miniList.map(m=>`<div class="srow ms-row"><span class="sic" style="background:linear-gradient(135deg,${m.color},#1e1b4b)">${esc(m.icon)}</span><span class="sl">${esc(m.name)}<br><small class="muted">${esc((m.desc||'').slice(0,50))}</small></span>
-        <button class="btn" data-mo="${m.id}">Öffnen</button><button class="ms-b" data-me="${m.id}">✏️</button><button class="ms-b" data-md="${m.id}">🗑️</button></div>`).join('')}</div>`:'')+
+        <button class="btn" data-mo="${m.id}">Öffnen</button><button class="ms-b" data-me="${m.id}">✏️</button><button class="ms-b" data-md="${m.id}" ${busy&&job.editId===m.id?'disabled':''}>🗑️</button></div>`).join('')}</div>`:'')+
       `<p class="muted" style="font-size:12px;text-align:center;margin-top:14px">${S.miniNet?'🌐 Internet an: KI-Apps dürfen ins Internet, Standort/Kamera anfragen und deine Coins, Akku, Wetter & Quests lesen (nicht ändern).':'🔒 KI-Apps laufen abgeschirmt: kein Internet, kein Zugriff auf deine Coins oder Daten.'}</p>`;
-    if(busy){const E=(S.miniAvg||45000);const tk=()=>{const b=$('#msBar',body);if(!b)return;const el=Date.now()-t0,f=Math.min(.96,1-Math.exp(-2.3*el/E));b.style.width=(f*100).toFixed(1)+'%';
-      const l=Math.ceil((E-el)/1000),lf=$('#msLeft',body);if(lf)lf.textContent=l>0?`noch ca. ${l} Sek.`:'gleich fertig …';raf=requestAnimationFrame(tk)};tk();return}
-    const P=$('#msP',body);P.oninput=()=>want=P.value;
-    $$('[data-sug]',body).forEach(b=>b.onclick=()=>{want=P.value=b.dataset.sug;haptic('select')});
-    const x=$('#msX',body);if(x)x.onclick=()=>{editId=null;want='';msg='';draw()};
-    $('#msGo',body).onclick=()=>{const d=P.value.trim();if(!d){msg='Beschreib erst deine App ✍️';draw();return}build(d)};
     $$('[data-mo]',body).forEach(b=>b.onclick=()=>openApp(b.dataset.mo));
-    $$('[data-me]',body).forEach(b=>b.onclick=()=>{editId=b.dataset.me;want='';msg='';draw();body.scrollTop=0});
-    $$('[data-md]',body).forEach(b=>b.onclick=()=>askCode('KI-App löschen',async()=>{await miniRemove(b.dataset.md);draw()}));
+    $$('[data-me]',body).forEach(b=>b.onclick=()=>{if(J())return notify('🧩','Moment','Gufy AI baut gerade schon eine App – warte kurz, bis sie fertig ist.','#7c5cff');editId=b.dataset.me;want='';msg='';draw();body.scrollTop=0});
+    $$('[data-md]',body).forEach(b=>b.onclick=()=>{const m=S.miniList.find(x=>x.id===b.dataset.md);askCode('„'+(m?m.name:'App')+'“ löschen',async()=>{await miniRemove(b.dataset.md);if(editId===b.dataset.md)editId=null;haptic('success');draw()})});
+    if(busy){const E=(S.miniAvg||45000),t0=job.t0;const tk=()=>{const b=$('#msBar',body);if(!b)return;const el=Date.now()-t0,f=Math.min(.96,1-Math.exp(-2.3*el/E));b.style.width=(f*100).toFixed(1)+'%';
+      const l=Math.ceil((E-el)/1000),lf=$('#msLeft',body);if(lf)lf.textContent=l>0?`noch ca. ${l} Sek.`:'gleich fertig …';raf=requestAnimationFrame(tk)};tk();return}
+    const P=$('#msP',body),upd=()=>{const c=miniCost(want,!!em),pr=(S.coins||0)<c;$('#msCb',body).textContent=c;$('#msCost',body).innerHTML=costTxt(c,pr);$('#msGo',body).disabled=pr};
+    P.oninput=()=>{want=P.value;upd()};
+    $$('[data-sug]',body).forEach(b=>b.onclick=()=>{want=P.value=b.dataset.sug;upd();haptic('select')});
+    const x=$('#msX',body);if(x)x.onclick=()=>{editId=null;want='';msg='';draw()};
+    $('#msGo',body).onclick=()=>{const d=P.value.trim();if(!d){msg='Beschreib erst deine App ✍️';draw();return}
+      if(!gemGet()){gemDialog();return}
+      const r=miniStart(d,editId);if(r){msg='⚠️ '+r;draw();return}editId=null;want='';msg='';draw()};
   }
-  async function build(d){if(!gemGet()){gemDialog();return}
-    want=d;busy=true;msg='';t0=Date.now();draw();
-    try{const m=await miniCreate(d,editId,n=>{const e=$('#msStep',body);if(e)e.textContent='⚠️ Neuer Versuch ('+n+') …'});
-      haptic('success');msg=`✅ „${m.name}“ ist ${editId?'geändert':'fertig'} – liegt auf deinem Home-Bildschirm.`;notify(m.icon,'KI-App fertig',m.name,'#7c5cff');editId=null;want=''}
-    catch(e){msg='⚠️ '+e.message;haptic('error')}
-    busy=false;if(body.isConnected)draw()}
   draw();ctx.cleanup.push(()=>cancelAnimationFrame(raf));
 }},
 /* ---------- MathEdits (Website in einer App) ---------- */
@@ -5786,7 +5788,9 @@ function planCmd(raw){
     if(!S.miniBeta)return{ic:'🧩',err:'Eigene Apps bauen geht mit der Beta: Einstellungen › Beta › KI-Mini-Apps.'};
     if(!gemGet())return{ic:'🧩',err:'Dafür brauchst du Gufy AI – sag „API-Key“.'};
     const d=raw.replace(/^.*?\b(erstell|bau|mach|programmier|entwickl|generier|kreier)\w*\s*(mir|uns)?\s*(bitte)?\s*/i,'').trim()||raw;
-    return{ic:'🧩',txt:'KI-App bauen',run:async()=>{const m=await miniCreate(d);notify(m.icon,'KI-App fertig',m.name+' liegt auf deinem Home-Bildschirm','#7c5cff');return `Fertig! ${m.icon} „${m.name}“ liegt jetzt auf deinem Home-Bildschirm.`}};
+    const c=miniCost(d);if(window.MS_JOB)return{ic:'🧩',err:'Gufy AI baut gerade schon eine App – warte kurz.'};
+    if((S.coins||0)<c)return{ic:'🧩',err:`Diese App kostet 🪙 ${c} Coins – dir fehlen ${c-(S.coins||0)}.`};
+    return{ic:'🧩',txt:`KI-App bauen · 🪙 ${c}`,run:async()=>{const r=miniStart(d);if(r)return r;const m=await window.MS_JOB.p;return `Fertig! ${m.icon} „${m.name}“ liegt jetzt auf deinem Home-Bildschirm (−${c} Coins).`}};
   }
   if(/quest/.test(s)&&/erstell|erfind|ausdenk|denk\w*.*aus|generier|mach\w* (mir |uns |ihm |ihr )?(eine|ne|n|neue)|schreib|kreier|bau|für (meinen|meine|den|die|uns|ihn)|neue quest/.test(s))
     return gemGet()?{ic:'✨',unknown:true,raw,err:''}:{ic:'✨',err:'Quests erfinden kann Gufy AI – sag „API-Key“, um sie einzurichten.'};
@@ -6016,6 +6020,29 @@ function miniParse(t){
   if(!/<(body|div|main|script)/i.test(html))throw new Error('Gufy AI hat keine fertige App geliefert – versuch es nochmal.');
   return{name,icon,color,html};
 }
+/* KI-App bauen läuft global – man kann das KI-Studio schließen */
+let MS_MSG='';const MS_LIS=new Set();window.MS_JOB=null;
+function miniCost(d,edit){d=String(d||'').toLowerCase();const w=d.split(/\s+/).filter(Boolean).length;
+  let c=5+Math.max(0,w-6)*0.6;
+  const K=[[/spiel|game|jump|level|gegner|boss|highscore|punkte sammeln/,18],[/multiplayer|online|mehrspieler|chat/,25],[/3d|physik|animation|grafik/,15],[/internet|api|wetter|karte|map|live|news/,10],
+    [/kamera|foto|mikro|standort|gps/,8],[/quiz|fragen|lernen|vokabel/,6],[/speicher|merk|verlauf|statistik|diagramm|liste|tracker|rekord/,4],[/shop|inventar|level ?system|freischalt|kalender|planer/,8],
+    [/rechner|zähler|counter|timer|countdown|glücksrad|würfel|notiz/,0]];
+  K.forEach(([r,v])=>{if(r.test(d))c+=v});
+  const and=(d.match(/\bund\b|,|\+/g)||[]).length;c+=Math.min(20,and*2.5);
+  c=Math.round(c);if(edit)c=Math.max(3,Math.round(c/2));return Math.max(edit?3:5,Math.min(100,c))}
+const costTxt=(c,poor)=>poor?`<b style="color:#ef4444">kostet 🪙 ${c} – dir fehlen ${c-(S.coins||0)}</b>`:`kostet 🪙 ${c} Coins`;
+function miniStart(desc,editId,fromAsk){
+  if(window.MS_JOB)return'Gufy AI baut gerade schon eine App – warte kurz.';
+  const cost=miniCost(desc,!!editId);if((S.coins||0)<cost)return`Das kostet ${cost} Coins – dir fehlen ${cost-(S.coins||0)}.`;
+  S.coins-=cost;save();updateCoins();coinPop('−'+cost+' 🪙');glog('KI-Studio',`App bauen: −${cost} Coins`);
+  const job=window.MS_JOB={desc,editId,cost,t0:Date.now(),step:''};MS_LIS.forEach(f=>f());
+  job.p=miniCreate(desc,editId,n=>{job.step='⚠️ Neuer Versuch ('+n+') …';const e=$('#msStep');if(e)e.textContent=job.step})
+    .then(m=>{haptic('success');MS_MSG=`✅ „${m.name}“ ist ${editId?'geändert':'fertig'} – liegt auf deinem Home-Bildschirm.`;
+      notify(m.icon,editId?'KI-App geändert':'KI-App fertig',m.name+' – tippen zum Öffnen','#7c5cff',()=>openApp(m.id));return m},
+      e=>{S.coins+=cost;save();updateCoins();haptic('error');MS_MSG=`⚠️ ${e.message} (🪙 ${cost} zurück)`;
+      notify('🧩','KI-App fehlgeschlagen',e.message+' – deine '+cost+' Coins sind zurück.','#ef4444',()=>openApp('aistudio'));throw e})
+    .finally(()=>{window.MS_JOB=null;MS_LIS.forEach(f=>f())});
+  job.p.catch(()=>{});return''}
 async function miniCreate(desc,editId,onRetry){
   if(!gemGet())throw new Error('Du brauchst zuerst Gufy AI – sag „API-Key“.');
   let q=`Baue diese App: ${desc}`;
