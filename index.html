@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"11.9","notes":["Gufy Maps: Suche findet jetzt Geschäfte wie H&M – auch weiter weg (bis 250 km), mit mehreren Ersatz-Servern","Gufy Music: neuer, cleaner Player mit Cover, Play/Pause und Fortschrittsbalken – nur noch ein kleines Video in der Ecke","Gufy Music: Songs starten schneller (werden schon beim Suchen vorbereitet)"]};
+window.GUFY={"v":"12.3","notes":["Kaltstart entfernt – dafür dauert der Start nach dem Ausschalten jetzt ca. 12 Sek. (mit Lade-Texten)","Urlaubsmodus-Warnung, Zuhause per Adresse, Schlafenszeit entfernt"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1362,6 +1362,26 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
 .mu-spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(0,0,0,.2);border-top-color:#000;animation:pwSpin .7s linear infinite;display:block}
 .mu-prog{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums}
 .mu-bar{flex:1;height:5px;border-radius:5px;background:rgba(255,255,255,.18);overflow:hidden;cursor:pointer}.mu-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2d55,#af52de);border-radius:5px}
+.lask-t{flex-direction:column;align-items:stretch;gap:10px;cursor:default}
+.lt-h{display:flex;gap:12px;align-items:flex-start}.lt-h small{display:block}
+.lt-x{flex:none;width:28px;height:28px;border-radius:50%;background:var(--hover);font-size:12px}
+.lt-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lt-chips button{padding:8px 12px;border-radius:999px;background:var(--hover);border:1px solid var(--border);font-weight:650;font-size:13px}
+.lt-chips button:active{background:var(--accent);color:#fff}
+.lt-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
+.lt-foot button{font-weight:700;color:var(--accent);font-size:13px}
+.mu-open,.mu-stop{display:none!important}
+.mu-player.mini{left:12px;right:12px;padding:8px 10px!important;border-radius:18px}
+.mu-player.mini .mu-prog,.mu-player.mini #muPL,.mu-player.mini #muPrev{display:none}
+.mu-player.mini .mu-open,.mu-player.mini .mu-stop{display:grid!important;place-items:center}
+.mu-player.mini .mu-ph img{width:40px;height:40px}
+.mu-player.mini .mu-pp{width:38px!important;height:38px!important;font-size:15px!important}
+.mu-player.mini .mu-yt{width:64px;height:36px;top:-42px}
+body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-area-inset-bottom))}
+.ladr{padding:14px 16px;margin-top:12px}.ladr-h{font-weight:700;margin-bottom:8px}.ladr-h small{display:block;font-weight:500;color:var(--muted);font-size:12.5px;margin-top:2px}
+.ladr-in{display:flex;gap:8px}.ladr-in .input{flex:1;min-width:0}
+.ladr-r{display:block;width:100%;text-align:left;padding:10px 12px;margin-top:8px;border-radius:12px;background:var(--hover);font-size:14px}
+.off-warn{margin:-8px 0 0;font-size:11.5px;color:rgba(255,255,255,.28)}
 </style>
 </head>
 <body class="dark">
@@ -1423,7 +1443,6 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
   <div id="cc" class="glass">
     <div class="cc-grid">
       <button class="cc-tile" data-t="loc"><span>🏠</span><div><b>Standort</b><small></small></div></button>
-      <button class="cc-tile" data-t="sleep"><span>😴</span><div><b>Schlafenszeit</b><small></small></div></button>
       <button class="cc-tile" data-t="dark"><span>🌙</span><div><b>Dunkelmodus</b><small></small></div></button>
       <button class="cc-tile" data-t="dnd"><span>🔕</span><div><b>Nicht stören</b><small></small></div></button>
     </div>
@@ -1470,7 +1489,7 @@ body.dark .ai-card-in{background:rgba(20,20,30,.96)}
   <div class="center">
     <div class="off-brand">Gufy<i>UI</i></div>
     <button id="powerBtn" aria-label="Einschalten"><span class="pw-ring"></span><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
-    <p class="off-hint">Zum Einschalten tippen</p>
+    <p class="off-hint">Zum Einschalten tippen</p><p class="off-warn">🔒 Code · 🔋 −3 % · ⏳ langer Start</p>
   </div>
   <div class="off-bat" id="offBat"></div>
 </div>
@@ -1556,6 +1575,7 @@ function defaults(){
   S.coins??=0; S.inv??={}; S.questDone??=[]; S.debts??=[]; S.folders??={};
   S.loc??={mode:'manual',isHome:true,home:null,radius:150};
   S.sleep??={from:'22:00',to:'06:00'};
+  if(S.widgets)for(const k in S.widgets)if(S.widgets[k]&&S.widgets[k].type==='sleep')delete S.widgets[k];   // Schlafenszeit-Widget entfernt
   S.battery??={level:100,last:Date.now()};
   S.installed??=[]; S.notes??=[];
   if(!S.widgets){S.widgets={'w-clock-1':{type:'clock',size:'l'},'w-battery-1':{type:'battery',size:'s'},'w-coins-1':{type:'coins',size:'s'}};if(S.layout&&S.layout[0])S.layout[0].unshift('w-clock-1','w-battery-1','w-coins-1')} S.events??={}; S.snakeHigh??=0;
@@ -1984,7 +2004,9 @@ const OFF_HOURS=24;  // manuell ausgeschaltet: so lange hält ein voller Akku
 const CHARGE_HOURS=8; // so lange dauert 0 → 100 % zu Hause
 const R_AWAY=-100/AWAY_HOURS, R_OFF=-100/OFF_HOURS, R_FAST=130/CHARGE_HOURS, R_SLOW=R_FAST/2.5; // 80/R_FAST + 20/R_SLOW = 8 Std.
 const toMin=s=>{const[a,b]=s.split(':').map(Number);return a*60+b};
-function isSleepTime(d){
+function isSleepTime(d){return false; // Schlafenszeit entfernt (v12.2)
+}
+function isSleepTimeOld(d){
   const m=d.getHours()*60+d.getMinutes(),f=toMin(S.sleep.from),t=toMin(S.sleep.to);
   if(f===t)return false;
   return f<t?(m>=f&&m<t):(m>=f||m<t);
@@ -2184,7 +2206,7 @@ function setHome(v,quiet){
   if(S.loc.isHome===v)return;
   const askAfter=!quiet&&S.loc.mode==='gps'&&Date.now()-resumeAt<180000&&resumeGap>10*60000;
   advance();bsnap(true);S.loc.isHome=v;bsnap(true);save();haptic();
-  if(askAfter){resumeAt=0;S.locAsk={from:Date.now()-resumeGap,at:Date.now(),home:v};save();renderHome();notify('📍',v?'Seit wann bist du zu Hause?':'Seit wann bist du weg?',`GufyUI war ${fmtLen(Math.round(resumeGap/60000)*60000)} zu – tippe hier und trag es in der Standort-App ein.`,'#ff2a68',openCorr)}
+  if(askAfter){resumeAt=0;S.locAsk={from:Date.now()-resumeGap,at:Date.now(),home:v};save();renderHome();locAskNotify()}
   else if(!quiet)notify(v?'🏠':'🚶',v?'Willkommen zu Hause':'Du bist unterwegs',v?'Dein Akku lädt jetzt wieder.':'Dein Akku wird jetzt verbraucht (100 % = 8 Std.).',v?'#34c759':'#ff9500');
   renderBattery();updateCC();
   if(appCtx&&appCtx.refresh)appCtx.refresh();
@@ -2300,8 +2322,13 @@ function boot(){
   const bt=$('#boot');bt.classList.remove('play','out');void bt.offsetWidth;bt.classList.add('play');
   const f=$('#bootFill');f.getAnimations().forEach(a=>a.cancel());
   $('#bootTxt').textContent=S.setupDone?(S.name?'Willkommen zurück, '+S.name:'Wird gestartet …'):'Willkommen';
-  f.animate([{transform:'scaleX(0)'},{transform:'scaleX(.35)',offset:.35},{transform:'scaleX(.6)',offset:.6},{transform:'scaleX(1)'}],{duration:1250,delay:1650,easing:'cubic-bezier(.65,0,.35,1)',fill:'both'});
-  setTimeout(()=>bt.classList.add('out'),2950);
+  const long=!!S.longBoot;S.longBoot=false;save();   // nach manuellem Ausschalten: langer Start (~15 Sek.)
+  const K=long?5:1;
+  f.animate([{transform:'scaleX(0)'},{transform:'scaleX(.35)',offset:.35},{transform:'scaleX(.42)',offset:.5},{transform:'scaleX(.6)',offset:.6},{transform:'scaleX(.9)',offset:.85},{transform:'scaleX(1)'}],{duration:1250*K*1.6,delay:1650,easing:'cubic-bezier(.65,0,.35,1)',fill:'both'});
+  if(long){const T=['Systeme werden gestartet …','Akku wird geprüft …','Apps werden geladen …','Quests werden synchronisiert …','Fast fertig …'];
+    T.forEach((t,i)=>setTimeout(()=>{const e=$('#bootTxt');if(e&&current==='boot')e.textContent=t},1650+i*2600))}
+  const OUT=long?1650+1250*K*1.6+200:2950;
+  setTimeout(()=>bt.classList.add('out'),OUT);
   setTimeout(()=>{
     advance();
     if(S.setupDone&&(S.battery.level<=0||(S.wasDead&&S.battery.level<START_MIN))){batteryDead();return}
@@ -2309,7 +2336,7 @@ function boot(){
     if(!S.setupDone){step=0;show('setup');renderSetup()}
     else if(S.loggedIn)enterDesktop();
     else showLock();
-  },3400);
+  },OUT+450);
 }
 
 /* =========================================================
@@ -2347,6 +2374,7 @@ function gemEstimate(q){ // geschätzte Dauer: gelernte Zeit + Länge der Frage 
 }
 async function gemAsk(q,onRetry,opt={}){
   const key=gemGet();if(!key)throw new Error('Kein Schlüssel');
+  if(coldLeft())throw new Error(`🥶 Kaltstart – Gufy AI ist in ${coldLeft()} Sek. bereit.`);
   if(Date.now()-gemHistT>10*60000)gemHist=[];
   const sys=opt.sys||`Du bist „Gufy AI“, die KI im Gufy Assistenten von GufyUI, einem selbstgebauten Handy-System. Wenn man dich fragt, wer du bist, sag, du bist Gufy AI. Antworte immer auf Deutsch, locker und freundlich. Komm IMMER sofort zum Punkt: keine Einleitung, keine Wiederholung der Frage, kein Gelaber. Normale Fragen: kurz (1–3 Sätze). ABER wenn der Nutzer ausdrücklich viel will (z. B. „nenn mir 100 Apps“, eine lange Liste, ein Rezept, eine Anleitung, eine Geschichte, ausführlich) oder wenn es wichtig ist, dann liefere es VOLLSTÄNDIG und so lang wie nötig – sag nie, dass etwas zu lang ist oder ein Limit sprengt. Listen mit • und je Punkt kurz. Benutze ein paar passende Emojis (1–3 pro Antwort). Kein Markdown, keine Sternchen. Beende immer deinen Satz. Wenn eine Frage unklar ist oder komisch klingt (z. B. falsch von der Spracheingabe erkannt), sag kurz, was du vermutest, und antworte darauf. Nutze die Infos unten nur, wenn sie zur Frage passen.
 WICHTIG – Aktionen: Du kannst Dinge in GufyUI ausführen lassen. Wenn der Nutzer etwas TUN will, schreib für jede Aktion eine eigene Zeile genau so: [[BEFEHL: <einfacher deutscher Befehl>]] und danach höchstens einen kurzen Satz. Beispiele für Befehle, die GufyUI versteht: „Timer 5 Minuten“, „Wecker 7:30“, „Erinnere mich in 10 Minuten an Hausaufgaben“, „Taschenlampe an“, „Taschenlampe aus“, „Öffne Wetter“ (oder jede andere App), „Akku“, „Coins“, „Quests“, „Notiz Milch kaufen“, „Helligkeit 50 Prozent“, „Dunkelmodus an“, „Hintergrund wechseln“, „Würfeln“, „Neustart“, „Abmelden“, „Ausschalten“. Erfinde keine anderen Aktionen; wenn etwas nicht geht, sag das kurz.
@@ -2498,7 +2526,7 @@ function renderSetup(){
         <button class="themecard ${tmp.isHome?'sel':''}" data-home="1"><div style="font-size:46px;padding:8px">🏠</div><b>Zu Hause</b></button>
         <button class="themecard ${!tmp.isHome?'sel':''}" data-home="0"><div style="font-size:46px;padding:8px">🚶</div><b>Unterwegs</b></button>
       </div>
-      <p class="s-sub" style="font-size:13px;margin:0">In der App „Standort“ kannst du später GPS einschalten und deine Schlafenszeit festlegen.</p>`;
+      <p class="s-sub" style="font-size:13px;margin:0">In der App „Standort“ kannst du später GPS einschalten und dein Zuhause festlegen.</p>`;
   }else if(step===6){
     html=`<div class="s-ico">✨</div><h1>KI für den Assistenten</h1>
       <p class="s-sub">Wenn der Gufy Assistent etwas nicht versteht, fragt er <b>Gufy AI</b>. Gufy AI läuft mit Google Gemini – dafür brauchst du einen kostenlosen API-Schlüssel von Google.</p>
@@ -2681,6 +2709,29 @@ function notify(icon,title,text,color,onTap){
     else{t.style.transform='';t.style.opacity=''}};
   t.addEventListener('pointerup',end);t.addEventListener('pointercancel',end);
   setTimeout(()=>{if(!drag)kill()},onTap?9000:5000);
+}
+/* Einmalige Standort-Frage direkt in der Mitteilung: Zeit antippen (mit Code), wegwischen = später, ✕ = ignorieren */
+function locAskNotify(){
+  const q=S.locAsk;if(!q)return;$$('.toast.lask-t').forEach(x=>x.remove());
+  const maxM=Math.max(1,Math.floor((Date.now()-q.from)/60000)),minM=Math.max(0,Math.ceil((Date.now()-q.at)/60000));
+  const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']].filter(([m])=>m<maxM&&m>=minM);
+  const t=h(`<div class="toast glass lask-t"><div class="lt-h"><div class="ic" style="background:#ff2a68">📍</div><div style="flex:1;min-width:0"><b>${q.home?'Seit wann bist du zu Hause?':'Seit wann bist du weg?'}</b>
+      <small>GufyUI war ${fmtLen(Math.round((q.at-q.from)/60000)*60000)} zu – wähl die Zeit, dann stimmt dein Akku.</small></div><button class="lt-x" data-lx="1" title="Ignorieren">✕</button></div>
+    <div class="lt-chips">${P.map(([m,l])=>`<button data-lm="${m}">vor ${l}</button>`).join('')}<button data-lm="${maxM}">die ganze Zeit</button></div>
+    <div class="lt-foot"><button data-later="1">Später</button><span>wegwischen = später</span></div></div>`);
+  $('#toasts').prepend(t);haptic('heavy');
+  let gone=false,sx=0,dx=0,drag=false;
+  const kill=dir=>{if(gone)return;gone=true;t.style.transition='transform .25s,opacity .25s';t.style.transform=dir?`translateX(${dir*120}%)`:'translateY(-140%)';t.style.opacity=0;setTimeout(()=>t.remove(),260)};
+  t.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;drag=true;sx=e.clientX;dx=0;t.style.transition='none'});
+  t.addEventListener('pointermove',e=>{if(!drag)return;dx=e.clientX-sx;t.style.transform=`translateX(${dx}px)`;t.style.opacity=1-Math.min(.8,Math.abs(dx)/220)});
+  const end=()=>{if(!drag)return;drag=false;t.style.transition='';if(Math.abs(dx)>70)kill(Math.sign(dx));else{t.style.transform='';t.style.opacity=''}};
+  t.addEventListener('pointerup',end);t.addEventListener('pointercancel',end);
+  $('[data-later]',t).onclick=()=>{kill();notify('📍','Später','Die Frage wartet in der Standort-App (rote 1).','#8e8e93')};
+  $('[data-lx]',t).onclick=()=>{kill();S.locAsk=null;save();renderHome();haptic();glog('Akku','Einmalige Frage ignoriert')};
+  $$('[data-lm]',t).forEach(b=>b.onclick=()=>{const m=+b.dataset.lm,qq=S.locAsk;if(!qq)return kill();
+    askCode(qq.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(qq.from,Date.now()-m*60000);
+      if(corrSegApply(a,qq.at,qq.home,qq.home,'Einmalige Frage')){S.locAsk=null;save();renderHome();kill();haptic('success');notify('📍','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${qq.home?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759')}
+      else notify('⚠️','Geht nicht','So weit reicht der Akku-Verlauf nicht zurück.','#ff9500')})});
 }
 let pinOk=null,pinCancel=null,pinVal='';
 function askCode(title,ok,cancel){
@@ -2895,6 +2946,7 @@ const WTYPES={
       <div class="cw-stats"><div><small>Coins</small><b class="js-coins"></b></div><div><small>Quests</small><b class="js-tq"></b></div><div><small>Akku</small><b class="js-tb"></b></div></div></div>`,
     upd:el=>{ensureQuests();const L=S.daily.list;$('.js-tq',el).textContent=L.filter(q=>q.done).length+'/'+L.length;$('.js-tb',el).textContent=Math.round(S.battery.level)+' %'}}
 };
+delete WTYPES.sleep;   // Schlafenszeit entfernt
 function widgetBody(type,size){return WTYPES[type].html(size)}
 function updateWidgets(root){
   const d=new Date();
@@ -3307,8 +3359,11 @@ function powerOffFx(){
     $('#offBat').animate([{opacity:0},{opacity:1}],{duration:600,delay:400,fill:'backwards'});
     fx.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>fx.remove()},1550);
 }
-$('#powerBtn').onclick=()=>{if($('#powerBtn').classList.contains('go'))return;$('#powerBtn').classList.add('go');haptic('heavy');
-  $('#off .center').animate([{opacity:1},{opacity:1,offset:.5},{opacity:0,transform:'scale(1.06)'}],{duration:650,easing:'ease-in',fill:'forwards'});setTimeout(()=>{advance();if(S.poweredOff)glog('Akku','Eingeschaltet bei '+S.battery.level.toFixed(1)+' %');S.poweredOff=false;save();location.reload()},600)};
+$('#powerBtn').onclick=()=>{if($('#powerBtn').classList.contains('go'))return;
+  if(S.poweredOff&&S.setupDone)return askCode('GufyUI starten',powerOn);   // Nachteil: Code zum Starten
+  powerOn()};
+function powerOn(){if($('#powerBtn').classList.contains('go'))return;$('#powerBtn').classList.add('go');haptic('heavy');
+  $('#off .center').animate([{opacity:1},{opacity:1,offset:.5},{opacity:0,transform:'scale(1.06)'}],{duration:650,easing:'ease-in',fill:'forwards'});setTimeout(()=>{advance();if(S.poweredOff){S.battery.level=Math.max(0,S.battery.level-3);S.battery.last=Date.now();S.longBoot=true;glog('Akku','Eingeschaltet: −3 % Startstrom → '+S.battery.level.toFixed(1)+' %, langer Start')}S.poweredOff=false;save();location.reload()},600)};
 function updateCC(){
   const set=(k,on,txt,ic)=>{const t=$(`.cc-tile[data-t="${k}"]`);if(!t)return;t.classList.toggle('on',on);$('small',t).textContent=txt;if(ic)$('span',t).textContent=ic};
   set('loc',S.loc.isHome,(S.loc.isHome?'Zu Hause':'Unterwegs')+(S.loc.mode==='gps'?' · GPS':''),S.loc.isHome?'🏠':'🚶');
@@ -3726,6 +3781,8 @@ render(body,ctx){
         <div class="mapbtns"><button id="lCenter" title="Zentrieren">◎</button><button id="lLayer" title="Satellit">🛰️</button></div></div>
       <div class="lchips" id="lInfo">${infoHTML()}</div>
       <div class="lacts"><button class="btn" id="lRef">Aktualisieren</button><button class="btn primary" id="lSet" ${geoPos?'':'disabled'}>Hier ist mein Zuhause</button></div>
+      <div class="sgroup ladr"><div class="ladr-h">📮 Zuhause per Adresse${S.loc.homeAddr?`<small>Aktuell: ${esc(S.loc.homeAddr)}</small>`:''}</div>
+        <div class="ladr-in"><input class="input" id="lAdr" placeholder="Straße Nr., Ort – z. B. Strandweg 3, Kampen" autocomplete="street-address"><button class="btn primary" id="lAdrGo">Suchen</button></div><div id="lAdrR"></div></div>
       <div class="sgroup" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><b>Umkreis</b><b id="lRadV" style="color:var(--accent)">${S.loc.radius} m</b></div>
         <input type="range" id="lRad" min="50" max="1000" step="25" value="${S.loc.radius}" class="slider"></div>`;
   }
@@ -3738,12 +3795,7 @@ render(body,ctx){
       <div class="sgroup lcorr" id="lAdd"></div>
       <div class="seg" style="margin:16px 0 14px"><button data-mode="manual" class="${S.loc.mode==='manual'?'on':''}">Manuell</button><button data-mode="gps" class="${S.loc.mode==='gps'?'on':''}">GPS & Karte</button></div>
       <div id="lGps">${gpsHTML()}</div>
-      <div class="slabel">Schlafenszeit</div>
-      <div class="sgroup">
-        <div class="srow"><span class="sic" style="background:#5e5ce6">😴</span><span class="sl">Schlafen ab</span><input type="time" class="tinput" id="sF" value="${S.sleep.from}"></div>
-        <div class="srow"><span class="sic" style="background:#ff9f0a">⏰</span><span class="sl">Aufstehen um</span><input type="time" class="tinput" id="sT" value="${S.sleep.to}"></div>
-        <div class="srow"><span class="sic" style="background:#8e8e93">⏱️</span><span class="sl">Dauer</span><span class="sv">${fmtDur(sleepHours())}</span></div>
-      </div>`;
+      `;
     $$('[data-mode]',body).forEach(b=>b.onclick=()=>{
       if(b.dataset.mode===S.loc.mode)return;
       askCode('Modus ändern',()=>{
@@ -3752,9 +3804,6 @@ render(body,ctx){
         updateCC();draw();
       });
     });
-    const upd=(k,v)=>askCode('Schlafenszeit ändern',()=>{advance();S.sleep[k]=v;save();renderBattery();updateCC();draw()},draw);
-    $('#sF',body).onchange=e=>e.target.value&&upd('from',e.target.value);
-    $('#sT',body).onchange=e=>e.target.value&&upd('to',e.target.value);
     bindGps();corrDraw();addDraw();
     if(S.loc.mode==='gps')initMap();
   }
@@ -3809,7 +3858,13 @@ render(body,ctx){
   function bindGps(){
     const hm=$('#lHome',body);if(hm)hm.onchange=e=>{const v=e.target.checked;e.target.checked=!v;askHome(v,refresh)};
     const rf=$('#lRef',body);if(rf)rf.onclick=()=>{geoErr='';fitted=false;checkGeoOnce()};
-    const st=$('#lSet',body);if(st)st.onclick=()=>{if(!geoPos)return;askCode('Zuhause festlegen',()=>{S.loc.home={lat:geoPos.lat,lon:geoPos.lon};save();setHome(true,true);haptic('success');notify('🏠','Zuhause gespeichert','GufyUI erkennt jetzt automatisch, ob du zu Hause bist.','#34c759');fitted=false;refresh()})};
+    const ag=$('#lAdrGo',body);if(ag)ag.onclick=async()=>{const q=$('#lAdr',body).value.trim(),R2=$('#lAdrR',body);if(q.length<3)return;R2.innerHTML='<small class="muted">Suche …</small>';
+      let L2=[];try{L2=(await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=4&addressdetails=1&accept-language=de&countrycodes=de,dk,at,ch,nl`).then(x=>x.json())).map(z=>({lat:+z.lat,lon:+z.lon,t:z.display_name.split(',').slice(0,3).join(',')}))}catch(e){}
+      if(!L2.length)try{L2=((await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=4&lang=de`).then(x=>x.json())).features||[]).map(f=>{const p=f.properties;return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],t:[p.name,p.street&&(p.street+(p.housenumber?' '+p.housenumber:'')),p.city||p.town||p.village].filter(Boolean).join(', ')}})}catch(e){}
+      R2.innerHTML=L2.length?L2.map((x,i)=>`<button class="ladr-r" data-ai="${i}">🏠 ${esc(x.t)}</button>`).join(''):'<small class="muted">Adresse nicht gefunden</small>';
+      $$('[data-ai]',R2).forEach(b=>b.onclick=()=>{const x=L2[+b.dataset.ai];askCode('Zuhause festlegen',()=>{S.loc.home={lat:x.lat,lon:x.lon};S.loc.homeAddr=x.t;save();haptic('success');
+        if(geoPos)setHome(distM(geoPos,S.loc.home)<=S.loc.radius,true);notify('🏠','Zuhause gespeichert',x.t,'#34c759');fitted=false;refresh()})})};
+    const st=$('#lSet',body);if(st)st.onclick=()=>{if(!geoPos)return;askCode('Zuhause festlegen',()=>{S.loc.home={lat:geoPos.lat,lon:geoPos.lon};S.loc.homeAddr='';save();setHome(true,true);haptic('success');notify('🏠','Zuhause gespeichert','GufyUI erkennt jetzt automatisch, ob du zu Hause bist.','#34c759');fitted=false;refresh()})};
     const rd=$('#lRad',body);
     if(rd){
       rd.oninput=e=>{$('#lRadV',body).textContent=e.target.value+' m';if(homeC)homeC.setRadius(+e.target.value)};
@@ -3940,11 +3995,19 @@ render(body,ctx){
     $('#hDev',body).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
       askCode(v?'Entwicklermodus an':'Entwicklermodus aus',()=>{S.dev=v;save();devSync();const t=$('#hDev',body);if(t)t.checked=v})};
     $('#hVac',body).onchange=e=>{const v=e.target.checked;e.target.checked=!v;
-      askCode(v?'Urlaubsmodus einschalten':'Urlaubsmodus ausschalten',()=>{
-        advance(inUse()?USE_MULT:1);S.vacation=v;save();renderBattery();updateCC();
+      const doIt=()=>askCode(v?'Urlaubsmodus einschalten':'Urlaubsmodus ausschalten',()=>{
+        advance(inUse()?USE_MULT:1);S.vacation=v;if(!v&&S.inv&&S.inv.station){S.inv.station=0;glog('Akku','Urlaubsmodus aus → Ladestation zurückgesetzt')}save();renderBattery();updateCC();
         const t=$('#hVac',body);if(t)t.checked=v;
+        if(typeof renderHome==='function')renderHome();
         notify('🏖️',v?'Urlaubsmodus an':'Urlaubsmodus aus',v?(hasStation()?'Zu Hause lädt jetzt deine Ladestation.':'Ohne Ladestation verliert der Akku auch zu Hause Strom – die Ladestation gibt es im Gufy Store.'):'Laden zu Hause funktioniert wieder normal.','#ff9f0a');
-      })};
+      });
+      if(v||!hasStation())return doIt();
+      const d=h(`<div class="gem-dlg"><div class="gem-card"><div style="font-size:42px">⚠️</div><h2 style="font-size:19px">Ladestation geht verloren</h2>
+        <p class="muted" style="margin:6px 0 14px;font-size:14px;line-height:1.45">Wenn du den Urlaubsmodus ausschaltest, wird deine <b>Ladestation zurückgesetzt</b>. Schaltest du ihn später wieder ein, musst du dir im Gufy Store eine <b>neue kaufen</b>.</p>
+        <div class="gem-btns"><button class="btn" id="vNo">Abbrechen</button><button class="btn primary" id="vOk" style="background:#ff453a;border-color:#ff453a">Trotzdem aus</button></div></div></div>`);
+      document.body.appendChild(d);requestAnimationFrame(()=>d.classList.add('open'));haptic('heavy');
+      $('#vNo',d).onclick=()=>d.remove();$('#vOk',d).onclick=()=>{d.remove();doIt()};
+    };
     $('#hBr',body).oninput=e=>{S.brightness=+e.target.value;save();applyLook()};
     $('#hOut',body).onclick=()=>logout();
     bindNav();
@@ -5023,22 +5086,26 @@ render(body,ctx){
         :`<div class="mu-list">${MU.pl.map(p=>`<button class="mu-pl" data-pl="${p.id}"><span>${p.songs[0]&&p.songs[0].img?`<img src="${p.songs[0].img}">`:'🎶'}</span><div><b>${esc(p.name)}</b><small>${p.songs.length} Songs</small></div></button>`).join('')}</div><button class="btn" id="muNewPl" style="width:100%;margin-top:10px">＋ Neue Playlist</button>`}
     else h+=`<div class="mu-plh"><b>📥 Offline-Musik</b><small>Eigene Musikdateien – laufen auch ohne Internet</small><label class="btn primary" style="cursor:pointer">＋ Dateien hinzufügen<input type="file" id="muFile" accept="audio/*" multiple hidden></label></div>
       <div class="mu-list">${files.map((x,i)=>songHTML(x,i,'files')).join('')||'<p class="muted" style="text-align:center">Noch keine Dateien.</p>'}</div>`;
-    h+=`</div>`;if(!$('#muC',body))body.innerHTML='<div id="muC"></div><div class="mu-player hide" id="muPl"><div id="muPH"></div><div id="muYT" class="mu-yt hide"></div><div id="muPL"></div></div>';
+    h+=`</div>`;if(!$('#muC',body))body.innerHTML='<div id="muC"></div>';
+    if(!$('#muPl'))document.body.insertAdjacentHTML('beforeend','<div class="mu-player hide" id="muPl"><div id="muPH"></div><div id="muYT" class="mu-yt hide"></div><div id="muPL"></div></div>');
+    $('#muPl').classList.remove('mini');
     $('#muC',body).innerHTML=h;drawPlayer();bind();
   }
   const fmtS=t=>!isFinite(t)||t<0?'0:00':Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
-  function drawPlayer(){const c=P.cur,pl=$('#muPl',body);if(!pl)return;pl.classList.toggle('hide',!c);if(!c)return;
-    $('#muPH',body).innerHTML=`<div class="mu-ph"><img src="${c.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(c.t)}</b><small>${esc(c.a||'')}${P.mode==='prev'?' · Vorschau':P.mode==='file'?' · Offline':''}</small></div>
-      <button class="mu-b" id="muPrev">⏮</button><button class="mu-b mu-pp" id="muPP">${P.loading?'<i class="mu-spin"></i>':P.paused?'▶':'⏸'}</button><button class="mu-b" id="muNext">⏭</button></div>
+  function drawPlayer(){const c=P.cur,pl=$('#muPl');if(!pl)return;pl.classList.toggle('hide',!c);if(!c)return;
+    $('#muPH').innerHTML=`<div class="mu-ph"><img src="${c.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(c.t)}</b><small>${esc(c.a||'')}${P.mode==='prev'?' · Vorschau':P.mode==='file'?' · Offline':''}</small></div>
+      <button class="mu-b mu-open" id="muOpen">⤢</button><button class="mu-b" id="muPrev">⏮</button><button class="mu-b mu-pp" id="muPP">${P.loading?'<i class="mu-spin"></i>':P.paused?'▶':'⏸'}</button><button class="mu-b" id="muNext">⏭</button><button class="mu-b mu-stop" id="muStop">✕</button></div>
       <div class="mu-prog"><span id="muCt">0:00</span><div class="mu-bar" id="muBar"><i id="muBi"></i></div><span id="muDu">0:00</span></div>`;
-    $('#muYT',body).classList.toggle('hide',P.mode!=='yt');
-    $('#muPL',body).innerHTML=P.mode==='prev'?`<a class="mu-ytl" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.a+' '+c.t)}" target="_blank" rel="noopener">Ganzen Song auf YouTube öffnen ↗</a>`:'';
-    $('#muPrev',body).onclick=()=>next(-1);$('#muNext',body).onclick=()=>next(1);
-    $('#muPP',body).onclick=()=>{haptic('select');if(P.mode==='yt'&&P.yt&&P.yt.getPlayerState){P.yt.getPlayerState()===1?P.yt.pauseVideo():P.yt.playVideo()}else if(P.audio){P.audio.paused?P.audio.play():P.audio.pause()}};
-    $('#muBar',body).onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;if(P.mode==='yt'&&P.yt&&P.yt.getDuration)P.yt.seekTo(P.yt.getDuration()*f,true);else if(P.audio&&P.audio.duration)P.audio.currentTime=P.audio.duration*f}}
-  const progIv=setInterval(()=>{if(!body.isConnected||!P.cur)return;let ct=0,du=0,paused=false;
+    $('#muYT').classList.toggle('hide',P.mode!=='yt');
+    $('#muPL').innerHTML=P.mode==='prev'?`<a class="mu-ytl" href="https://www.youtube.com/results?search_query=${encodeURIComponent(c.a+' '+c.t)}" target="_blank" rel="noopener">Ganzen Song auf YouTube öffnen ↗</a>`:'';
+    $('#muOpen').onclick=()=>openApp('gmusic');
+    $('#muStop').onclick=()=>{haptic();stopAll();P.cur=null;P.queue=[];const pl=$('#muPl');if(pl){pl.classList.add('hide');pl.classList.remove('mini');const y=$('#muYT');if(y)y.innerHTML=''}};
+    $('#muPrev').onclick=()=>next(-1);$('#muNext').onclick=()=>next(1);
+    $('#muPP').onclick=()=>{haptic('select');if(P.mode==='yt'&&P.yt&&P.yt.getPlayerState){P.yt.getPlayerState()===1?P.yt.pauseVideo():P.yt.playVideo()}else if(P.audio){P.audio.paused?P.audio.play():P.audio.pause()}};
+    $('#muBar').onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),f=(e.clientX-r.left)/r.width;if(P.mode==='yt'&&P.yt&&P.yt.getDuration)P.yt.seekTo(P.yt.getDuration()*f,true);else if(P.audio&&P.audio.duration)P.audio.currentTime=P.audio.duration*f}}
+  if(!P.iv)P.iv=setInterval(()=>{if(!P.cur)return;let ct=0,du=0,paused=false;
     if(P.mode==='yt'&&P.yt&&P.yt.getCurrentTime){try{ct=P.yt.getCurrentTime();du=P.yt.getDuration();paused=P.yt.getPlayerState()!==1}catch(e){}}else if(P.audio){ct=P.audio.currentTime;du=P.audio.duration;paused=P.audio.paused}
-    const a=$('#muCt',body),b=$('#muDu',body),i=$('#muBi',body),pp=$('#muPP',body);if(a)a.textContent=fmtS(ct);if(b)b.textContent=fmtS(du);if(i)i.style.width=(du?ct/du*100:0)+'%';
+    const a=$('#muCt'),b=$('#muDu'),i=$('#muBi'),pp=$('#muPP');if(a)a.textContent=fmtS(ct);if(b)b.textContent=fmtS(du);if(i)i.style.width=(du?ct/du*100:0)+'%';
     if(pp&&!P.loading&&P.paused!==paused){P.paused=paused;pp.textContent=paused?'▶':'⏸'}},400);
   MU.ytc??={};
   async function ytId(x){if(x.yt)return x.yt;const ck=key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
@@ -5058,8 +5125,8 @@ render(body,ctx){
     if(x.local){const f=(await dbAll()).find(z=>z.id===x.local);if(!f)return;P.mode='file';P.audio=P.audio||new Audio();P.audio.src=URL.createObjectURL(f.blob);P.audio.onended=()=>next(1);P.audio.play().catch(()=>{});draw();return}
     P.mode='yt';P.loading=true;draw();const id=await ytId(x);P.loading=false;
     if(P.cur!==x)return;
-    if(!id||!body.isConnected){P.mode='prev';draw();if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
-    await loadYTApi();const el=$('#muYT',body);if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
+    if(!id){P.mode='prev';draw();if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
+    await loadYTApi();const el=$('#muYT');if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
     el.innerHTML='<div id="muYTp"></div>';
     P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0,controls:0,modestbranding:1},events:{onReady:e=>{try{e.target.playVideo()}catch(_){}},onStateChange:e=>{if(e.data===0)next(1)}}});
     drawPlayer();
@@ -5098,7 +5165,7 @@ render(body,ctx){
   loadFiles().then(()=>{if(body.isConnected&&tab==='files')draw()});
   loadYTApi();
   draw();
-  ctx.cleanup.push(()=>{stopAll();clearInterval(progIv)});
+  ctx.cleanup.push(()=>{const pl=$('#muPl');if(pl&&P.cur)pl.classList.add('mini')});   // Musik läuft weiter – als Mini-Player
 }},
 /* ---------- KI-Studio: Mini-Apps bauen (Beta) ---------- */
 aistudio:{name:'KI-Studio',cat:'KI-Apps',full:false,icon:'🧩',bg:'linear-gradient(135deg,#8b5cf6,#3b82f6 60%,#ec4899)',
@@ -5740,7 +5807,6 @@ function planCmd(raw){
     try{await wxLoad(false);if(S.wx){const c=S.wx.d.current;w=` Draußen: ${Math.round(c.temperature_2m)}°, ${wxCode(c.weather_code,c.is_day).t}, ${rainSummary(S.wx.d).text}.`}}catch(e){}
     return `Guten Morgen ${S.name||''}! Akku ${dispPct()} %, ${fmtNum(S.coins)} Coins, ${o} Quests offen.${w}`}};
   if(/gute nacht|ich geh schlafen|schlafen gehen/.test(s))return{ic:'🌙',txt:'Gute Nacht',run:()=>{S.dnd=true;S.brightness=40;applyLook();save();updateCC();return `Gute Nacht ${S.name||''}! Nicht stören ist an, Helligkeit runter. 😴`}};
-  if(/wann (muss|soll) ich (ins bett|schlafen)|schlafenszeit|wann aufstehen/.test(s))return{ic:'😴',txt:'Schlafenszeit',run:()=>`Schlafenszeit: ${S.sleep.from} bis ${S.sleep.to} Uhr.`};
   if(/was habe ich heute|heute geschafft|meine statistik|statistik/.test(s))return{ic:'📊',txt:'Statistik',run:()=>{const t=dayKey(),h=S.questDone.filter(e=>dayKey(new Date(e.t))===t),all=S.questDone.reduce((a,e)=>a+e.coins,0);
     return `Heute: ${h.length} Quest${h.length===1?'':'s'} geschafft (+${h.reduce((a,e)=>a+e.coins,0)} Coins). Insgesamt: ${S.questDone.length} Quests, ${fmtNum(all)} Coins verdient.`}};
   if((m=s.match(/wie viele tage (?:noch )?bis (?:zu |zum |zur )?(.+)/))){const q=m[1].replace(/[?!]/g,'').replace(/\.$/,'').trim(),now=new Date(),y=now.getFullYear();let d=null,name=q;
@@ -5868,7 +5934,9 @@ let asRun=false;
 function asStatus(t,mode){const st=$('#asSt');if(st){st.textContent=t;st.className='as-st '+(mode||'')}}
 document.addEventListener('visibilitychange',()=>glog('App',document.visibilityState==='hidden'?'im Hintergrund':'wieder sichtbar'));
 const AS_CHIPS=['Timer 3 Minuten und Taschenlampe an','Erinnere mich in 10 Minuten an Hausaufgaben','Wie ist das Wetter?','Wie viele Tage bis Weihnachten?','Pizza oder Burger?','Schere','Guten Morgen','Was habe ich heute geschafft?'];
+const coldLeft=()=>0;   // Kaltstart entfernt (v12.3)
 function openAssistant(){
+  if(coldLeft()){haptic('error');notify('🥶','Kaltstart',`Der Assistent startet noch – bereit in ${coldLeft()} Sek.`,'#5ac8fa');return}
   if(current!=='desktop')return;
   let a=$('#asst');
   if(!a){a=document.createElement('div');a.id='asst';a.className='top';document.body.append(a);
