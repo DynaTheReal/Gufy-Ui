@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"12.3","notes":["Kaltstart entfernt – dafür dauert der Start nach dem Ausschalten jetzt ca. 12 Sek. (mit Lade-Texten)","Urlaubsmodus-Warnung, Zuhause per Adresse, Schlafenszeit entfernt"]};
+window.GUFY={"v":"12.4","notes":["Standort-Frage: Schnelltasten 10 / 20 / 30 Min., 1 / 2 / 4 Std. sind wieder da (mit Uhrzeit) – plus „✕ Ignorieren“","Start nach dem Ausschalten dauert jetzt ca. 20 Sek.","Kein Code mehr zum Einschalten"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1382,6 +1382,8 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
 .ladr-in{display:flex;gap:8px}.ladr-in .input{flex:1;min-width:0}
 .ladr-r{display:block;width:100%;text-align:left;padding:10px 12px;margin-top:8px;border-radius:12px;background:var(--hover);font-size:14px}
 .off-warn{margin:-8px 0 0;font-size:11.5px;color:rgba(255,255,255,.28)}
+.lc-chips button small{opacity:.6;font-weight:500;margin-left:3px}
+.lc-btns{display:flex;gap:8px}.lc-btns .btn{flex:1}
 </style>
 </head>
 <body class="dark">
@@ -1489,7 +1491,7 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
   <div class="center">
     <div class="off-brand">Gufy<i>UI</i></div>
     <button id="powerBtn" aria-label="Einschalten"><span class="pw-ring"></span><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
-    <p class="off-hint">Zum Einschalten tippen</p><p class="off-warn">🔒 Code · 🔋 −3 % · ⏳ langer Start</p>
+    <p class="off-hint">Zum Einschalten tippen</p><p class="off-warn">🔋 −3 % · ⏳ langer Start</p>
   </div>
   <div class="off-bat" id="offBat"></div>
 </div>
@@ -2323,10 +2325,10 @@ function boot(){
   const f=$('#bootFill');f.getAnimations().forEach(a=>a.cancel());
   $('#bootTxt').textContent=S.setupDone?(S.name?'Willkommen zurück, '+S.name:'Wird gestartet …'):'Willkommen';
   const long=!!S.longBoot;S.longBoot=false;save();   // nach manuellem Ausschalten: langer Start (~15 Sek.)
-  const K=long?5:1;
+  const K=long?8:1;
   f.animate([{transform:'scaleX(0)'},{transform:'scaleX(.35)',offset:.35},{transform:'scaleX(.42)',offset:.5},{transform:'scaleX(.6)',offset:.6},{transform:'scaleX(.9)',offset:.85},{transform:'scaleX(1)'}],{duration:1250*K*1.6,delay:1650,easing:'cubic-bezier(.65,0,.35,1)',fill:'both'});
   if(long){const T=['Systeme werden gestartet …','Akku wird geprüft …','Apps werden geladen …','Quests werden synchronisiert …','Fast fertig …'];
-    T.forEach((t,i)=>setTimeout(()=>{const e=$('#bootTxt');if(e&&current==='boot')e.textContent=t},1650+i*2600))}
+    T.forEach((t,i)=>setTimeout(()=>{const e=$('#bootTxt');if(e&&current==='boot')e.textContent=t},1650+i*3800))}
   const OUT=long?1650+1250*K*1.6+200:2950;
   setTimeout(()=>bt.classList.add('out'),OUT);
   setTimeout(()=>{
@@ -2711,13 +2713,14 @@ function notify(icon,title,text,color,onTap){
   setTimeout(()=>{if(!drag)kill()},onTap?9000:5000);
 }
 /* Einmalige Standort-Frage direkt in der Mitteilung: Zeit antippen (mit Code), wegwischen = später, ✕ = ignorieren */
+const LOC_CHIPS=[[10,'vor 10 Min.'],[20,'vor 20 Min.'],[30,'vor 30 Min.'],[60,'vor 1 Std.'],[120,'vor 2 Std.'],[240,'vor 4 Std.']];
 function locAskNotify(){
   const q=S.locAsk;if(!q)return;$$('.toast.lask-t').forEach(x=>x.remove());
-  const maxM=Math.max(1,Math.floor((Date.now()-q.from)/60000)),minM=Math.max(0,Math.ceil((Date.now()-q.at)/60000));
-  const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']].filter(([m])=>m<maxM&&m>=minM);
+  const maxM=Math.max(1,Math.round((q.at-q.from)/60000));
+  const P=LOC_CHIPS.filter(([m])=>m<maxM);
   const t=h(`<div class="toast glass lask-t"><div class="lt-h"><div class="ic" style="background:#ff2a68">📍</div><div style="flex:1;min-width:0"><b>${q.home?'Seit wann bist du zu Hause?':'Seit wann bist du weg?'}</b>
       <small>GufyUI war ${fmtLen(Math.round((q.at-q.from)/60000)*60000)} zu – wähl die Zeit, dann stimmt dein Akku.</small></div><button class="lt-x" data-lx="1" title="Ignorieren">✕</button></div>
-    <div class="lt-chips">${P.map(([m,l])=>`<button data-lm="${m}">vor ${l}</button>`).join('')}<button data-lm="${maxM}">die ganze Zeit</button></div>
+    <div class="lt-chips">${P.map(([m,l])=>`<button data-lm="${m}">${l}</button>`).join('')}<button data-lm="${maxM}">die ganze Zeit</button></div>
     <div class="lt-foot"><button data-later="1">Später</button><span>wegwischen = später</span></div></div>`);
   $('#toasts').prepend(t);haptic('heavy');
   let gone=false,sx=0,dx=0,drag=false;
@@ -2729,7 +2732,7 @@ function locAskNotify(){
   $('[data-later]',t).onclick=()=>{kill();notify('📍','Später','Die Frage wartet in der Standort-App (rote 1).','#8e8e93')};
   $('[data-lx]',t).onclick=()=>{kill();S.locAsk=null;save();renderHome();haptic();glog('Akku','Einmalige Frage ignoriert')};
   $$('[data-lm]',t).forEach(b=>b.onclick=()=>{const m=+b.dataset.lm,qq=S.locAsk;if(!qq)return kill();
-    askCode(qq.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(qq.from,Date.now()-m*60000);
+    askCode(qq.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(qq.from,qq.at-m*60000);
       if(corrSegApply(a,qq.at,qq.home,qq.home,'Einmalige Frage')){S.locAsk=null;save();renderHome();kill();haptic('success');notify('📍','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${qq.home?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759')}
       else notify('⚠️','Geht nicht','So weit reicht der Akku-Verlauf nicht zurück.','#ff9500')})});
 }
@@ -3360,7 +3363,6 @@ function powerOffFx(){
     fx.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>fx.remove()},1550);
 }
 $('#powerBtn').onclick=()=>{if($('#powerBtn').classList.contains('go'))return;
-  if(S.poweredOff&&S.setupDone)return askCode('GufyUI starten',powerOn);   // Nachteil: Code zum Starten
   powerOn()};
 function powerOn(){if($('#powerBtn').classList.contains('go'))return;$('#powerBtn').classList.add('go');haptic('heavy');
   $('#off .center').animate([{opacity:1},{opacity:1,offset:.5},{opacity:0,transform:'scale(1.06)'}],{duration:650,easing:'ease-in',fill:'forwards'});setTimeout(()=>{advance();if(S.poweredOff){S.battery.level=Math.max(0,S.battery.level-3);S.battery.last=Date.now();S.longBoot=true;glog('Akku','Eingeschaltet: −3 % Startstrom → '+S.battery.level.toFixed(1)+' %, langer Start')}S.poweredOff=false;save();location.reload()},600)};
@@ -3834,24 +3836,25 @@ render(body,ctx){
   function corrDraw(){
     const W=$('#lAskW',body);if(!W)return;const q=S.locAsk;
     if(!q){W.innerHTML='';return}
-    const now=Date.now(),maxM=Math.max(1,Math.floor((now-q.from)/60000)),minM=Math.max(0,Math.ceil((now-q.at)/60000));
-    const P=[[10,'10 Min.'],[30,'30 Min.'],[60,'1 Std.'],[120,'2 Std.'],[240,'4 Std.']].filter(([m])=>m<maxM&&m>=minM);
+    const maxM=Math.max(1,Math.round((q.at-q.from)/60000)),minM=1,hmA=m=>new Date(q.at-m*60000).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    const P=LOC_CHIPS.filter(([m])=>m<maxM);
     W.innerHTML=`<div class="slabel" style="color:#ff2a68">❗ Einmalige Frage</div><div class="sgroup lcorr lask">
       <p class="lc-q">${q.home?'🏠 Du bist wieder <b>zu Hause</b>. Seit wann?':'🚶 Du bist <b>weg</b>. Seit wann schon?'}</p>
       <small class="muted" style="display:block;margin:-4px 0 10px">GufyUI war ${fmtLen(Math.round((q.at-q.from)/60000)*60000)} zu (seit ${new Date(q.from).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr).</small>
-      <div class="lc-chips">${P.map(([m,t])=>`<button data-cm="${m}" class="${cMin===m?'on':''}">vor ${t}</button>`).join('')}<button data-cm="${maxM}" class="${cMin===maxM?'on':''}">die ganze Zeit</button></div>
+      <div class="lc-chips">${P.map(([m,t])=>`<button data-cm="${m}" class="${cMin===m?'on':''}">${t} <small>ab ${hmA(m)}</small></button>`).join('')}<button data-cm="${maxM}" class="${cMin===maxM?'on':''}">die ganze Zeit <small>ab ${hmA(maxM)}</small></button></div>
       <div class="lc-own"><input class="input" id="lcIn" type="number" inputmode="numeric" min="${minM}" max="${maxM}" placeholder="Eigene Zeit" value="${cMin&&cMin!==maxM&&!P.some(p=>p[0]===cMin)?cMin:''}"><span>Min.</span></div>
       <div class="lc-prev" id="lcPrev"></div>
-      <button class="btn primary" id="lcOk" style="width:100%" ${cMin?'':'disabled'}>Bestätigen 🔒</button></div>`;
+      <div class="lc-btns"><button class="btn" id="lcIg">✕ Ignorieren</button><button class="btn primary" id="lcOk" ${cMin?'':'disabled'}>Bestätigen 🔒</button></div></div>`;
     const el=W;
-    const seg=()=>{const a=Math.max(q.from,now-cMin*60000);return corrSeg(a,q.at,q.home,q.home)};
+    const seg=()=>{const a=Math.max(q.from,q.at-cMin*60000);return corrSeg(a,q.at,q.home,q.home)};
     const prev=()=>{const pv=$('#lcPrev',el),ok=$('#lcOk',el);if(!cMin){pv.innerHTML='Wähle, seit wann';ok.disabled=true;return}
       if(cMin>maxM||cMin<minM){pv.textContent=`Geht nur zwischen ${minM} und ${maxM} Min.`;ok.disabled=true;return}
       const r=seg();if(!r){pv.innerHTML='⚠️ So weit reicht der Akku-Verlauf nicht zurück.';ok.disabled=true;return}
       ok.disabled=false;pv.innerHTML=`Akku jetzt <b>${dispPct()} %</b> → danach <b style="color:${r.lv<S.battery.level?'#ff9f0a':'#34c759'}">${r.lv<=0?0:Math.ceil(r.lv-1e-9)} %</b>`};
     $$('[data-cm]',el).forEach(b=>b.onclick=()=>{cMin=+b.dataset.cm;haptic('select');corrDraw()});
     $('#lcIn',el).oninput=e=>{const v=Math.round(+e.target.value);cMin=v>0?v:0;$$('[data-cm]',el).forEach(x=>x.classList.remove('on'));prev()};
-    $('#lcOk',el).onclick=()=>{const m=cMin;if(!m)return;askCode(q.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(q.from,Date.now()-m*60000);
+    $('#lcIg',el).onclick=()=>{S.locAsk=null;cMin=0;save();renderHome();haptic();glog('Akku','Einmalige Frage ignoriert');corrDraw()};
+    $('#lcOk',el).onclick=()=>{const m=cMin;if(!m)return;askCode(q.home?'Seit wann zu Hause':'Seit wann weg',()=>{const a=Math.max(q.from,q.at-m*60000);
       if(corrSegApply(a,q.at,q.home,q.home,'Einmalige Frage')){S.locAsk=null;save();renderHome();haptic('success');notify('📍','Akku nachgerechnet',`Seit ${fmtLen(m*60000)} ${q.home?'zu Hause':'unterwegs'} – jetzt ${dispPct()} %`,'#34c759');cMin=0;corrDraw();refresh()}})};
     prev();
   }
