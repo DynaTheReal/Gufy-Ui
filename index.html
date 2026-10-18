@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"12.6","notes":["Öfis-Radar: Busse & Bahnen bleiben an Haltestellen stehen, statt zu verschwinden","Fahrzeuge fahren jetzt flüssig statt sich jede Sekunde vorwärts zu teleportieren","🔔 Verspätungs-Alarm: Linie + Richtung wählen – ist der Bus über 3 Min. zu spät (oder fällt aus), kommt eine Mitteilung","Haltestellen lassen sich nach Richtung aufteilen (z. B. → Hörnum / → List)","Gufy Music: 🎬 Shorts-Modus – Songs als passender YouTube-Short (nur mit genau diesem Titel), keine doppelten Songs mehr in der Suche"]};
+window.GUFY={"v":"12.7","notes":["Gufy Music sucht jetzt nur noch in YouTube Shorts – der Titel wird zum Liedtitel, das Vorschaubild zum Liedbild","Zwei Modi (⚙️ neben der Suche): 🎵 Musik – nur Musik-Shorts wie Lieder & Song-Showcases · 🎬 Alle – einfach alle Shorts","Keine normalen YouTube-Videos mehr"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1394,7 +1394,9 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
 .o-wpick button{padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:700 15px inherit;text-align:left;display:flex;justify-content:space-between;gap:10px}
 .o-wpick button small{opacity:.55;font-weight:500}
 .leaflet-marker-icon .o-veh{transition:none}
-.mu-search{display:flex;gap:8px;align-items:center}.mu-search .input{flex:1}
+.mu-search{display:flex;gap:8px;align-items:center}
+.mu-mode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:16px;border:2px solid var(--border);background:var(--panel);color:inherit;font:inherit}
+.mu-mode small{opacity:.65;font-size:12.5px}.mu-mode.on{border-color:#ff2d55;background:rgba(255,45,85,.12)}.mu-search .input{flex:1}
 .mu-sh{flex:none;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:700 13px inherit}.mu-sh.on{background:#ff2d55;color:#fff;border-color:transparent}
 </style>
 </head>
@@ -5111,20 +5113,21 @@ render(body,ctx){
 gmusic:{name:'Gufy Music',cat:'Unterhaltung',full:true,store:true,icon:'🎵',bg:'linear-gradient(135deg,#ff2d55,#af52de)',
 render(body,ctx){
   S.music??={pl:[{id:'fav',name:'❤️ Lieblingssongs',songs:[]}]};const MU=S.music;
-  let tab='search',res=[],q='',plOpen=null,files=[];
+  let tab='search',res=[],q='',plOpen=null,files=[],searching=false;
   const P=window.__GMP??=(window.__GMP={queue:[],i:-1,yt:null,audio:null,cur:null,mode:''});
   const DB=()=>new Promise((r,j)=>{const o=indexedDB.open('gufyui_music',1);o.onupgradeneeded=()=>o.result.createObjectStore('f',{keyPath:'id'});o.onsuccess=()=>r(o.result);o.onerror=()=>j(o.error)});
   const dbAll=async()=>{try{const db=await DB();return await new Promise(r=>{const t=db.transaction('f').objectStore('f').getAll();t.onsuccess=()=>r(t.result||[]);t.onerror=()=>r([])})}catch(e){return[]}};
   const dbPut=async o=>{const db=await DB();await new Promise((r,j)=>{const t=db.transaction('f','readwrite');t.objectStore('f').put(o);t.oncomplete=r;t.onerror=()=>j(t.error)})};
   const dbDel=async id=>{const db=await DB();await new Promise(r=>{const t=db.transaction('f','readwrite');t.objectStore('f').delete(id);t.oncomplete=r;t.onerror=r})};
-  const key=x=>x.local?'f:'+x.local:(x.a+'|'+x.t).toLowerCase();
+  const key=x=>x.local?'f:'+x.local:x.sid?'y:'+x.sid:(x.a+'|'+x.t).toLowerCase();
+  MU.smode??='music';delete MU.shorts;
   const songHTML=(x,i,ctxName)=>`<div class="mu-song ${P.cur&&key(P.cur)===key(x)?'on':''}"><img src="${x.img||''}" alt="" onerror="this.style.visibility='hidden'"><div class="mu-t"><b>${esc(x.t)}</b><small>${esc(x.a||'')}${x.local?' · 📥 offline':''}</small></div>
       <button class="mu-b" data-play="${ctxName}:${i}">▶</button><button class="mu-b" data-add="${ctxName}:${i}">${ctxName==='pl'?'🗑️':'＋'}</button></div>`;
   function list(ctxName){return ctxName==='res'?res:ctxName==='files'?files:ctxName==='pl'?(MU.pl.find(p=>p.id===plOpen)||{songs:[]}).songs:[]}
   function draw(){
     let h=`<div class="mu"><div class="tabs"><button data-mt="search" class="${tab==='search'?'on':''}">🔎 Suchen</button><button data-mt="pl" class="${tab==='pl'?'on':''}">📃 Playlists</button><button data-mt="files" class="${tab==='files'?'on':''}">📥 Offline</button></div>`;
-    if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="Song oder Künstler suchen" value="${esc(q)}" enterkeyhint="search"><button class="mu-sh ${MU.shorts!==false?'on':''}" id="muSh">🎬 Shorts</button></div>
-      <div class="mu-list">${res.length?res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>🎵</div><b>Such einen Song</b><br><small>Bekannte Lieder aus den Charts &amp; Co.</small></div>`}</div>`;
+    if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="${MU.smode==='music'?'Musik-Shorts suchen …':'YouTube Shorts suchen …'}" value="${esc(q)}" enterkeyhint="search"><button class="mu-sh" id="muSet">${MU.smode==='music'?'🎵 Musik':'🎬 Alle'} ⚙️</button></div>
+      <div class="mu-list">${searching?'<div class="emptyinv"><div class="mu-spin" style="margin:0 auto 8px"></div><small>Shorts werden gesucht …</small></div>':res.length?res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>${MU.smode==='music'?'🎵':'🎬'}</div><b>${MU.smode==='music'?'Such Musik':'Such YouTube Shorts'}</b><br><small>${MU.smode==='music'?'z. B. „Minecraft“ → Lieder & Song-Showcases als Shorts':'Alle Shorts zu deinem Suchwort'}</small></div>`}</div>`;
     else if(tab==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);
       h+=pl?`<button class="mu-back" id="muBack">‹ Playlists</button><div class="mu-plh"><b>${esc(pl.name)}</b><small>${pl.songs.length} Songs</small><button class="btn primary" id="muPlay" ${pl.songs.length?'':'disabled'}>▶ Abspielen</button></div><div class="mu-list">${pl.songs.map((x,i)=>songHTML(x,i,'pl')).join('')||'<p class="muted" style="text-align:center">Noch leer – füg Songs mit ＋ hinzu.</p>'}</div>`
         :`<div class="mu-list">${MU.pl.map(p=>`<button class="mu-pl" data-pl="${p.id}"><span>${p.songs[0]&&p.songs[0].img?`<img src="${p.songs[0].img}">`:'🎶'}</span><div><b>${esc(p.name)}</b><small>${p.songs.length} Songs</small></div></button>`).join('')}</div><button class="btn" id="muNewPl" style="width:100%;margin-top:10px">＋ Neue Playlist</button>`}
@@ -5152,9 +5155,9 @@ render(body,ctx){
     const a=$('#muCt'),b=$('#muDu'),i=$('#muBi'),pp=$('#muPP');if(a)a.textContent=fmtS(ct);if(b)b.textContent=fmtS(du);if(i)i.style.width=(du?ct/du*100:0)+'%';
     if(pp&&!P.loading&&P.paused!==paused){P.paused=paused;pp.textContent=paused?'▶':'⏸'}},400);
   MU.ytc??={};
-  async function ytId(x){const sh=MU.shorts!==false;if(x.yt&&!!x.ytS===sh)return x.yt;x.ytS=sh;x.yt=null;const ck=(sh?'s:':'')+key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
+  async function ytId(x){if(x.sid)return x.sid;if(x.yt&&x.ytS)return x.yt;x.ytS=true;x.yt=null;const ck='s:'+key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
     return x._p=(async()=>{const id=await ytFind(x);if(id){x.yt=id;MU.ytc[ck]=id;const ks=Object.keys(MU.ytc);if(ks.length>400)delete MU.ytc[ks[0]];save()}delete x._p;return id})()}
-  async function ytFind(x){if(MU.shorts!==false)return shortFind(x);const qq=encodeURIComponent(x.a+' '+x.t);
+  async function ytFind(x){return shortFind(x);const qq=encodeURIComponent(x.a+' '+x.t);
     const tm=(u,ms=6000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>z.json())};
     const any=ps=>new Promise(res=>{let n=ps.length;if(!n)res(null);ps.forEach(p=>p.then(v=>{if(v)res(v);else if(--n===0)res(null)},()=>{if(--n===0)res(null)}))});
     const id=await any([   // alle Suchdienste gleichzeitig – der schnellste gewinnt
@@ -5162,6 +5165,23 @@ render(body,ctx){
       ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video`).then(r=>r[0]&&r[0].videoId||null))]);
     if(!id)glog('Music','Kein YouTube-Treffer für '+x.a+' – '+x.t);
     return id}
+  /* Suche direkt in YouTube Shorts – Titel wird zum Liedtitel, Vorschaubild zum Liedbild */
+  async function shortsSearch(q,mode){
+    const music=mode==='music',qq=encodeURIComponent(q+(music?' song music':'')+' #shorts');
+    const tm=(u,ms=8000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>{if(!z.ok)throw new Error('HTTP '+z.status);return z.json()})};
+    const out=[],ids=new Set();
+    const add=(id,title,up,img,dur,short)=>{if(!id||ids.has(id))return;if(!(short||(dur>0&&dur<=180)))return;ids.add(id);
+      let t=String(title||'').replace(/#[\p{L}\p{N}_]+/gu,'').replace(/\s{2,}/g,' ').replace(/^[\s|:\-–]+|[\s|:\-–]+$/g,'').trim()||String(title||'Short');
+      out.push({t,a:String(up||'').replace(/ - Topic$/,''),img:img||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`,sid:id,raw:String(title||''),dur})};
+    await Promise.allSettled([
+      ...['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee'].map(b=>tm(`${b}/search?q=${qq}&filter=videos`).then(r=>(r.items||[]).forEach(i=>{
+        if(i.url&&/watch/.test(i.url))add(i.url.split('v=')[1].split('&')[0],i.title,i.uploaderName,i.thumbnail,i.duration,i.isShort)}))),
+      ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video&duration=short`).then(r=>(r||[]).forEach(i=>{
+        const th=(i.videoThumbnails||[]).find(t=>t.quality==='high'||t.quality==='medium');add(i.videoId,i.title,i.author,th&&/^https/.test(th.url)?th.url:'',i.lengthSeconds,i.isShort)})))]);
+    if(!music)return out;
+    const M=/song|music|musik|lied|lyrics?|remix|sped ?up|slowed|nightcore|phonk|beat|cover|edit\b|audio|soundtrack|\bost\b|theme|melod|piano|guitar|gitarre|rap|singing|sing|parody|parodie|🎵|🎶|♪|♫|🎧|🎤|🎹|🎸|vevo|records|official/i;
+    const sc=x=>(M.test(x.raw)?2:0)+(M.test(x.a)?1:0)+(/ - Topic$|VEVO|Records|Music/i.test(x.a)?1:0);
+    return out.filter(x=>sc(x)>0).sort((a,b)=>sc(b)-sc(a))}
   /* Shorts-Modus: nur einen Short nehmen, dessen Titel wirklich zum Song passt */
   async function shortFind(x){
     const nt=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[([](feat|ft|with|official|lyrics?|audio|video)[^)\]]*[)\]]|\bfeat\..*|\bft\..*/g,' ').replace(/[^a-z0-9ß ]/g,' ').replace(/\s+/g,' ').trim();
@@ -5185,7 +5205,7 @@ render(body,ctx){
     if(x.local){const f=(await dbAll()).find(z=>z.id===x.local);if(!f)return;P.mode='file';P.audio=P.audio||new Audio();P.audio.src=URL.createObjectURL(f.blob);P.audio.onended=()=>next(1);P.audio.play().catch(()=>{});draw();return}
     P.mode='yt';P.loading=true;draw();const id=await ytId(x);P.loading=false;
     if(P.cur!==x)return;
-    if(!id){P.mode='prev';draw();if(MU.shorts!==false)notify('🎬','Kein passender Short','Für „'+x.t+'“ gibt es keinen Short mit genau diesem Titel – du hörst die 30-Sek.-Vorschau.','#ff2d55');if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
+    if(!id){P.mode='prev';draw();if(!x.sid)notify('🎬','Kein passender Short','Für „'+x.t+'“ gibt es keinen Short mit genau diesem Titel – du hörst die 30-Sek.-Vorschau.','#ff2d55');if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
     await loadYTApi();const el=$('#muYT');if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
     el.innerHTML='<div id="muYTp"></div>';
     P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0,controls:0,modestbranding:1},events:{onReady:e=>{try{e.target.playVideo()}catch(_){}},onStateChange:e=>{if(e.data===0)next(1)}}});
@@ -5195,20 +5215,17 @@ render(body,ctx){
   function bind(){
     $$('[data-mt]',body).forEach(b=>b.onclick=()=>{tab=b.dataset.mt;plOpen=null;haptic('select');draw()});
     const qi=$('#muQ',body);if(qi)qi.onkeydown=async e=>{if(e.key!=='Enter')return;q=qi.value.trim();if(!q)return;qi.blur();
-      const jsonp=(u,cb='callback')=>new Promise((ok,no)=>{const fn='__gmj'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sc=document.createElement('script');
-        const t=setTimeout(()=>{cleanup();no(new Error('Zeit abgelaufen'))},9000),cleanup=()=>{clearTimeout(t);delete window[fn];sc.remove()};
-        window[fn]=d=>{cleanup();ok(d)};sc.onerror=()=>{cleanup();no(new Error('nicht erreichbar'))};sc.src=u+(u.includes('?')?'&':'?')+cb+'='+fn;document.head.append(sc)});
-      res=[];
-      try{const r=await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=DE&limit=30`);
-        res=(r.results||[]).map(z=>({t:z.trackName,a:z.artistName,img:(z.artworkUrl100||'').replace('100x100','200x200'),prev:z.previewUrl}))}catch(err){glog('Music','iTunes: '+err.message)}
-      if(!res.length)try{const r=await jsonp(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=30&output=jsonp`);
-        res=(r.data||[]).map(z=>({t:z.title,a:z.artist&&z.artist.name||'',img:z.album&&(z.album.cover_medium||z.album.cover)||'',prev:z.preview}))}catch(err){glog('Music','Deezer: '+err.message)}
-      {const nt=x=>String(x||'').toLowerCase().replace(/[([](feat|ft|with)[^)\]]*[)\]]|-.*remaster.*|\bfeat\..*|\bft\..*/g,'').replace(/[^a-z0-9äöüß]/g,''),sn=new Set();
-        res=res.filter(x=>{const k=nt(x.a.split(/,|&| x /)[0])+'|'+nt(x.t);if(sn.has(k))return false;sn.add(k);return true})}   // keine doppelten Songs
-      if(!res.length)notify('🎵','Gufy Music','Nichts gefunden oder Suche gerade nicht erreichbar','#ff2d55');
-      res.slice(0,5).forEach(x=>ytId(x));   // die ersten Songs schon mal vorbereiten → startet schneller
-      draw()};
-    const sb=$('#muSh',body);if(sb)sb.onclick=()=>{MU.shorts=MU.shorts===false;save();haptic('select');notify('🎬',MU.shorts?'Shorts-Modus an':'Shorts-Modus aus',MU.shorts?'Songs werden als passender YouTube-Short gesucht (oft nur ein Ausschnitt).':'Songs spielen wieder als ganzes Video.','#ff2d55');draw()};
+      searching=true;res=[];draw();const my=q;
+      try{const r=await shortsSearch(q,MU.smode);if(q!==my)return;res=r}catch(err){glog('Music','Shorts-Suche: '+err.message)}
+      searching=false;if(!res.length)notify('🎬','Gufy Music',MU.smode==='music'?'Keine Musik-Shorts gefunden – probier den Modus „Alle“ (⚙️).':'Keine Shorts gefunden oder Suche gerade nicht erreichbar','#ff2d55');
+      if(body.isConnected)draw()};
+    const st=$('#muSet',body);if(st)st.onclick=()=>{
+      const sh=h(`<div class="gem-dlg"><div class="gem-card"><h2 style="font-size:19px">⚙️ Suche in Gufy Music</h2><p class="muted" style="margin:4px 0 12px">Gesucht wird nur in YouTube Shorts.</p>
+        <button class="mu-mode ${MU.smode==='music'?'on':''}" data-sm="music"><b>🎵 Musik</b><small>Nur Shorts mit Musik: Lieder, Song-Showcases, Remixe, Sped up …</small></button>
+        <button class="mu-mode ${MU.smode==='all'?'on':''}" data-sm="all"><b>🎬 Alle</b><small>Einfach alle YouTube Shorts zu deinem Suchwort</small></button>
+        <button class="btn" style="width:100%;margin-top:10px" data-sm="">Fertig</button></div></div>`);
+      document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('open'));
+      $$('[data-sm]',sh).forEach(b=>b.onclick=()=>{if(b.dataset.sm){MU.smode=b.dataset.sm;save();haptic('select');res=[];}sh.remove();draw();const i2=$('#muQ',body);if(q&&b.dataset.sm&&i2)i2.onkeydown({key:'Enter'})})};
     $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
     $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
       if(c==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);pl.songs.splice(+i,1);save();draw();return}
