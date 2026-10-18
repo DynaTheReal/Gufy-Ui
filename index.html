@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"12.5","notes":["KI-Studio: Du kannst die App schließen, während Gufy AI baut – es läuft im Hintergrund weiter und meldet sich","KI-Apps löschen geht jetzt auch während des Bauens (🗑️)","Apps bauen kostet Coins: kleine Apps ca. 5–10, große bis 100 – ändern kostet die Hälfte. Klappt es nicht, gibt es die Coins zurück"]};
+window.GUFY={"v":"12.6","notes":["Öfis-Radar: Busse & Bahnen bleiben an Haltestellen stehen, statt zu verschwinden","Fahrzeuge fahren jetzt flüssig statt sich jede Sekunde vorwärts zu teleportieren","🔔 Verspätungs-Alarm: Linie + Richtung wählen – ist der Bus über 3 Min. zu spät (oder fällt aus), kommt eine Mitteilung","Haltestellen lassen sich nach Richtung aufteilen (z. B. → Hörnum / → List)","Gufy Music: 🎬 Shorts-Modus – Songs als passender YouTube-Short (nur mit genau diesem Titel), keine doppelten Songs mehr in der Suche"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1386,6 +1386,16 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
 .lc-btns{display:flex;gap:8px}.lc-btns .btn{flex:1}
 .ms-bg{display:block;margin-top:12px;font-size:12px;opacity:.75;line-height:1.35;text-align:center}
 .aiw-go:disabled{opacity:.45;filter:grayscale(.6)}.ms-b:disabled{opacity:.3}
+.o-bell{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--panel);font-size:16px}
+.o-dirs{display:flex;gap:6px;overflow-x:auto;margin:10px 0 2px;scrollbar-width:none}.o-dirs:empty{display:none}
+.o-dirs button{flex:none;display:flex;flex-direction:column;align-items:flex-start;padding:7px 12px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:600 13px inherit;white-space:nowrap}
+.o-dirs button small{font-weight:500;opacity:.6;font-size:11px}.o-dirs button.on{background:var(--accent);color:#fff;border-color:transparent}
+.o-wpick{display:flex;flex-wrap:wrap;gap:8px;max-height:46vh;overflow:auto}.o-wpick.col{flex-direction:column}
+.o-wpick button{padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:700 15px inherit;text-align:left;display:flex;justify-content:space-between;gap:10px}
+.o-wpick button small{opacity:.55;font-weight:500}
+.leaflet-marker-icon .o-veh{transition:none}
+.mu-search{display:flex;gap:8px;align-items:center}.mu-search .input{flex:1}
+.mu-sh{flex:none;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:700 13px inherit}.mu-sh.on{background:#ff2d55;color:#fff;border-color:transparent}
 </style>
 </head>
 <body class="dark">
@@ -2714,6 +2724,35 @@ function notify(icon,title,text,color,onTap){
   t.addEventListener('pointerup',end);t.addEventListener('pointercancel',end);
   setTimeout(()=>{if(!drag)kill()},onTap?9000:5000);
 }
+/* Öfis: Verspätungs-Alarm – prüft beim Öffnen von GufyUI und alle 3 Min. */
+async function oefiWatchCheck(){
+  const W=S.oefiW||[];if(!S.setupDone||S.poweredOff||!W.length||navigator.onLine===false)return;
+  S.oefiWN??={};const now=Date.now(),hm=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const nl=l=>String(l||'').replace(/^(bus|str|tram)\s*/i,'').trim().toLowerCase(),dk=d=>String(d||'').toLowerCase().replace(/[^a-zäöüß0-9]/g,'');
+  const same=(a,b)=>{a=dk(a);b=dk(b);return a&&b&&(a===b||a.startsWith(b.slice(0,7))||b.startsWith(a.slice(0,7)))};
+  const J=async u=>{const ac=new AbortController();setTimeout(()=>ac.abort(),10000);const r=await fetch(u,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
+  for(const w of W){let L=[];
+    try{if(w.prov!=='db'){const u=`https://api.transitous.org/api/v6/stoptimes?center=${w.lat},${w.lon}&radius=200&time=${new Date(now-15*60000).toISOString()}&n=80`;
+        let r;try{r=await J(u)}catch(e){r=await J(u.replace('/v6/','/v5/'))}
+        L=(r.stopTimes||[]).map(x=>({t:x.place.departure||x.place.scheduledDeparture,p:x.place.scheduledDeparture||x.place.departure,line:x.displayName||x.routeShortName||'',dir:x.headsign||'',cancel:!!(x.cancelled||x.tripCancelled),rt:x.realTime}))}
+    }catch(e){glog('Öfis','Alarm: '+e.message)}
+    const inDE=w.lat>47&&w.lat<55.2&&w.lon>5.5&&w.lon<15.5;
+    if((w.prov==='db'||inDE)&&!L.some(x=>nl(x.line)===nl(w.line)&&same(x.dir,w.dir)&&x.rt))try{
+      let id=w.prov==='db'?w.id:w.dbId;
+      if(!id){const n=(await J(`https://v6.db.transport.rest/locations/nearby?latitude=${w.lat}&longitude=${w.lon}&results=3&distance=300`)).filter(x=>x.type==='stop'||x.type==='station');if(n[0]){id=w.dbId=n[0].id;save()}}
+      if(id){const r=await J(`https://v6.db.transport.rest/stops/${encodeURIComponent(id)}/departures?when=${new Date(now-15*60000).toISOString()}&duration=90&results=120&remarks=false`);
+        L=L.concat((r.departures||r).map(x=>({t:x.when||x.plannedWhen,p:x.plannedWhen,line:(x.line&&x.line.name||'').replace(/^Bus\s*/i,''),dir:x.direction||'',cancel:!!x.cancelled})))}
+    }catch(e){glog('Öfis','Alarm DB: '+e.message)}
+    L.filter(x=>x.t&&x.p&&nl(x.line)===nl(w.line)&&same(x.dir,w.dir)).forEach(x=>{
+      const p=+new Date(x.p),t=+new Date(x.t),d=Math.round((t-p)/60000);
+      if(p<now-10*60000||p>now+60*60000||t<now-60000)return;
+      const k=w.k+'|'+p,old=S.oefiWN[k];
+      if(x.cancel){if(old!=='x'){S.oefiWN[k]='x';notify(w.mode==='bahn'?'🚆':'🚌',`${w.line} → ${w.dir} fällt aus`,`${w.stop} · war um ${hm(p)} geplant`,'#ef4444',()=>openApp('oefi'))}return}
+      if(d>3&&(old==null||(old!=='x'&&d>=old+5))){S.oefiWN[k]=d;glog('Öfis',`Alarm: ${w.line} → ${w.dir} +${d} Min.`);
+        notify(w.mode==='bahn'?'🚆':'🚌',`${w.line} → ${w.dir}: +${d} Min. zu spät`,`${w.stop} · planmäßig ${hm(p)}, jetzt ca. ${hm(t)}`,'#ff9500',()=>openApp('oefi'))}})}
+  const cut=now-864e5;Object.keys(S.oefiWN).forEach(k=>{if(+k.split('|')[1]<cut)delete S.oefiWN[k]});save()}
+setTimeout(()=>{oefiWatchCheck();setInterval(()=>{if(document.visibilityState==='visible')oefiWatchCheck()},180000)},5000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-(window.__owc||0)>60000){window.__owc=Date.now();oefiWatchCheck()}});
 /* Einmalige Standort-Frage direkt in der Mitteilung: Zeit antippen (mit Code), wegwischen = später, ✕ = ignorieren */
 const LOC_CHIPS=[[10,'vor 10 Min.'],[20,'vor 20 Min.'],[30,'vor 30 Min.'],[60,'vor 1 Std.'],[120,'vor 2 Std.'],[240,'vor 4 Std.']];
 function locAskNotify(){
@@ -5084,7 +5123,7 @@ render(body,ctx){
   function list(ctxName){return ctxName==='res'?res:ctxName==='files'?files:ctxName==='pl'?(MU.pl.find(p=>p.id===plOpen)||{songs:[]}).songs:[]}
   function draw(){
     let h=`<div class="mu"><div class="tabs"><button data-mt="search" class="${tab==='search'?'on':''}">🔎 Suchen</button><button data-mt="pl" class="${tab==='pl'?'on':''}">📃 Playlists</button><button data-mt="files" class="${tab==='files'?'on':''}">📥 Offline</button></div>`;
-    if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="Song oder Künstler suchen" value="${esc(q)}" enterkeyhint="search"></div>
+    if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="Song oder Künstler suchen" value="${esc(q)}" enterkeyhint="search"><button class="mu-sh ${MU.shorts!==false?'on':''}" id="muSh">🎬 Shorts</button></div>
       <div class="mu-list">${res.length?res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>🎵</div><b>Such einen Song</b><br><small>Bekannte Lieder aus den Charts &amp; Co.</small></div>`}</div>`;
     else if(tab==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);
       h+=pl?`<button class="mu-back" id="muBack">‹ Playlists</button><div class="mu-plh"><b>${esc(pl.name)}</b><small>${pl.songs.length} Songs</small><button class="btn primary" id="muPlay" ${pl.songs.length?'':'disabled'}>▶ Abspielen</button></div><div class="mu-list">${pl.songs.map((x,i)=>songHTML(x,i,'pl')).join('')||'<p class="muted" style="text-align:center">Noch leer – füg Songs mit ＋ hinzu.</p>'}</div>`
@@ -5113,9 +5152,9 @@ render(body,ctx){
     const a=$('#muCt'),b=$('#muDu'),i=$('#muBi'),pp=$('#muPP');if(a)a.textContent=fmtS(ct);if(b)b.textContent=fmtS(du);if(i)i.style.width=(du?ct/du*100:0)+'%';
     if(pp&&!P.loading&&P.paused!==paused){P.paused=paused;pp.textContent=paused?'▶':'⏸'}},400);
   MU.ytc??={};
-  async function ytId(x){if(x.yt)return x.yt;const ck=key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
+  async function ytId(x){const sh=MU.shorts!==false;if(x.yt&&!!x.ytS===sh)return x.yt;x.ytS=sh;x.yt=null;const ck=(sh?'s:':'')+key(x);if(MU.ytc[ck])return x.yt=MU.ytc[ck];if(x._p)return x._p;
     return x._p=(async()=>{const id=await ytFind(x);if(id){x.yt=id;MU.ytc[ck]=id;const ks=Object.keys(MU.ytc);if(ks.length>400)delete MU.ytc[ks[0]];save()}delete x._p;return id})()}
-  async function ytFind(x){const qq=encodeURIComponent(x.a+' '+x.t);
+  async function ytFind(x){if(MU.shorts!==false)return shortFind(x);const qq=encodeURIComponent(x.a+' '+x.t);
     const tm=(u,ms=6000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>z.json())};
     const any=ps=>new Promise(res=>{let n=ps.length;if(!n)res(null);ps.forEach(p=>p.then(v=>{if(v)res(v);else if(--n===0)res(null)},()=>{if(--n===0)res(null)}))});
     const id=await any([   // alle Suchdienste gleichzeitig – der schnellste gewinnt
@@ -5123,6 +5162,22 @@ render(body,ctx){
       ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video`).then(r=>r[0]&&r[0].videoId||null))]);
     if(!id)glog('Music','Kein YouTube-Treffer für '+x.a+' – '+x.t);
     return id}
+  /* Shorts-Modus: nur einen Short nehmen, dessen Titel wirklich zum Song passt */
+  async function shortFind(x){
+    const nt=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[([](feat|ft|with|official|lyrics?|audio|video)[^)\]]*[)\]]|\bfeat\..*|\bft\..*/g,' ').replace(/[^a-z0-9ß ]/g,' ').replace(/\s+/g,' ').trim();
+    const st=nt(x.t),ar=nt(x.a.split(/,|&| x | feat/i)[0]),stW=st.split(' ').filter(w=>w.length>1);
+    const ok=(title,up)=>{const T=nt(title),U=nt(up);if(!stW.length||!stW.every(w=>T.includes(w)))return 0;return 1+(T.includes(ar)||U.includes(ar)?2:0)+(/#?shorts?\b/.test(String(title).toLowerCase())?0:0)};
+    const qq=encodeURIComponent(x.a+' '+x.t+' #shorts');
+    const tm=(u,ms=7000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>z.json())};
+    const cands=[];
+    await Promise.allSettled([
+      ...['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee'].map(b=>tm(`${b}/search?q=${qq}&filter=videos`).then(r=>(r.items||[]).forEach(i=>{
+        if(i.url&&/watch/.test(i.url)&&(i.isShort||(i.duration>0&&i.duration<=180)))cands.push({id:i.url.split('v=')[1].split('&')[0],sc:ok(i.title,i.uploaderName)+(i.isShort?1:0)})}))),
+      ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video&duration=short`).then(r=>(r||[]).forEach(i=>{
+        if(i.videoId&&i.lengthSeconds>0&&i.lengthSeconds<=180)cands.push({id:i.videoId,sc:ok(i.title,i.author)+(i.isShort?1:0)})})))]);
+    const best=cands.filter(c=>c.sc>=3).sort((a,b)=>b.sc-a.sc)[0];   // Titel UND Künstler müssen passen – keine zufälligen Shorts
+    if(!best)glog('Music','Kein passender Short für '+x.a+' – '+x.t);
+    return best?best.id:null}
   function stopAll(){try{P.audio&&P.audio.pause()}catch(e){}try{P.yt&&P.yt.destroy&&P.yt.destroy()}catch(e){}P.yt=null}
   function loadYTApi(){return new Promise(r=>{if(window.YT&&YT.Player)return r();const s2=document.createElement('script');s2.src='https://www.youtube.com/iframe_api';document.head.append(s2);window.onYouTubeIframeAPIReady=()=>r();setTimeout(r,6000)})}
   async function play(queue,i){
@@ -5130,7 +5185,7 @@ render(body,ctx){
     if(x.local){const f=(await dbAll()).find(z=>z.id===x.local);if(!f)return;P.mode='file';P.audio=P.audio||new Audio();P.audio.src=URL.createObjectURL(f.blob);P.audio.onended=()=>next(1);P.audio.play().catch(()=>{});draw();return}
     P.mode='yt';P.loading=true;draw();const id=await ytId(x);P.loading=false;
     if(P.cur!==x)return;
-    if(!id){P.mode='prev';draw();if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
+    if(!id){P.mode='prev';draw();if(MU.shorts!==false)notify('🎬','Kein passender Short','Für „'+x.t+'“ gibt es keinen Short mit genau diesem Titel – du hörst die 30-Sek.-Vorschau.','#ff2d55');if(x.prev){P.audio=P.audio||new Audio();P.audio.src=x.prev;P.audio.onended=()=>next(1);P.audio.play().catch(()=>{})}return}
     await loadYTApi();const el=$('#muYT');if(!el||!window.YT||!YT.Player){P.mode='prev';draw();return}
     el.innerHTML='<div id="muYTp"></div>';
     P.yt=new YT.Player('muYTp',{videoId:id,width:'100%',height:'100%',host:'https://www.youtube-nocookie.com',playerVars:{autoplay:1,playsinline:1,rel:0,controls:0,modestbranding:1},events:{onReady:e=>{try{e.target.playVideo()}catch(_){}},onStateChange:e=>{if(e.data===0)next(1)}}});
@@ -5148,9 +5203,12 @@ render(body,ctx){
         res=(r.results||[]).map(z=>({t:z.trackName,a:z.artistName,img:(z.artworkUrl100||'').replace('100x100','200x200'),prev:z.previewUrl}))}catch(err){glog('Music','iTunes: '+err.message)}
       if(!res.length)try{const r=await jsonp(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=30&output=jsonp`);
         res=(r.data||[]).map(z=>({t:z.title,a:z.artist&&z.artist.name||'',img:z.album&&(z.album.cover_medium||z.album.cover)||'',prev:z.preview}))}catch(err){glog('Music','Deezer: '+err.message)}
+      {const nt=x=>String(x||'').toLowerCase().replace(/[([](feat|ft|with)[^)\]]*[)\]]|-.*remaster.*|\bfeat\..*|\bft\..*/g,'').replace(/[^a-z0-9äöüß]/g,''),sn=new Set();
+        res=res.filter(x=>{const k=nt(x.a.split(/,|&| x /)[0])+'|'+nt(x.t);if(sn.has(k))return false;sn.add(k);return true})}   // keine doppelten Songs
       if(!res.length)notify('🎵','Gufy Music','Nichts gefunden oder Suche gerade nicht erreichbar','#ff2d55');
       res.slice(0,5).forEach(x=>ytId(x));   // die ersten Songs schon mal vorbereiten → startet schneller
       draw()};
+    const sb=$('#muSh',body);if(sb)sb.onclick=()=>{MU.shorts=MU.shorts===false;save();haptic('select');notify('🎬',MU.shorts?'Shorts-Modus an':'Shorts-Modus aus',MU.shorts?'Songs werden als passender YouTube-Short gesucht (oft nur ein Ausschnitt).':'Songs spielen wieder als ganzes Video.','#ff2d55');draw()};
     $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
     $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
       if(c==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);pl.songs.splice(+i,1);save();draw();return}
@@ -5231,7 +5289,8 @@ render(body,ctx){
   const ICON={BUS:'🚌',COACH:'🚍',TRAM:'🚋',SUBWAY:'🚇',METRO:'🚇',SUBURBAN:'🚈',REGIONAL_RAIL:'🚆',REGIONAL_FAST_RAIL:'🚆',RAIL:'🚆',LONG_DISTANCE:'🚄',HIGHSPEED_RAIL:'🚄',NIGHT_RAIL:'🚆',FERRY:'⛴️'};
   const TT='https://api.transitous.org/api',DB='https://v6.db.transport.rest';
   const hm=d=>new Date(d).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  let mvT=0,deps=[],loading=false,errMsg='',map=null,tiles=null,dots=null,radarSeg=[],radarIv=0,animIv=0,searchT=0,dayOff=0;
+  let mvT=0,deps=[],loading=false,errMsg='',map=null,tiles=null,dots=null,radarSeg=[],radarIv=0,animRaf=0,searchT=0,dayOff=0,lastAnim=0,dirF=null;
+  const vehs=new Map();   // Fahrzeuge bleiben bestehen und gleiten flüssig weiter
   const j=async u=>{const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()};
   /* ---- Anbieter: Transitous (weltweit), sonst transport.rest (DB, Europa) ---- */
   async function search(q){
@@ -5304,25 +5363,62 @@ render(body,ctx){
     return pts}
   async function radarLoad(){
     if(!map)return;const z=map.getZoom(),b=map.getBounds(),now=Date.now(),info=$('#oRInfo',body);
-    if(z<11){radarSeg=[];drawDots();if(info)info.textContent='🔍 Reinzoomen, um Fahrzeuge zu sehen';return}
+    if(z<11){radarSeg=[];vehClear();if(info)info.textContent='🔍 Reinzoomen, um Fahrzeuge zu sehen';return}
     const st=cur();
     try{
       let useDb=st&&st.prov==='db';
       if(!useDb){
         const prec=z>=11?5:4;
-        const r=await j(`${TT}/v6/map/trips?zoom=${Math.round(z)}&min=${b.getSouth()},${b.getEast()}&max=${b.getNorth()},${b.getWest()}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+120000).toISOString()}&precision=${prec}`);
-        radarSeg=r.filter(s=>MODES[O.mode].includes(s.mode)).map(s=>({dep:+new Date(s.departure),arr:+new Date(s.arrival),pts:decode(s.polyline,prec),name:(s.trips&&s.trips[0]&&(s.trips[0].displayName||s.trips[0].routeShortName))||'',to:s.to&&s.to.name||'',col:s.routeColor,ic:ICON[s.mode]||'•'}));
+        const r=await j(`${TT}/v6/map/trips?zoom=${Math.round(z)}&min=${b.getSouth()},${b.getEast()}&max=${b.getNorth()},${b.getWest()}&startTime=${new Date(now-5*60000).toISOString()}&endTime=${new Date(now+10*60000).toISOString()}&precision=${prec}`);
+        radarSeg=r.filter(s=>MODES[O.mode].includes(s.mode)).map(s=>({key:'t:'+((s.trips&&s.trips[0]&&s.trips[0].tripId)||(s.departure+'|'+(s.from&&s.from.name))),dep:+new Date(s.departure),arr:+new Date(s.arrival),pts:decode(s.polyline,prec),name:(s.trips&&s.trips[0]&&(s.trips[0].displayName||s.trips[0].routeShortName))||'',to:s.to&&s.to.name||'',col:s.routeColor,ic:ICON[s.mode]||'•'}));
         const c=map.getCenter();
-        if(!radarSeg.filter(s=>posOf(s,Date.now())).length&&c.lat>47&&c.lat<55.2&&c.lng>5.5&&c.lng<15.5){useDb=true;glog('Öfis','Radar: Transitous leer → DB')}
+        if(!radarSeg.filter(s=>now>=s.dep-60000&&now<=s.arr+60000).length&&c.lat>47&&c.lat<55.2&&c.lng>5.5&&c.lng<15.5){useDb=true;glog('Öfis','Radar: Transitous leer → DB')}
       }
       if(useDb){
         const r2=await j(`${DB}/radar?north=${b.getNorth()}&west=${b.getWest()}&south=${b.getSouth()}&east=${b.getEast()}&results=256&duration=30&frames=1&polylines=false`);
-        radarSeg=(r2.movements||r2).filter(m=>m.location&&((O.mode==='bus')===(m.line&&m.line.product==='bus'))).map(m=>({fix:[m.location.latitude,m.location.longitude],name:m.line.name,dir:m.direction||'',ic:m.line&&m.line.product==='bus'?'🚌':'🚆'}));
+        radarSeg=(r2.movements||r2).filter(m=>m.location&&((O.mode==='bus')===(m.line&&m.line.product==='bus'))).map(m=>({key:'d:'+(m.tripId||m.line.name+'|'+m.direction),fix:[m.location.latitude,m.location.longitude],name:m.line.name,dir:m.direction||'',ic:m.line&&m.line.product==='bus'?'🚌':'🚆'}));
       }
-      if(info)info.textContent=`🛰️ ${radarSeg.length} ${O.mode==='bus'?(radarSeg.length===1?'Bus':'Busse'):(radarSeg.length===1?'Bahn':'Bahnen')} unterwegs · live`;
+      vehMerge(radarSeg);const nV=[...vehs.values()].filter(v=>vPos(v,Date.now())).length;
+      if(info)info.textContent=`🛰️ ${nV} ${O.mode==='bus'?(nV===1?'Bus':'Busse'):(nV===1?'Bahn':'Bahnen')} unterwegs · live`;
     }catch(e){glog('Öfis','Radar: '+e.message);if(info)info.textContent='Radar gerade nicht erreichbar'}
-    drawDots();
+    animStart();
   }
+  /* Abschnitte (Haltestelle → Haltestelle) pro Fahrt sammeln, damit Fahrzeuge an Haltestellen stehen bleiben statt zu verschwinden */
+  function vehMerge(list){const now=Date.now(),seen=new Set();
+    list.forEach(s=>{let v=vehs.get(s.key);seen.add(s.key);
+      if(!v){v={key:s.key,segs:[],name:s.name,to:s.to||s.dir||'',ic:s.ic,col:s.col};vehs.set(s.key,v)}
+      v.name=s.name||v.name;v.to=s.to||s.dir||v.to;v.gone=0;
+      if(s.fix){const cur=v.m?[v.m.getLatLng().lat,v.m.getLatLng().lng]:s.fix;v.from=cur;v.to2=s.fix;v.ft=now;v.fixed=true;return}
+      const i=v.segs.findIndex(x=>Math.abs(x.dep-s.dep)<30000);if(i>=0)v.segs[i]=s;else v.segs.push(s);
+      v.segs=v.segs.filter(x=>x.arr>now-15*60000).sort((a,b)=>a.dep-b.dep)});
+    vehs.forEach(v=>{if(!seen.has(v.key)&&v.fixed&&!v.gone)v.gone=now})}
+  function vehClear(){vehs.forEach(v=>{if(v.m&&dots)dots.removeLayer(v.m)});vehs.clear()}
+  function segAt(s,now){
+    if(!s.cum){s.cum=[0];for(let i=1;i<s.pts.length;i++)s.cum.push(s.cum[i-1]+Math.hypot(s.pts[i][0]-s.pts[i-1][0],(s.pts[i][1]-s.pts[i-1][1])*Math.cos(s.pts[i][0]*Math.PI/180)))}
+    const tot=s.cum[s.cum.length-1],f=Math.min(1,Math.max(0,(now-s.dep)/Math.max(1,s.arr-s.dep))),want=f*tot;
+    let lo=0,hi=s.cum.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(s.cum[m]<=want)lo=m;else hi=m}
+    const a=s.pts[lo],b=s.pts[Math.min(hi,s.pts.length-1)],seg=s.cum[hi]-s.cum[lo],k=seg?(want-s.cum[lo])/seg:0;
+    return[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k]}
+  function vPos(v,now){
+    if(v.fixed){if(v.gone&&now-v.gone>60000)return null;const k=Math.min(1,(now-v.ft)/30000);return[v.from[0]+(v.to2[0]-v.from[0])*k,v.from[1]+(v.to2[1]-v.from[1])*k]}
+    const G=v.segs.filter(s=>s.pts.length>=2);if(!G.length)return null;
+    for(let i=0;i<G.length;i++){const s=G[i];
+      if(now>=s.dep&&now<=s.arr)return segAt(s,now);
+      if(G[i+1]&&now>s.arr&&now<G[i+1].dep)return s.pts[s.pts.length-1]}   // steht an der Haltestelle
+    if(now<G[0].dep)return G[0].dep-now<120000?G[0].pts[0]:null;           // wartet an der Start-Haltestelle
+    const L2=G[G.length-1];return now-L2.arr<180000?L2.pts[L2.pts.length-1]:null}   // gleich geht's weiter / Endstation
+  function vIcon(v){const c=v.col?'#'+v.col.replace('#',''):(O.mode==='bus'?'#ff9500':'#0a84ff'),ic=v.ic&&v.ic!=='•'?v.ic:(O.mode==='bus'?'🚌':'🚆');
+    return L.divIcon({className:'',html:`<div class="o-veh" style="--c:${c}"><span>${ic}</span>${v.name?`<b>${esc(String(v.name).slice(0,6))}</b>`:''}</div>`,iconSize:[34,34],iconAnchor:[17,17]})}
+  function drawDots(){
+    if(!map||!dots)return;const now=Date.now();
+    vehs.forEach(v=>{const p=vPos(v,now);
+      if(!p){if(v.m){const m=v.m;v.m=null;const e=m.getElement();if(e)e.style.opacity=0;setTimeout(()=>dots&&dots.removeLayer(m),400)}
+        if(!v.fixed&&v.segs.every(s=>s.arr<now-5*60000))vehs.delete(v.key);return}
+      if(!v.m){v.m=L.marker(p,{pane:'veh',interactive:true,icon:vIcon(v)}).bindTooltip(()=>`${v.ic||''} ${esc(v.name)}${v.to?' → '+esc(v.to):''}`,{direction:'top'}).addTo(dots);
+        const e=v.m.getElement();if(e){e.style.opacity=0;e.style.transition='opacity .4s';requestAnimationFrame(()=>e.style.opacity=1)}}
+      else v.m.setLatLng(p)});
+  }
+  function animStart(){if(animRaf)return;const loop=t=>{animRaf=0;if(!map||!body.isConnected)return;if(t-lastAnim>40){lastAnim=t;drawDots()}animRaf=requestAnimationFrame(loop)};animRaf=requestAnimationFrame(loop)}
   function posOf(s,now){
     if(s.fix)return s.fix;
     if(now<s.dep||now>s.arr||s.pts.length<2)return null;
@@ -5330,13 +5426,6 @@ render(body,ctx){
     for(let i=1;i<s.pts.length;i++){const d=Math.hypot(s.pts[i][0]-s.pts[i-1][0],(s.pts[i][1]-s.pts[i-1][1])*Math.cos(s.pts[i][0]*Math.PI/180));segs.push(d);tot+=d}
     let want=f*tot;for(let i=0;i<segs.length;i++){if(want<=segs[i]){const k=segs[i]?want/segs[i]:0,a=s.pts[i],b=s.pts[i+1];return[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k]}want-=segs[i]}
     return s.pts[s.pts.length-1];
-  }
-  function drawDots(){
-    if(!map||!dots)return;const now=Date.now();dots.clearLayers();
-    radarSeg.forEach(s=>{const p=posOf(s,now);if(!p)return;
-      const c=s.col?'#'+s.col.replace('#',''):(O.mode==='bus'?'#ff9500':'#0a84ff');
-      const ic=s.ic&&s.ic!=='•'?s.ic:(O.mode==='bus'?'🚌':'🚆');
-      L.marker(p,{pane:'veh',interactive:true,icon:L.divIcon({className:'',html:`<div class="o-veh" style="--c:${c}"><span>${ic}</span>${s.name?`<b>${esc(String(s.name).slice(0,6))}</b>`:''}</div>`,iconSize:[34,34],iconAnchor:[17,17]})}).bindTooltip(`${s.ic||''} ${esc(s.name)}${s.to||s.dir?' → '+esc(s.to||s.dir):''}`,{direction:'top'}).addTo(dots)});
   }
   async function initMap(){
     try{await loadLeaflet()}catch(e){const m=$('#oMap',body);if(m)m.innerHTML='<div class="mapload">Karte braucht Internet</div>';return}
@@ -5353,7 +5442,7 @@ render(body,ctx){
   }
   const cur=()=>O[O.mode];
   function draw(){
-    if(map){map.remove();map=null;dots=null}
+    if(map){vehClear();map.remove();map=null;dots=null}
     const st=cur();
     body.innerHTML=`<div class="oefi">
       ${gemGet()?`<div class="ai-card" style="margin-bottom:12px"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> Frag Gufy AI</div>
@@ -5363,10 +5452,12 @@ render(body,ctx){
       ${O.mode==='bus'?'<div class="lbus" id="lBus"></div>':''}
       <div class="o-search"><input class="input" id="oQ" placeholder="${O.mode==='bus'?'Bushaltestelle suchen …':'Bahnhof suchen …'}" autocomplete="off" enterkeyhint="search"><div id="oRes" class="o-res"></div></div>
       ${st?`<div class="o-stop"><div><b>${O.mode==='bus'?'🚏':'🚉'} ${esc(st.name)}</b><small>${esc(st.area||'')}</small></div>
-        <div class="o-day"><button data-dd="-1" ${dayOff<=0?'disabled':''}>‹</button><span>${dayOff===0?'Heute':dayOff===1?'Morgen':new Date(Date.now()+dayOff*864e5).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'})}</span><button data-dd="1" ${dayOff>=6?'disabled':''}>›</button></div></div>
+        <div class="o-day"><button data-dd="-1" ${dayOff<=0?'disabled':''}>‹</button><span>${dayOff===0?'Heute':dayOff===1?'Morgen':new Date(Date.now()+dayOff*864e5).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'})}</span><button data-dd="1" ${dayOff>=6?'disabled':''}>›</button></div><button class="o-bell" id="oBell" title="Verspätungs-Alarm">🔔</button></div>
+        <div class="o-dirs" id="oDirs"></div>
         <div id="oAiChk"></div>
         <div class="o-list" id="oList"><div class="emptyinv">${loading?'⏳ Fahrplan wird geladen …':esc(errMsg)}</div></div>`
        :`<div class="emptyinv"><div>${O.mode==='bus'?'🚌':'🚆'}</div><b>${O.mode==='bus'?'Such eine Bushaltestelle':'Such einen Bahnhof'}</b><br><small>auf der ganzen Welt</small></div>`}
+      ${(S.oefiW||[]).length?`<div class="slabel">🔔 Verspätungs-Alarm</div><div class="sgroup">${S.oefiW.map(w=>`<div class="srow"><span class="sic" style="background:${w.mode==='bahn'?'#0a84ff':'#ff9500'}">${w.mode==='bahn'?'🚆':'🚌'}</span><span class="sl">${esc(w.line)} → ${esc(w.dir)}<br><small class="muted">${esc(w.stop)} · ab 4 Min. zu spät</small></span><button class="ms-b" data-wx="${w.k}">✕</button></div>`).join('')}</div>`:''}
       <div class="slabel">🛰️ ${O.mode==='bus'?'Busradar':'Bahnradar'}</div>
       <div class="mapcard o-map"><div id="oMap"><div class="mapload">Karte wird geladen …</div></div><div class="o-rinfo" id="oRInfo"></div></div>
       <small class="muted o-src">Daten: <a href="https://transitous.org/sources/" target="_blank" rel="noopener">Transitous</a> · © OpenStreetMap-Mitwirkende · Esri</small>
@@ -5381,6 +5472,8 @@ render(body,ctx){
         $$('[data-i]',res).forEach(b=>b.onclick=()=>{O[O.mode]=L2[+b.dataset.i];save();haptic('success');dayOff=0;draw();load()});
       }catch(e){res.innerHTML='<div class="o-hit muted">⚠️ Fahrplandienst nicht erreichbar</div>'}},350)};
     if(st)renderDeps();
+    $$('[data-wx]',body).forEach(b=>b.onclick=()=>{S.oefiW=S.oefiW.filter(w=>w.k!==b.dataset.wx);save();haptic('select');draw();renderDeps()});
+    const bl=$('#oBell',body);if(bl)bl.onclick=()=>watchDlg();
     const af=$('#oAiF',body);if(af)af.onsubmit=e=>{e.preventDefault();const q=$('#oAiQ',body).value.trim();if(q)aiTrip(q)};
     if(busStop)busStop();busStop=O.mode==='bus'?busNearWidget(body):null;
     initMap();
@@ -5434,15 +5527,45 @@ render(body,ctx){
       const b2=$('#oAiChk',body);if(b2)b2.innerHTML=`<div class="ai-card o-aichk"><div class="ai-card-in"><div class="ai-card-h"><span class="ai-spark">✨</span> KI-Check ${o.status==='ok'?'· alles passt':o.status==='stoerung'?'· Störung':'· ergänzt'}</div><p>${esc(o.hinweis||'')}${add.length?` <small class="muted">(+${add.length} Abfahrten laut KI)</small>`:''}</p></div></div>`;
     }catch(e){glog('Öfis','KI-Check: '+e.message);const b2=$('#oAiChk',body);if(b2)b2.innerHTML=''}
   }
+  const dirK=d=>String(d||'').toLowerCase().replace(/[^a-zäöüß0-9]/g,'');
+  function dirsOf(list){const c={};list.forEach(d=>{if(!d.dir)return;const k=dirK(d.dir);(c[k]??={n:0,dir:d.dir,lines:new Set()}).n++;c[k].lines.add(d.line)});return Object.values(c).sort((a,b)=>b.n-a.n)}
+  /* Richtungen = Haltestelle in die eine oder andere Richtung */
+  function renderDirs(){const el=$('#oDirs',body);if(!el)return;const st=cur();if(!st||loading||!deps.length){el.innerHTML='';return}
+    O.dirF??={};dirF=O.dirF[st.id]||null;const D=dirsOf(deps);if(D.length<2){el.innerHTML='';return}
+    if(dirF&&!D.some(d=>dirK(d.dir)===dirF))dirF=null;
+    el.innerHTML=`<button data-df="" class="${dirF?'':'on'}">Alle Richtungen</button>`+D.slice(0,12).map(d=>`<button data-df="${esc(dirK(d.dir))}" class="${dirF===dirK(d.dir)?'on':''}">→ ${esc(d.dir)}<small>${[...d.lines].slice(0,3).map(esc).join(' · ')}</small></button>`).join('');
+    $$('[data-df]',el).forEach(b=>b.onclick=()=>{dirF=b.dataset.df||null;O.dirF[st.id]=dirF;save();haptic('select');renderDirs();renderDeps()})}
+  function watchDlg(){const st=cur();if(!st)return;
+    if(!deps.length)return notify('🔔','Verspätungs-Alarm','Warte kurz, bis der Fahrplan geladen ist.','#ff9500');
+    const lines=[...new Set(deps.map(d=>d.line))].sort((a,b)=>String(a).localeCompare(String(b),'de',{numeric:true}));
+    let line=null;const sh=h(`<div class="gem-dlg"><div class="gem-card o-wdlg"></div></div>`);document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('open'));
+    const card=$('.o-wdlg',sh),close=()=>{sh.classList.remove('open');setTimeout(()=>sh.remove(),250)};
+    const step=()=>{
+      if(!line){card.innerHTML=`<h2 style="font-size:19px">🔔 Verspätungs-Alarm</h2><p class="muted" style="margin:4px 0 12px">${esc(st.name)} · Welche Linie?</p><div class="o-wpick">${lines.map(l=>`<button data-wl="${esc(l)}">${O.mode==='bus'?'🚌':'🚆'} ${esc(l)}</button>`).join('')}</div><button class="btn" style="width:100%;margin-top:12px" data-wc>Abbrechen</button>`}
+      else{const D=dirsOf(deps.filter(d=>d.line===line));
+        card.innerHTML=`<h2 style="font-size:19px">🔔 ${esc(line)} – welche Richtung?</h2><p class="muted" style="margin:4px 0 12px">Nur für eine Richtung – also die Haltestelle auf deiner Straßenseite.</p><div class="o-wpick col">${D.map(d=>`<button data-wd="${esc(d.dir)}">→ ${esc(d.dir)}<small>${d.n}× heute</small></button>`).join('')||'<small class="muted">Keine Richtung gefunden</small>'}</div>
+          <div class="gem-btns" style="margin-top:12px"><button class="btn" data-wb>‹ Zurück</button><button class="btn" data-wc>Abbrechen</button></div>`}
+      $$('[data-wl]',card).forEach(b=>b.onclick=()=>{line=b.dataset.wl;haptic('select');step()});
+      $$('[data-wd]',card).forEach(b=>b.onclick=()=>{const dir=b.dataset.wd;S.oefiW??=[];
+        if(S.oefiW.some(w=>w.id===st.id&&w.line===line&&dirK(w.dir)===dirK(dir))){close();return notify('🔔','Gibt es schon',`${line} → ${dir}`,'#ff9500')}
+        if(S.oefiW.length>=10)S.oefiW.shift();
+        S.oefiW.push({k:'w'+Date.now().toString(36),id:st.id,prov:st.prov,lat:st.lat,lon:st.lon,stop:st.name,line,dir,mode:O.mode});save();haptic('success');close();
+        notify('🔔','Alarm an',`${line} → ${dir}: Kommt er über 3 Min. zu spät, sagt GufyUI Bescheid.`,'#ff9500');draw();renderDeps();setTimeout(oefiWatchCheck,1500)});
+      const bb=$('[data-wb]',card);if(bb)bb.onclick=()=>{line=null;step()};
+      $$('[data-wc]',card).forEach(b=>b.onclick=close)};
+    step();sh.onclick=e=>{if(e.target===sh)close()}}
   function renderDeps(){
+    renderDirs();
     const el=$('#oList',body);if(!el)return;
     if(loading||!deps.length){el.innerHTML=`<div class="emptyinv">${loading?'⏳ Fahrplan wird geladen …':esc(errMsg||'Keine Abfahrten an diesem Tag')}</div>`;return}
     const now=Date.now();let h=-1,html='',nowDone=dayOff>0;
-    deps.forEach(d=>{const t=new Date(d.t),hh=t.getHours();
+    const W=S.oefiW||[],st0=cur(),wOn=d=>st0&&W.some(w=>w.id===st0.id&&w.line===d.line&&dirK(w.dir)===dirK(d.dir));
+    const shown=dirF?deps.filter(d=>dirK(d.dir)===dirF):deps;if(!shown.length){el.innerHTML='<div class="emptyinv">Keine Abfahrten in diese Richtung</div>';return}
+    shown.forEach(d=>{const t=new Date(d.t),hh=t.getHours();
       if(!nowDone&&+t>=now){html+=`<div class="o-now" id="oNow"><span>Jetzt ${hm(now)}</span></div>`;nowDone=true}
       if(hh!==h){h=hh;html+=`<div class="o-hour">${pad(hh)}:00</div>`}
       const delay=Math.round((new Date(d.t)-new Date(d.p))/60000);
-      html+=`<div class="o-dep ${+t<now?'past':''} ${d.cancel?'cxl':''} ${d.ai?'aiadd':''}"><span class="o-t">${hm(d.t)}${delay>0?`<i>+${delay}</i>`:''}</span><span class="o-line" style="${d.col?`background:#${d.col.replace('#','')}`:''}">${d.ic||''} ${esc(d.line)}</span><span class="o-dir">${esc(d.dir)}${d.cancel?' · <b>fällt aus</b>':''}</span>${d.track?`<span class="o-tr">Gl. ${esc(d.track)}</span>`:''}</div>`});
+      html+=`<div class="o-dep ${+t<now?'past':''} ${d.cancel?'cxl':''} ${d.ai?'aiadd':''}"><span class="o-t">${hm(d.t)}${delay>0?`<i>+${delay}</i>`:''}</span><span class="o-line" style="${d.col?`background:#${d.col.replace('#','')}`:''}">${d.ic||''} ${esc(d.line)}</span><span class="o-dir">${esc(d.dir)}${d.cancel?' · <b>fällt aus</b>':''}${wOn(d)?' 🔔':''}</span>${d.track?`<span class="o-tr">Gl. ${esc(d.track)}</span>`:''}</div>`});
     el.innerHTML=html;
     const n=$('#oNow',el);if(n)setTimeout(()=>{el.scrollTop=n.offsetTop-el.offsetTop-40},30);
   }
@@ -5453,9 +5576,8 @@ render(body,ctx){
     loading=false;renderDeps();aiCheck(st);
   }
   draw();load();
-  radarIv=setInterval(()=>{if(body.isConnected)radarLoad()},45000);
-  animIv=setInterval(()=>{if(body.isConnected)drawDots()},2000);
-  ctx.cleanup.push(()=>{clearInterval(radarIv);clearInterval(animIv);if(busStop)busStop();if(map){map.remove();map=null}});
+  radarIv=setInterval(()=>{if(body.isConnected&&document.visibilityState==='visible')radarLoad()},25000);
+  ctx.cleanup.push(()=>{clearInterval(radarIv);cancelAnimationFrame(animRaf);animRaf=0;if(busStop)busStop();if(map){map.remove();map=null}});
 }}
 };
 
