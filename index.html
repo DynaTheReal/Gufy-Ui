@@ -9,7 +9,7 @@
    "quick":true  = Quick-Update: wird beim nächsten Öffnen SOFORT installiert,
                    ohne Nachfrage – auch bei leerem Akku. Bei normalen Updates weglassen.
    ===================================================================== */
-window.GUFY={"v":"12.7","notes":["Gufy Music sucht jetzt nur noch in YouTube Shorts – der Titel wird zum Liedtitel, das Vorschaubild zum Liedbild","Zwei Modi (⚙️ neben der Suche): 🎵 Musik – nur Musik-Shorts wie Lieder & Song-Showcases · 🎬 Alle – einfach alle Shorts","Keine normalen YouTube-Videos mehr"]};
+window.GUFY={"v":"12.8","notes":["Gufy Music: nur noch echte Shorts – normale Videos fliegen raus","Viel mehr Ergebnisse: mehrere Suchdienste, Suchwörter und Seiten gleichzeitig","Neu (⚙️): eigener YouTube-Schlüssel für die offizielle Suche – im Musik-Modus nur Shorts aus der Kategorie Musik"]};
 /* Update-Schutz: Ist auf dem Gerät noch eine ältere Version installiert,
    läuft diese weiter, bis das Update in den Einstellungen installiert wird. */
 (function(){
@@ -1396,7 +1396,9 @@ body:not(.inapp) .mu-player.mini,.mu-player.mini{bottom:calc(84px + env(safe-are
 .leaflet-marker-icon .o-veh{transition:none}
 .mu-search{display:flex;gap:8px;align-items:center}
 .mu-mode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:16px;border:2px solid var(--border);background:var(--panel);color:inherit;font:inherit}
-.mu-mode small{opacity:.65;font-size:12.5px}.mu-mode.on{border-color:#ff2d55;background:rgba(255,45,85,.12)}.mu-search .input{flex:1}
+.mu-mode small{opacity:.65;font-size:12.5px}
+.mu-key{margin-top:6px;padding:12px;border-radius:16px;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column;gap:6px;font-size:14px}.mu-key a{color:#ff2d55}
+.mu-hint{font-size:12.5px;padding:9px 12px;border-radius:12px;background:rgba(255,45,85,.12);margin-bottom:8px}.mu-mode.on{border-color:#ff2d55;background:rgba(255,45,85,.12)}.mu-search .input{flex:1}
 .mu-sh{flex:none;padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:var(--panel);color:inherit;font:700 13px inherit}.mu-sh.on{background:#ff2d55;color:#fff;border-color:transparent}
 </style>
 </head>
@@ -5113,7 +5115,8 @@ render(body,ctx){
 gmusic:{name:'Gufy Music',cat:'Unterhaltung',full:true,store:true,icon:'🎵',bg:'linear-gradient(135deg,#ff2d55,#af52de)',
 render(body,ctx){
   S.music??={pl:[{id:'fav',name:'❤️ Lieblingssongs',songs:[]}]};const MU=S.music;
-  let tab='search',res=[],q='',plOpen=null,files=[],searching=false;
+  let tab='search',res=[],q='',plOpen=null,files=[],searching=false,lastFew=false;
+  const ytKey=()=>{try{return localStorage.getItem('gufyui_yt')||''}catch(e){return''}};
   const P=window.__GMP??=(window.__GMP={queue:[],i:-1,yt:null,audio:null,cur:null,mode:''});
   const DB=()=>new Promise((r,j)=>{const o=indexedDB.open('gufyui_music',1);o.onupgradeneeded=()=>o.result.createObjectStore('f',{keyPath:'id'});o.onsuccess=()=>r(o.result);o.onerror=()=>j(o.error)});
   const dbAll=async()=>{try{const db=await DB();return await new Promise(r=>{const t=db.transaction('f').objectStore('f').getAll();t.onsuccess=()=>r(t.result||[]);t.onerror=()=>r([])})}catch(e){return[]}};
@@ -5127,7 +5130,7 @@ render(body,ctx){
   function draw(){
     let h=`<div class="mu"><div class="tabs"><button data-mt="search" class="${tab==='search'?'on':''}">🔎 Suchen</button><button data-mt="pl" class="${tab==='pl'?'on':''}">📃 Playlists</button><button data-mt="files" class="${tab==='files'?'on':''}">📥 Offline</button></div>`;
     if(tab==='search')h+=`<div class="mu-search"><input class="input" id="muQ" placeholder="${MU.smode==='music'?'Musik-Shorts suchen …':'YouTube Shorts suchen …'}" value="${esc(q)}" enterkeyhint="search"><button class="mu-sh" id="muSet">${MU.smode==='music'?'🎵 Musik':'🎬 Alle'} ⚙️</button></div>
-      <div class="mu-list">${searching?'<div class="emptyinv"><div class="mu-spin" style="margin:0 auto 8px"></div><small>Shorts werden gesucht …</small></div>':res.length?res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>${MU.smode==='music'?'🎵':'🎬'}</div><b>${MU.smode==='music'?'Such Musik':'Such YouTube Shorts'}</b><br><small>${MU.smode==='music'?'z. B. „Minecraft“ → Lieder & Song-Showcases als Shorts':'Alle Shorts zu deinem Suchwort'}</small></div>`}</div>`;
+      <div class="mu-list">${searching?'<div class="emptyinv"><div class="mu-spin" style="margin:0 auto 8px"></div><small>Shorts werden gesucht …</small></div>':res.length?(lastFew?'<div class="mu-hint">Die freien Suchdienste liefern gerade wenig. Mit einem eigenen YouTube-Schlüssel (⚙️) findest du viel mehr Shorts.</div>':'')+res.map((x,i)=>songHTML(x,i,'res')).join(''):`<div class="emptyinv"><div>${MU.smode==='music'?'🎵':'🎬'}</div><b>${MU.smode==='music'?'Such Musik':'Such YouTube Shorts'}</b><br><small>${MU.smode==='music'?'z. B. „Minecraft“ → Lieder & Song-Showcases als Shorts':'Alle Shorts zu deinem Suchwort'}</small></div>`}</div>`;
     else if(tab==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);
       h+=pl?`<button class="mu-back" id="muBack">‹ Playlists</button><div class="mu-plh"><b>${esc(pl.name)}</b><small>${pl.songs.length} Songs</small><button class="btn primary" id="muPlay" ${pl.songs.length?'':'disabled'}>▶ Abspielen</button></div><div class="mu-list">${pl.songs.map((x,i)=>songHTML(x,i,'pl')).join('')||'<p class="muted" style="text-align:center">Noch leer – füg Songs mit ＋ hinzu.</p>'}</div>`
         :`<div class="mu-list">${MU.pl.map(p=>`<button class="mu-pl" data-pl="${p.id}"><span>${p.songs[0]&&p.songs[0].img?`<img src="${p.songs[0].img}">`:'🎶'}</span><div><b>${esc(p.name)}</b><small>${p.songs.length} Songs</small></div></button>`).join('')}</div><button class="btn" id="muNewPl" style="width:100%;margin-top:10px">＋ Neue Playlist</button>`}
@@ -5167,21 +5170,40 @@ render(body,ctx){
     return id}
   /* Suche direkt in YouTube Shorts – Titel wird zum Liedtitel, Vorschaubild zum Liedbild */
   async function shortsSearch(q,mode){
-    const music=mode==='music',qq=encodeURIComponent(q+(music?' song music':'')+' #shorts');
+    const music=mode==='music',ytk=ytKey();
     const tm=(u,ms=8000)=>{const ac=new AbortController();setTimeout(()=>ac.abort(),ms);return fetch(u,{signal:ac.signal}).then(z=>{if(!z.ok)throw new Error('HTTP '+z.status);return z.json()})};
-    const out=[],ids=new Set();
-    const add=(id,title,up,img,dur,short)=>{if(!id||ids.has(id))return;if(!(short||(dur>0&&dur<=180)))return;ids.add(id);
+    const out=[],ids=new Set(),src={};
+    const add=(id,title,up,img,dur,from)=>{if(!id||ids.has(id))return;ids.add(id);src[from]=(src[from]||0)+1;
       let t=String(title||'').replace(/#[\p{L}\p{N}_]+/gu,'').replace(/\s{2,}/g,' ').replace(/^[\s|:\-–]+|[\s|:\-–]+$/g,'').trim()||String(title||'Short');
       out.push({t,a:String(up||'').replace(/ - Topic$/,''),img:img||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`,sid:id,raw:String(title||''),dur})};
-    await Promise.allSettled([
-      ...['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee'].map(b=>tm(`${b}/search?q=${qq}&filter=videos`).then(r=>(r.items||[]).forEach(i=>{
-        if(i.url&&/watch/.test(i.url))add(i.url.split('v=')[1].split('&')[0],i.title,i.uploaderName,i.thumbnail,i.duration,i.isShort)}))),
-      ...['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be'].map(b=>tm(`${b}/api/v1/search?q=${qq}&type=video&duration=short`).then(r=>(r||[]).forEach(i=>{
-        const th=(i.videoThumbnails||[]).find(t=>t.quality==='high'||t.quality==='medium');add(i.videoId,i.title,i.author,th&&/^https/.test(th.url)?th.url:'',i.lengthSeconds,i.isShort)})))]);
+    const Q=music?[q+' song #shorts',q+' music #shorts',q+' remix #shorts',q+' sped up #shorts']:[q+' #shorts',q+' shorts'];
+    if(ytk){   // 1) Offizielle YouTube-Suche (eigener Schlüssel) – am zuverlässigsten
+      try{const found=[];
+        for(const qq of Q.slice(0,2)){const r=await tm(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoDuration=short&maxResults=50&q=${encodeURIComponent(qq)}${music?'&videoCategoryId=10':''}&key=${encodeURIComponent(ytk)}`);
+          (r.items||[]).forEach(i=>found.push(i))}
+        const idl=[...new Set(found.map(i=>i.id.videoId))];const dur={};
+        for(let i=0;i<idl.length;i+=50){const r=await tm(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${idl.slice(i,i+50).join(',')}&key=${encodeURIComponent(ytk)}`);
+          (r.items||[]).forEach(v=>{const m=(v.contentDetails.duration||'').match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)||[];dur[v.id]=(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0)})}
+        const dec=t=>{const e=document.createElement('textarea');e.innerHTML=t;return e.value};
+        found.forEach(i=>{const d=dur[i.id.videoId];if(d>0&&d<=180){const th=i.snippet.thumbnails;add(i.id.videoId,dec(i.snippet.title),dec(i.snippet.channelTitle),(th.high||th.medium||th.default||{}).url,d,'yt')}})}
+      catch(e){glog('Music','YouTube-Schlüssel: '+e.message)}
+    }
+    if(out.length<15){   // 2) Freie Suchdienste: nur echte Shorts (isShort), mehrere Seiten
+      const PI=['https://pipedapi.kavin.rocks','https://pipedapi.adminforge.de','https://api.piped.private.coffee','https://pipedapi.r4fo.com'];
+      await Promise.allSettled(PI.flatMap(b=>Q.map(async qq=>{let r=await tm(`${b}/search?q=${encodeURIComponent(qq)}&filter=videos`);
+        for(let pg=0;pg<3&&r;pg++){(r.items||[]).forEach(i=>{if(i.url&&/watch/.test(i.url)&&(i.isShort||(i.duration>0&&i.duration<=60)))add(i.url.split('v=')[1].split('&')[0],i.title,i.uploaderName,i.thumbnail,i.duration,'piped')});
+          if(!r.nextpage||out.length>=80)break;r=await tm(`${b}/nextpage/search?nextpage=${encodeURIComponent(r.nextpage)}&q=${encodeURIComponent(qq)}&filter=videos`).catch(()=>null)}})));
+      const IV=['https://inv.nadeko.net','https://invidious.nerdvpn.de','https://yewtu.be','https://iv.melmac.space'];
+      await Promise.allSettled(IV.flatMap(b=>Q.slice(0,2).flatMap(qq=>[1,2].map(pg=>tm(`${b}/api/v1/search?q=${encodeURIComponent(qq)}&type=video&duration=short&page=${pg}`).then(r=>(r||[]).forEach(i=>{
+        if(i.lengthSeconds>0&&i.lengthSeconds<=60){const th=(i.videoThumbnails||[]).find(t=>t.quality==='high'||t.quality==='medium');add(i.videoId,i.title,i.author,th&&/^https/.test(th.url)?th.url:'',i.lengthSeconds,'inv')}}))))));
+    }
+    glog('Music',`Shorts „${q}“ (${mode}): ${out.length} · `+Object.entries(src).map(([k,v])=>k+' '+v).join(', '));
+    lastFew=out.length<8&&!ytk;
     if(!music)return out;
-    const M=/song|music|musik|lied|lyrics?|remix|sped ?up|slowed|nightcore|phonk|beat|cover|edit\b|audio|soundtrack|\bost\b|theme|melod|piano|guitar|gitarre|rap|singing|sing|parody|parodie|🎵|🎶|♪|♫|🎧|🎤|🎹|🎸|vevo|records|official/i;
+    const M=/song|music|musik|lied|lyrics?|remix|sped ?up|slowed|nightcore|phonk|beat|cover|edit\b|audio|soundtrack|\bost\b|theme|melod|piano|guitar|gitarre|\brap\b|sing|parod|🎵|🎶|♪|♫|🎧|🎤|🎹|🎸|vevo|records|official/i;
     const sc=x=>(M.test(x.raw)?2:0)+(M.test(x.a)?1:0)+(/ - Topic$|VEVO|Records|Music/i.test(x.a)?1:0);
-    return out.filter(x=>sc(x)>0).sort((a,b)=>sc(b)-sc(a))}
+    const good=out.filter(x=>sc(x)>0).sort((a,b)=>sc(b)-sc(a));
+    return good.length>=6?good:good.concat(out.filter(x=>sc(x)===0))}
   /* Shorts-Modus: nur einen Short nehmen, dessen Titel wirklich zum Song passt */
   async function shortFind(x){
     const nt=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[([](feat|ft|with|official|lyrics?|audio|video)[^)\]]*[)\]]|\bfeat\..*|\bft\..*/g,' ').replace(/[^a-z0-9ß ]/g,' ').replace(/\s+/g,' ').trim();
@@ -5223,9 +5245,15 @@ render(body,ctx){
       const sh=h(`<div class="gem-dlg"><div class="gem-card"><h2 style="font-size:19px">⚙️ Suche in Gufy Music</h2><p class="muted" style="margin:4px 0 12px">Gesucht wird nur in YouTube Shorts.</p>
         <button class="mu-mode ${MU.smode==='music'?'on':''}" data-sm="music"><b>🎵 Musik</b><small>Nur Shorts mit Musik: Lieder, Song-Showcases, Remixe, Sped up …</small></button>
         <button class="mu-mode ${MU.smode==='all'?'on':''}" data-sm="all"><b>🎬 Alle</b><small>Einfach alle YouTube Shorts zu deinem Suchwort</small></button>
+        <div class="mu-key"><b>🔑 YouTube-Schlüssel</b> <small>(optional, viel mehr Ergebnisse)</small>
+          <input class="input" id="muYK" placeholder="${ytKey()?'••••••• gespeichert':'Schlüssel einfügen'}" autocomplete="off">
+          <small class="muted">Kostenlos: <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">YouTube Data API v3 aktivieren</a> → „Anmeldedaten“ → API-Schlüssel. Bleibt nur auf diesem Gerät.</small>
+          ${ytKey()?'<button class="btn" id="muYKx" style="margin-top:6px">Schlüssel löschen</button>':''}</div>
         <button class="btn" style="width:100%;margin-top:10px" data-sm="">Fertig</button></div></div>`);
       document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('open'));
-      $$('[data-sm]',sh).forEach(b=>b.onclick=()=>{if(b.dataset.sm){MU.smode=b.dataset.sm;save();haptic('select');res=[];}sh.remove();draw();const i2=$('#muQ',body);if(q&&b.dataset.sm&&i2)i2.onkeydown({key:'Enter'})})};
+      const yk=$('#muYKx',sh);if(yk)yk.onclick=()=>{try{localStorage.removeItem('gufyui_yt')}catch(e){}sh.remove();notify('🔑','Schlüssel gelöscht','Gufy Music nutzt wieder die freien Suchdienste.','#ff2d55')};
+      $$('[data-sm]',sh).forEach(b=>b.onclick=()=>{const kv=$('#muYK',sh).value.trim();if(kv){try{localStorage.setItem('gufyui_yt',kv)}catch(e){}notify('🔑','YouTube-Schlüssel gespeichert','Die Suche nutzt jetzt die offizielle YouTube-Suche.','#ff2d55')}
+        if(b.dataset.sm){MU.smode=b.dataset.sm;save();haptic('select');res=[];}sh.remove();draw();const i2=$('#muQ',body);if(q&&b.dataset.sm&&i2)i2.onkeydown({key:'Enter'})})};
     $$('[data-play]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.play.split(':');play(list(c),+i)});
     $$('[data-add]',body).forEach(b=>b.onclick=()=>{const[c,i]=b.dataset.add.split(':'),x=list(c)[+i];
       if(c==='pl'){const pl=MU.pl.find(p=>p.id===plOpen);pl.songs.splice(+i,1);save();draw();return}
